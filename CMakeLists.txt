@@ -58,3 +58,24 @@ if(WIN32)
 
     add_executable(kart_binary_oracle tools/oracle/kart_binary_oracle.c)
 endif()
+
+if(APPLE)
+    enable_language(OBJC)
+
+    add_executable(kart_topdown MACOSX_BUNDLE demo/kart_demo_macos.m)
+    target_link_libraries(kart_topdown PRIVATE kart_dynamics "-framework Cocoa")
+    target_compile_options(kart_topdown PRIVATE -fobjc-arc)
+    set_target_properties(kart_topdown PROPERTIES
+        MACOSX_BUNDLE_BUNDLE_NAME "Kart Physics Top Down"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "local.kartriderdemo.physics.topdown"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0")
+
+    add_executable(kart_3d MACOSX_BUNDLE demo/kart_demo_macos.m)
+    target_compile_definitions(kart_3d PRIVATE KART_DEMO_3D=1)
+    target_link_libraries(kart_3d PRIVATE kart_dynamics "-framework Cocoa")
+    target_compile_options(kart_3d PRIVATE -fobjc-arc)
+    set_target_properties(kart_3d PROPERTIES
+        MACOSX_BUNDLE_BUNDLE_NAME "Kart Physics 3D"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "local.kartriderdemo.physics.3d"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0")
+endif()

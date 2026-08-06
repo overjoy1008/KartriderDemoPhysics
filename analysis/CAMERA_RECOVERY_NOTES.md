@@ -108,6 +108,95 @@ The chase-position portion of `0x00444C30` contains the following direct constan
 | `0x00572688` | `0.015f` | second speed-dependent distance term |
 | `0x005722C0` | `3.0f` | camera-axis offset term |
 
+## Speed-dependent chase geometry
+
+`ChaseCameraman::Update` obtains the magnitude of the kart velocity through `0x00412360` followed by `0x004136F0`. The magnitude is not used raw for the chase geometry. A persistent filtered value at `this+0x24` is updated first:
+
+```c
+float response_ms = filtered_speed <= current_speed ? 10000.0f : 100.0f;
+float beta = min((uint32_t)(now_ms - previous_ms) / response_ms, 1.0f);
+filtered_speed = current_speed * beta + filtered_speed * (1.0f - beta);
+```
+
+This asymmetric original filter makes the camera geometry respond slowly while speed rises and quickly while speed falls. The filtered value then drives all of the following mode-0 equations:
+
+```c
+float chase_pitch = max(0.0f, filtered_speed) / 400.0f
+                  + 0.25f
+                  + camera->extra_pitch;
+
+float rear_distance = max(
+    5.5f,
+    5.5f + filtered_speed * 0.015f + filtered_speed * 0.03f);
+
+float upper_offset = filtered_speed / 60.0f + 3.0f;
+
+out_orientation = delayed_kart_orientation * RotationX(chase_pitch);
+out_position = kart_position
+             - delayed_axis_1 * rear_distance
+             + delayed_axis_2 * upper_offset;
+```
+
+`RotationX` is directly identified from `0x0047EE40`: it writes the matrix rows/columns containing `cos(angle)`, `-sin(angle)`, `sin(angle)`, and `cos(angle)` with the X diagonal fixed to 1. The final camera-position Z component is additionally smoothed with a 100 ms coefficient at the end of `0x00444C30`; the other two components are copied directly.
+
+Thus ordinary speed changes three view properties even without a booster: pitch, rear distance, and upper offset. The units are the engine's native world units. No conversion to metres is performed in this path.
+
+## Booster-linked FOV
+
+The fourth output of `0x00444C30` is an FOV value stored persistently at `this+0x34`. It is initialized to `75.0f`. Each subsequent update selects a target and time constant from the kart's vtable slot `+0x68`:
+
+```c
+bool wide_view = kart->vftable[26](kart); // byte offset +0x68
+
+float target_fov = wide_view ? 110.0f : 75.0f;
+float fov_response_ms = wide_view ? 1000.0f : 1500.0f;
+float gamma = min((uint32_t)(now_ms - previous_ms) / fov_response_ms, 1.0f);
+
+camera->fov = target_fov * gamma
+            + camera->fov * (1.0f - gamma);
+```
+
+RTTI/vftable recovery resolves that virtual slot as follows:
+
+- `the::GoKart`, vftable `0x00571824`, slot 26 -> `0x0042A1C0`, returns byte `this+0xE5`.
+- `the::GoPlayKart`, vftable `0x00571A7C`, slot 26 -> `0x00431B00`, returns `(this+0xE5) || (this+0x2D4)`.
+
+The playable-kart event paths at `0x004529D0` and `0x00457AC0` set these fields through `0x00431960`/`0x00431AB0`; directly observed duration arguments include `1000` and `3000` ms in the booster-related event cases. The same state is carried in recorded kart data at record-frame offset `+0x81`.
+
+Therefore the 75-to-110 widening is not a continuous function of ordinary speed. It is a smoothed state change tied to the kart's booster/boost-like runtime flag. Ordinary speed independently changes camera placement and pitch through the equations above.
+
+The projection path confirms that these numbers are degrees:
+
+- scene camera FOV is stored at camera field `+0x200` by `0x0045CE90`;
+- `0x004C1450` passes near plane, far plane, FOV, and aspect ratio to `0x004A98A0`;
+- at `0x004A98B1`, the projection builder multiplies FOV by `0.00872664f` (`pi / 360`) and calls tangent, producing `tan(FOV / 2)` for the perspective matrix.
+
+This FOV expansion itself produces strong perspective stretching near the sides of the image and a visual impression of acceleration.
+
+## Blur, distortion, wave and lens-flare audit
+
+The executable contains direct visual-resource evidence for:
+
+- UTF-16 resource names `booster`, `boosterwave`, and `shockwave`;
+- loader/constructor path `0x00411180`, which retrieves all three from the `effect` resource category and creates effect instances;
+- RTTI class `the::ReLensFlare` at `0x0059ABE4` and scene loader reference `0x0045A590` to the `lensflare` resource name.
+
+These findings prove that booster/wave/shock visual nodes and an environment lens-flare renderer exist. They do not, by themselves, prove a full-screen blur or image-space distortion algorithm. The exact booster effect material can be supplied by the external effect resource rather than being encoded as a named algorithm in this EXE.
+
+An exhaustive case-insensitive scan of the executable's ASCII and UTF-16 strings, followed by symbol/RTTI reference scanning, found no `blur`, `motion blur`, `distort`, `bloom`, `speedline`, or `postprocess` implementation name. No reference from `ReLensFlare` to kart velocity or the `ChaseCameraman` speed field was found either. The lens flare is therefore evidenced as a scene/environment effect, not a speed-dependent camera effect.
+
+Current evidence supports this classification:
+
+| effect | status in original EXE |
+|---|---|
+| speed-dependent distance/height/pitch | directly recovered with equations |
+| booster FOV widening, 75 -> 110 degrees | directly recovered and projection path verified |
+| delayed kart/camera orientation | directly recovered, 400 ms mode-0 follow |
+| booster / boosterwave / shockwave resources | directly recovered as effect-resource construction |
+| environment lens flare | directly recovered; no speed link found |
+| dedicated full-screen motion blur | not found in this executable |
+| dedicated speed-dependent image distortion | not found as executable code; external effect material remains possible |
+
 ## Raw evidence files
 
 - `analysis/reports/camera-rtti.txt`: RTTI, complete-object-locator and vftable recovery
@@ -115,4 +204,11 @@ The chase-position portion of `0x00444C30` contains the following direct constan
 - `analysis/reports/camera-helper-decompilations.c`: factor, quaternion conversion and interpolation wrappers
 - `analysis/reports/camera-slerp-decompilation.c`: lower-level quaternion interpolation implementation
 - `analysis/reports/camera-constants.txt`: direct constants and references, including the negative 90-degree result
-
+- `analysis/reports/camera-position-math-helpers.c`: rotation-matrix and vector helpers used by the speed geometry
+- `analysis/reports/camera-fov-state-functions.c`: GoKart/GoPlayKart vtable slot 26 implementations
+- `analysis/reports/fov-state-writers.c`: runtime-state writers used by the FOV condition
+- `analysis/reports/fov-state-callers.c`: event paths supplying 1000/3000 ms boost durations
+- `analysis/reports/projection-build.c`: camera projection rebuild and FOV handoff
+- `analysis/reports/camera-projection-disassembly.txt`: exact FOV half-angle and chase-camera instructions
+- `analysis/reports/visual-effect-symbols.txt`: effect/lens-flare symbols and references
+- `analysis/reports/visual-effect-decompilations.c`: booster, boosterwave, shockwave and lens-flare resource creation paths

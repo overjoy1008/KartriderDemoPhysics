@@ -4,6 +4,33 @@ This workspace contains a clean C reconstruction of the kart dynamics code in
 the 2004 `KartRider.exe` demo. It is an evidence-driven behavioral recovery,
 not the original source code.
 
+## Simulator preview
+
+### Top-down
+
+![Top-down simulator drifting with skid marks, item boost indicator, speedometer, and track bounds](docs/assets/simulator-topdown.png)
+
+### 3D
+
+![3D simulator using the fixed chase camera with boost flame, speedometer, ground grid, and track bounds](docs/assets/simulator-3d.png)
+
+Both programs run the same 3D physics state and 5 ms substep pipeline. The
+top-down program projects that state onto X-Y; the 3D program renders it with
+the existing fixed chase camera. These screenshots were captured from the
+current Windows build while drifting and using the item boost.
+
+## Read the recovery
+
+- **[Physics engine textbook](docs/PHYSICS_ENGINE_TEXTBOOK.md)** builds the
+  current implementation bottom-up from vectors and coordinate axes through
+  suspension, tire forces, drift states, boosts, drag, collision, and
+  quaternion integration. Its equations and update order follow the C code.
+- [Recovery notes](analysis/RECOVERY_NOTES.md) connect recovered formulas to
+  executable addresses and supporting reports.
+- [Differential-oracle results](analysis/RECOVERY_NOTES.md#differential-oracle-results)
+  record the original-EXE calls and frame-by-frame comparison results; the
+  captured CSV references are in [`analysis/reports`](analysis/reports/).
+
 ## Current recovered scope
 
 - the complete `Dynamics` parameter list and original fallback values;
@@ -66,6 +93,24 @@ keeps the recovered dynamics independent of the demo's proprietary scene and
 triangle-query implementation while preserving the original query geometry
 and update order.
 
+After a Windows build, launch `build/kart_topdown.exe` or
+`build/kart_3d.exe`. Both simulators use the following controls:
+
+| Action | Windows | macOS |
+|---|---|---|
+| Accelerate / brake or reverse | Up / Down | Up / Down |
+| Steer | Left / Right | Left / Right |
+| Drift | Shift or `W` | Shift or `W` |
+| 3-second item boost | Ctrl or `D` | Command or `D` |
+| Choose kart / track | `K` / `T` | `K` / `T` |
+| Toggle grounded-drag trigger | `G` | `G` |
+| Reset | `R` | `R` |
+
+Press `K` or `T` to open a selectable list. Use the mouse, or the arrow keys
+and Enter, to apply one of the 26 kart presets or 15 track bounds immediately.
+There is no mode-switch key: top-down and 3D are separate executables that
+share the same physics implementation.
+
 ## Top-down demo
 
 On Windows the build also produces `kart_topdown.exe`. It runs the full 3D
@@ -118,6 +163,40 @@ visible even when the physical wall is hundreds of metres away. Both bounds
 maps use an oriented kart triangle without a separate direction-vector line.
 Escape
 additionally closes the window.
+
+## macOS demos
+
+The same top-down and 3D simulations can be built as native Cocoa application
+bundles on macOS. The macOS renderer uses only AppKit/Core Graphics supplied by
+the operating system; no third-party graphics package is required. Physics,
+kart/track presets, flat-world collision callbacks, skid marks, bounds map,
+speedometer, and the `K`/`T` selection menus are shared in behavior with the
+Windows demos. The existing fixed 3D chase view is preserved.
+
+On a Mac with Xcode and CMake installed:
+
+```sh
+bash scripts/build_macos.sh
+```
+
+This builds and tests both applications, then creates:
+
+- `dist-macos/kart_topdown-macos.zip`
+- `dist-macos/kart_3d-macos.zip`
+
+macOS uses native `.app` bundles rather than Windows `.exe` files. Extract a
+zip and open the contained application. Locally built unsigned applications
+may require Control-click, then **Open**, the first time they are launched.
+
+Controls match Windows except that the item-boost modifier is **Command**:
+
+- Arrow keys: drive and steer
+- Shift or `W`: drift
+- Command or `D`: boost
+- `K`: kart list
+- `T`: track list
+- `G`: grounded-drag trigger
+- `R`: reset
 
 ## Confidence boundary
 

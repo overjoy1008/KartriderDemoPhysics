@@ -1,0 +1,27 @@
+00428820 FUN_00428820
+  00428a0e MOV byte ptr [ECX + 0xe5],0x0
+004299e0 FUN_004299e0
+  00429ed9 MOV byte ptr [EDX + 0xe5],AL
+0042a1c0 FUN_0042a1c0
+  0042a1ca MOV AL,byte ptr [EAX + 0xe5]
+0042d7d0 FUN_0042d7d0
+  0042d7dd MOV byte ptr [EAX + 0xe5],CL
+0042de00 FUN_0042de00
+  0042e0d3 MOV byte ptr [ECX + 0x2d4],0x0
+0042e750 FUN_0042e750
+  0042eccd MOV byte ptr [ECX + 0xe5],0x0
+0042eda0 FUN_0042eda0
+  0042ef2f MOVZX ECX,byte ptr [EAX + 0x2d4]
+  0042ef75 MOV byte ptr [EAX + 0x2d4],0x0
+0042f6c0 FUN_0042f6c0
+  0042f77b MOVZX EAX,byte ptr [EDX + 0x2d4]
+  0042f78c MOVZX EDX,byte ptr [ECX + 0xe5]
+00431960 FUN_00431960
+  004319af MOV byte ptr [EDX + 0x2d4],0x1
+  004319d5 MOV byte ptr [EDX + 0xe5],0x0
+00431ab0 FUN_00431ab0
+  00431ade MOV byte ptr [EAX + 0xe5],0x1
+  00431ae8 MOV AL,byte ptr [ECX + 0xe5]
+00431b00 FUN_00431b00
+  00431b0c MOVZX ECX,byte ptr [EAX + 0xe5]
+  00431b1a MOVZX EAX,byte ptr [EDX + 0x2d4]
