@@ -99,6 +99,7 @@ typedef struct KartSimulationState {
     float previous_steer_angle_rad;
     float grounded_drag_scale;
     bool previous_forward_input;
+    bool previous_drift_input;
     bool previous_boost_input;
     bool grounded;
 } KartSimulationState;

@@ -3,6 +3,7 @@ project(KartRiderDemoPhysics C)
 
 add_library(kart_dynamics STATIC
     src/kart_dynamics.c
+    src/kart_input.c
     src/kart_simulation.c
     src/kart_demo_data.c
 )

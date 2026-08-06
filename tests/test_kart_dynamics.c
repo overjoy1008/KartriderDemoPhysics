@@ -1,5 +1,6 @@
 #include "kart_dynamics.h"
 #include "kart_demo_data.h"
+#include "kart_input.h"
 #include "kart_simulation.h"
 
 #include <assert.h>
@@ -639,6 +640,75 @@ static void test_airborne_and_integrated_collision(void)
     assert(near(state.linear_velocity.z, -0.294f, 0.0001f));
 }
 
+static void test_event_ordered_new_cut_steering(void)
+{
+    KartSteeringInputState input = {0};
+
+    assert(kart_steering_key_event(
+        &input, KART_STEERING_LEFT, true));
+    assert(near(input.value, -1.0f, 0.0f));
+
+    /* A later opposite press owns steering; both held must not sum to zero. */
+    assert(kart_steering_key_event(
+        &input, KART_STEERING_RIGHT, true));
+    assert(input.left_down && input.right_down);
+    assert(near(input.value, 1.0f, 0.0f));
+
+    /* Releasing the older direction leaves the newer owner untouched. */
+    assert(kart_steering_key_event(
+        &input, KART_STEERING_LEFT, false));
+    assert(near(input.value, 1.0f, 0.0f));
+    assert(kart_steering_key_event(
+        &input, KART_STEERING_RIGHT, false));
+    assert(near(input.value, 0.0f, 0.0f));
+
+    /* Key-repeat messages are not new transitions. */
+    assert(kart_steering_key_event(
+        &input, KART_STEERING_RIGHT, true));
+    assert(!kart_steering_key_event(
+        &input, KART_STEERING_RIGHT, true));
+    kart_steering_input_reset(&input);
+    assert(!input.left_down && !input.right_down);
+    assert(near(input.value, 0.0f, 0.0f));
+}
+
+static void test_integrated_drift_input_edge(void)
+{
+    KartSimulationState state;
+    FlatGroundContext context = {0};
+    const KartSimulationWorld world = {
+        .query_ground = query_flat_ground,
+        .user_data = &context,
+    };
+    KartSimulationControls controls = {
+        .forward_input = 1.0f,
+        .steering_input = -1.0f,
+        .drift_input = true,
+    };
+
+    kart_simulation_init(&state, NULL, NULL);
+    state.linear_velocity.y = -20.0f;
+
+    /* One held key produces one trigger. It must not restart after the
+       default 0.2 second linger lockout expires. */
+    kart_simulate_milliseconds(&state, &controls, &world, 500);
+    assert(state.drift.input_active);
+    assert(!state.drift.trigger_active);
+    assert(near(state.drift.trigger_timer, 0.0f, 0.0001f));
+    assert(near(state.drift.linger_timer, 0.0f, 0.0001f));
+    kart_simulate_milliseconds(&state, &controls, &world, 500);
+    assert(!state.drift.trigger_active);
+    assert(near(state.drift.trigger_timer, 0.0f, 0.0001f));
+
+    controls.drift_input = false;
+    kart_simulate_milliseconds(&state, &controls, &world, 5);
+    assert(!state.drift.input_active);
+    controls.drift_input = true;
+    kart_simulate_milliseconds(&state, &controls, &world, 5);
+    assert(state.drift.input_active);
+    assert(state.drift.trigger_active);
+}
+
 int main(void)
 {
     test_defaults();
@@ -664,6 +734,8 @@ int main(void)
     test_integrated_instant_boost_input_edge();
     test_integrated_timed_boost_lockout();
     test_airborne_and_integrated_collision();
+    test_event_ordered_new_cut_steering();
+    test_integrated_drift_input_edge();
     puts("kart_dynamics_tests: ok");
     return 0;
 }

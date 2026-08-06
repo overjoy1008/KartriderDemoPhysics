@@ -167,6 +167,11 @@ is already active. Release and press Ctrl/`D` again after expiry to reuse it.
 
 During any drift state, the renderer leaves fading twin rear-wheel skid marks.
 Boost is shown by a cyan kart, a rear flame, and a `BOOST ON` HUD indicator.
+For the original new-cut input, keep the first steering direction held and
+press the opposite direction during the same drift. The most recently pressed
+direction owns steering instead of the two keys cancelling to zero, so the
+existing opposite yaw torque can straighten the kart without a guessed extra
+force.
 
 ## 3D demo
 

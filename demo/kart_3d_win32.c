@@ -3,6 +3,7 @@
 
 #include "kart_demo_data.h"
 #include "kart_demo_win32_ui.h"
+#include "kart_input.h"
 #include "kart_simulation.h"
 
 #include <math.h>
@@ -43,6 +44,7 @@ typedef struct Demo3DState {
     bool drag_trigger_active;
     bool previous_skid_active;
     bool boost_active;
+    KartSteeringInputState steering;
 } Demo3DState;
 
 typedef struct Camera3D {
@@ -891,6 +893,21 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         SetTimer(window, 1, 16, NULL);
         return 0;
     }
+    case WM_KEYDOWN:
+    case WM_KEYUP:
+        if (demo != NULL && (wparam == VK_LEFT || wparam == VK_RIGHT)) {
+            kart_steering_key_event(
+                &demo->steering,
+                wparam == VK_LEFT ? KART_STEERING_LEFT : KART_STEERING_RIGHT,
+                message == WM_KEYDOWN);
+            return 0;
+        }
+        return DefWindowProc(window, message, wparam, lparam);
+    case WM_KILLFOCUS:
+        if (demo != NULL) {
+            kart_steering_input_reset(&demo->steering);
+        }
+        return 0;
     case WM_TIMER: {
         DWORD now;
         DWORD elapsed;
@@ -912,9 +929,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         controls.forward_input = key_down(VK_UP) ? 1.0f : 0.0f;
         controls.reverse_input = key_down(VK_DOWN) ? 1.0f : 0.0f;
         /* The camera and bounds map now use the same handedness as top-down. */
-        controls.steering_input =
-            (key_down(VK_LEFT) ? -1.0f : 0.0f) +
-            (key_down(VK_RIGHT) ? 1.0f : 0.0f);
+        controls.steering_input = demo->steering.value;
         controls.reverse_steering = false;
         controls.drift_input = key_down(VK_SHIFT) || key_down('W');
         controls.boost_active = key_down(VK_CONTROL) || key_down('D');

@@ -242,7 +242,11 @@ static void simulate_substep(
         }
         force = add(force, longitudinal.force);
 
-        kart_drift_set_input(&state->drift, controls->drift_input, forward_velocity);
+    if (controls->drift_input != state->previous_drift_input) {
+        kart_drift_set_input(
+            &state->drift, controls->drift_input, forward_velocity);
+        state->previous_drift_input = controls->drift_input;
+    }
         was_drifting = state->drift.input_active || state->drift.slip_detected;
         kart_drift_update_slip_detection(
             &state->drift, speed, forward_velocity, lateral_velocity);
