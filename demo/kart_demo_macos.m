@@ -170,6 +170,28 @@ static void stroke_line(NSPoint a, NSPoint b, NSColor *color, CGFloat width)
     [path stroke];
 }
 
+static NSColor *rgb(unsigned int red, unsigned int green, unsigned int blue)
+{
+    return [NSColor colorWithSRGBRed:(CGFloat)red / 255.0
+                               green:(CGFloat)green / 255.0
+                                blue:(CGFloat)blue / 255.0
+                               alpha:1.0];
+}
+
+static NSColor *kart_body_color(const MacDemoState *demo)
+{
+    if (demo->boost_active) return rgb(65, 205, 255);
+    if (drift_active(&demo->kart)) return rgb(255, 165, 35);
+    return rgb(235, 65, 80);
+}
+
+static NSColor *skid_color(unsigned int age)
+{
+    if (age < 4000) return rgb(8, 10, 12);
+    if (age < 9000) return rgb(23, 26, 29);
+    return rgb(43, 47, 51);
+}
+
 static void fill_polygon(const NSPoint *points, unsigned int count, NSColor *fill, NSColor *stroke)
 {
     NSBezierPath *path = [NSBezierPath bezierPath];
@@ -357,17 +379,17 @@ static void line3d(NSRect bounds, MacCamera camera, KartVec3 a, KartVec3 b, NSCo
 - (void)drawSpeedometer
 {
     NSRect bounds = self.bounds;
-    NSRect panel = NSMakeRect(bounds.size.width-258, bounds.size.height-112, 240, 94);
+    NSRect panel = NSMakeRect(bounds.size.width-256, bounds.size.height-112, 238, 94);
     NSBezierPath *box = [NSBezierPath bezierPathWithRoundedRect:panel xRadius:8 yRadius:8];
-    [[NSColor colorWithCalibratedWhite:0.06 alpha:0.94] setFill]; [box fill];
-    [(_demo.boost_active ? [NSColor cyanColor] : [NSColor grayColor]) setStroke];
+    [rgb(12,16,22) setFill]; [box fill];
+    [(_demo.boost_active ? rgb(75,225,255) : rgb(110,130,145)) setStroke];
     [box setLineWidth:3]; [box stroke];
     int kmh = kart_speedometer_kmh(_demo.kart.linear_velocity);
     NSString *digits = [NSString stringWithFormat:@"%03d", kmh];
     [digits drawInRect:NSMakeRect(panel.origin.x+8,panel.origin.y+4,165,70)
-        withAttributes:[self textAttributes:52 color:(_demo.boost_active?[NSColor cyanColor]:[NSColor whiteColor]) bold:YES]];
+        withAttributes:[self textAttributes:52 color:(_demo.boost_active?rgb(90,235,255):rgb(245,248,250)) bold:YES]];
     [@"KM/H" drawAtPoint:NSMakePoint(panel.origin.x+176,panel.origin.y+52)
-        withAttributes:[self textAttributes:15 color:[NSColor lightGrayColor] bold:YES]];
+        withAttributes:[self textAttributes:15 color:rgb(175,195,205) bold:YES]];
 }
 
 - (NSPoint)topPointX:(float)x y:(float)y scale:(float)scale
@@ -378,90 +400,191 @@ static void line3d(NSRect bounds, MacCamera camera, KartVec3 a, KartVec3 b, NSCo
 
 - (void)drawMinimap
 {
-    NSRect panel = NSMakeRect(self.bounds.size.width-262,18,244,174);
-    [[NSColor colorWithCalibratedWhite:0.07 alpha:0.90] setFill]; NSRectFill(panel);
+    NSRect panel = NSMakeRect(self.bounds.size.width-236,16,220,190);
+    [rgb(15,19,26) setFill]; NSRectFill(panel);
+    NSBezierPath *panelPath=[NSBezierPath bezierPathWithRect:panel];
+    [rgb(54,64,73) setStroke]; [panelPath setLineWidth:1]; [panelPath stroke];
     float tw=kart_demo_track_width(_demo.track_spec), th=kart_demo_track_length(_demo.track_spec);
-    float scale=fminf((panel.size.width-20)/tw,(panel.size.height-30)/th);
-    NSRect track=NSMakeRect(NSMidX(panel)-tw*scale/2,NSMidY(panel)-th*scale/2+8,tw*scale,th*scale);
-    NSBezierPath *p=[NSBezierPath bezierPathWithRect:track]; [[NSColor cyanColor] setStroke]; [p setLineWidth:2]; [p stroke];
+    float scale=fminf(200.0f/tw,132.0f/th);
+    float centerY=(NSMinY(panel)+42+NSMaxY(panel)-10)*0.5f;
+    NSRect track=NSMakeRect(NSMidX(panel)-tw*scale/2,centerY-th*scale/2,tw*scale,th*scale);
+    for(int division=1;division<4;division++) {
+        float x=NSMinX(track)+track.size.width*division/4.0f;
+        float y=NSMinY(track)+track.size.height*division/4.0f;
+        stroke_line(NSMakePoint(x,NSMinY(track)),NSMakePoint(x,NSMaxY(track)),rgb(86,98,108),1);
+        stroke_line(NSMakePoint(NSMinX(track),y),NSMakePoint(NSMaxX(track),y),rgb(86,98,108),1);
+    }
+    NSBezierPath *p=[NSBezierPath bezierPathWithRect:track]; [rgb(75,220,255) setStroke]; [p setLineWidth:3]; [p stroke];
     KartVec3 r,f,u; kart_axes(_demo.kart.orientation,&r,&f,&u); (void)u;
-    NSPoint center=NSMakePoint(NSMidX(track)+_demo.kart.position.x*scale,NSMidY(track)+_demo.kart.position.y*scale);
+    NSPoint center=NSMakePoint(NSMidX(track)+_demo.kart.position.x*scale,centerY+_demo.kart.position.y*scale);
     NSPoint tri[3]={
-        NSMakePoint(center.x+f.x*7,center.y+f.y*7),
-        NSMakePoint(center.x-f.x*5+r.x*4,center.y-f.y*5+r.y*4),
-        NSMakePoint(center.x-f.x*5-r.x*4,center.y-f.y*5-r.y*4)};
-    fill_polygon(tri,3,[NSColor orangeColor],[NSColor whiteColor]);
+        NSMakePoint(center.x+f.x*9,center.y+f.y*9),
+        NSMakePoint(center.x-f.x*6+r.x*5,center.y-f.y*6+r.y*5),
+        NSMakePoint(center.x-f.x*6-r.x*5,center.y-f.y*6-r.y*5)};
+    fill_polygon(tri,3,rgb(255,180,45),rgb(255,235,175));
+    [@"TRACK BOUNDS" drawAtPoint:NSMakePoint(NSMinX(panel)+8,NSMinY(panel)+6)
+        withAttributes:[self textAttributes:12 color:rgb(180,205,215) bold:NO]];
+    NSString *size=[NSString stringWithFormat:@"KART %s  %.3f x %.3f",
+        _demo.kart_spec->asset_name,_demo.kart.geometry.half_width*2,
+        _demo.kart.geometry.half_length*2];
+    [size drawAtPoint:NSMakePoint(NSMinX(panel)+8,NSMinY(panel)+22)
+        withAttributes:[self textAttributes:12 color:rgb(180,205,215) bold:NO]];
 }
 
 - (void)drawTopDown
 {
-    const float scale=fminf(self.bounds.size.width/110.0f,self.bounds.size.height/76.0f);
+    const float scale=fminf((self.bounds.size.width-90.0f)/110.0f,(self.bounds.size.height-90.0f)/76.0f);
     float left=_demo.kart.position.x-self.bounds.size.width/(2*scale);
     float right=_demo.kart.position.x+self.bounds.size.width/(2*scale);
     float top=_demo.kart.position.y-self.bounds.size.height/(2*scale);
     float bottom=_demo.kart.position.y+self.bounds.size.height/(2*scale);
-    int gx=(int)floorf(left/10)*10, gy=(int)floorf(top/10)*10;
-    for(float x=gx;x<=right;x+=10) stroke_line([self topPointX:x y:top scale:scale],[self topPointX:x y:bottom scale:scale],[NSColor colorWithCalibratedWhite:.25 alpha:1],1);
-    for(float y=gy;y<=bottom;y+=10) stroke_line([self topPointX:left y:y scale:scale],[self topPointX:right y:y scale:scale],[NSColor colorWithCalibratedWhite:.25 alpha:1],1);
     float hw=kart_demo_track_width(_demo.track_spec)/2, hh=kart_demo_track_length(_demo.track_spec)/2;
+    NSPoint trackMin=[self topPointX:-hw y:-hh scale:scale];
+    NSPoint trackMax=[self topPointX:hw y:hh scale:scale];
+    NSRect trackRect=NSMakeRect(fmin(trackMin.x,trackMax.x),fmin(trackMin.y,trackMax.y),
+        fabs(trackMax.x-trackMin.x),fabs(trackMax.y-trackMin.y));
+    [rgb(50,58,65) setFill]; NSRectFill(trackRect);
+    int gx=(int)floorf(left/10)*10, gy=(int)floorf(top/10)*10;
+    for(float x=gx;x<=right;x+=10) stroke_line([self topPointX:x y:top scale:scale],[self topPointX:x y:bottom scale:scale],rgb(66,75,82),1);
+    for(float y=gy;y<=bottom;y+=10) stroke_line([self topPointX:left y:y scale:scale],[self topPointX:right y:y scale:scale],rgb(66,75,82),1);
     NSPoint corners[4]={{0}};
     corners[0]=[self topPointX:-hw y:-hh scale:scale]; corners[1]=[self topPointX:hw y:-hh scale:scale];
     corners[2]=[self topPointX:hw y:hh scale:scale]; corners[3]=[self topPointX:-hw y:hh scale:scale];
-    for(int i=0;i<4;i++) stroke_line(corners[i],corners[(i+1)%4],[NSColor cyanColor],3);
+    for(int i=0;i<4;i++) stroke_line(corners[i],corners[(i+1)%4],rgb(100,210,255),4);
     unsigned int start=(_demo.skid_head+MAX_SKIDS-_demo.skid_count)%MAX_SKIDS;
     for(unsigned int i=0;i<_demo.skid_count;i++) { MacSkid *s=&_demo.skids[(start+i)%MAX_SKIDS];
-        if(_demo.simulation_time_ms-s->created_ms>SKID_LIFETIME_MS) continue;
-        stroke_line([self topPointX:s->lx0 y:s->ly0 scale:scale],[self topPointX:s->lx1 y:s->ly1 scale:scale],[NSColor darkGrayColor],2);
-        stroke_line([self topPointX:s->rx0 y:s->ry0 scale:scale],[self topPointX:s->rx1 y:s->ry1 scale:scale],[NSColor darkGrayColor],2); }
+        unsigned int age=_demo.simulation_time_ms-s->created_ms;
+        if(age>SKID_LIFETIME_MS) continue;
+        NSColor *color=skid_color(age); CGFloat width=age<9000?3:2;
+        stroke_line([self topPointX:s->lx0 y:s->ly0 scale:scale],[self topPointX:s->lx1 y:s->ly1 scale:scale],color,width);
+        stroke_line([self topPointX:s->rx0 y:s->ry0 scale:scale],[self topPointX:s->rx1 y:s->ry1 scale:scale],color,width); }
     KartVec3 r,f,u; kart_axes(_demo.kart.orientation,&r,&f,&u); (void)u;
+    NSPoint center=[self topPointX:_demo.kart.position.x y:_demo.kart.position.y scale:scale];
+    if(_demo.boost_active) {
+        NSPoint flame[3]={
+            [self topPointX:_demo.kart.position.x-f.x*3.2f y:_demo.kart.position.y-f.y*3.2f scale:scale],
+            [self topPointX:_demo.kart.position.x-f.x*.7f+r.x*.48f y:_demo.kart.position.y-f.y*.7f+r.y*.48f scale:scale],
+            [self topPointX:_demo.kart.position.x-f.x*.7f-r.x*.48f y:_demo.kart.position.y-f.y*.7f-r.y*.48f scale:scale]};
+        fill_polygon(flame,3,rgb(255,205,45),rgb(255,205,45));
+    }
     NSPoint body[4]; float w=_demo.kart.geometry.half_width,l=_demo.kart.geometry.half_length;
     const float sx[4]={-w,w,w,-w}, sy[4]={-l,-l,l,l};
     for(int i=0;i<4;i++) body[i]=[self topPointX:_demo.kart.position.x+r.x*sx[i]+f.x*sy[i] y:_demo.kart.position.y+r.y*sx[i]+f.y*sy[i] scale:scale];
-    fill_polygon(body,4,_demo.boost_active?[NSColor cyanColor]:[NSColor orangeColor],[NSColor whiteColor]);
+    fill_polygon(body,4,kart_body_color(&_demo),rgb(255,230,220));
+    NSPoint nose=[self topPointX:_demo.kart.position.x+f.x*l y:_demo.kart.position.y+f.y*l scale:scale];
+    stroke_line(center,nose,rgb(255,245,180),2);
+    float speed=hypotf(_demo.kart.linear_velocity.x,_demo.kart.linear_velocity.y);
+    if(speed>.01f) {
+        float arrow=fminf(speed*.18f,9.0f);
+        NSPoint velocity=[self topPointX:_demo.kart.position.x+_demo.kart.linear_velocity.x/speed*arrow
+            y:_demo.kart.position.y+_demo.kart.linear_velocity.y/speed*arrow scale:scale];
+        stroke_line(center,velocity,rgb(80,230,255),3);
+    }
 }
 
 - (void)draw3D
 {
     MacCamera camera=make_camera(&_demo,self.bounds);
     float hw=kart_demo_track_width(_demo.track_spec)/2, hh=kart_demo_track_length(_demo.track_spec)/2;
-    int x0=(int)floorf((_demo.kart.position.x-100)/10)*10;
-    int y0=(int)floorf((_demo.kart.position.y-100)/10)*10;
-    for(float x=x0;x<=_demo.kart.position.x+100;x+=10) line3d(self.bounds,camera,(KartVec3){x,fmaxf(-hh,_demo.kart.position.y-100),0},(KartVec3){x,fminf(hh,_demo.kart.position.y+100),0},[NSColor colorWithCalibratedWhite:.28 alpha:1],1);
-    for(float y=y0;y<=_demo.kart.position.y+100;y+=10) line3d(self.bounds,camera,(KartVec3){fmaxf(-hw,_demo.kart.position.x-100),y,0},(KartVec3){fminf(hw,_demo.kart.position.x+100),y,0},[NSColor colorWithCalibratedWhite:.28 alpha:1],1);
+    const float gridRadius=140.0f;
+    int x0=(int)floorf((_demo.kart.position.x-gridRadius)/10)*10;
+    int y0=(int)floorf((_demo.kart.position.y-gridRadius)/10)*10;
+    for(float x=x0;x<=_demo.kart.position.x+gridRadius;x+=10) line3d(self.bounds,camera,(KartVec3){x,fmaxf(-hh,_demo.kart.position.y-gridRadius),0},(KartVec3){x,fminf(hh,_demo.kart.position.y+gridRadius),0},rgb(86,98,108),1);
+    for(float y=y0;y<=_demo.kart.position.y+gridRadius;y+=10) line3d(self.bounds,camera,(KartVec3){fmaxf(-hw,_demo.kart.position.x-gridRadius),y,0},(KartVec3){fminf(hw,_demo.kart.position.x+gridRadius),y,0},rgb(86,98,108),1);
     KartVec3 wall[4]={{-hw,-hh,0},{hw,-hh,0},{hw,hh,0},{-hw,hh,0}};
-    for(int i=0;i<4;i++) { line3d(self.bounds,camera,wall[i],wall[(i+1)%4],[NSColor cyanColor],3); wall[i].z=4; }
-    for(int i=0;i<4;i++) { KartVec3 bottom=wall[i]; bottom.z=0; line3d(self.bounds,camera,bottom,wall[i],[NSColor cyanColor],2); line3d(self.bounds,camera,wall[i],wall[(i+1)%4],[NSColor cyanColor],2); }
+    for(int i=0;i<4;i++) { line3d(self.bounds,camera,wall[i],wall[(i+1)%4],rgb(75,220,255),4); wall[i].z=.8f; }
+    for(int i=0;i<4;i++) line3d(self.bounds,camera,wall[i],wall[(i+1)%4],rgb(75,220,255),4);
     unsigned int start=(_demo.skid_head+MAX_SKIDS-_demo.skid_count)%MAX_SKIDS;
     for(unsigned int i=0;i<_demo.skid_count;i++) { MacSkid *s=&_demo.skids[(start+i)%MAX_SKIDS];
-        if(_demo.simulation_time_ms-s->created_ms>SKID_LIFETIME_MS) continue;
-        line3d(self.bounds,camera,(KartVec3){s->lx0,s->ly0,.03f},(KartVec3){s->lx1,s->ly1,.03f},[NSColor darkGrayColor],2);
-        line3d(self.bounds,camera,(KartVec3){s->rx0,s->ry0,.03f},(KartVec3){s->rx1,s->ry1,.03f},[NSColor darkGrayColor],2); }
+        unsigned int age=_demo.simulation_time_ms-s->created_ms;
+        if(age>SKID_LIFETIME_MS) continue;
+        NSColor *color=skid_color(age); CGFloat width=age<4000?4:(age<9000?3:2);
+        line3d(self.bounds,camera,(KartVec3){s->lx0,s->ly0,.025f},(KartVec3){s->lx1,s->ly1,.025f},color,width);
+        line3d(self.bounds,camera,(KartVec3){s->rx0,s->ry0,.025f},(KartVec3){s->rx1,s->ry1,.025f},color,width); }
     KartVec3 r,f,u; kart_axes(_demo.kart.orientation,&r,&f,&u);
-    float w=_demo.kart.geometry.half_width,l=_demo.kart.geometry.half_length,h=.65f;
+    if(_demo.boost_active) {
+        KartVec3 rear=vadd(_demo.kart.position,vadd(vscale(f,-_demo.kart.geometry.half_length),vscale(u,.35f)));
+        KartVec3 flameWorld[3]={
+            vadd(rear,vscale(r,_demo.kart.geometry.half_width*.42f)),
+            vadd(rear,vscale(r,-_demo.kart.geometry.half_width*.42f)),
+            vadd(rear,vadd(vscale(f,-2.8f),vscale(u,-.08f)))};
+        NSPoint flame[3]; bool visible=true;
+        for(int i=0;i<3;i++) { MacProjected p=project(self.bounds,camera,flameWorld[i]); flame[i]=p.point; visible=visible&&p.visible; }
+        if(visible) fill_polygon(flame,3,rgb(255,198,35),rgb(90,225,255));
+    }
+    float w=_demo.kart.geometry.half_width,l=_demo.kart.geometry.half_length;
+    float roofW=w*.8f,roofL=l*.75f,h=_demo.kart_spec->model_height;
     KartVec3 world[8]; MacProjected pp[8];
-    for(int i=0;i<8;i++){ float sx=(i&1)?w:-w, sy=(i&2)?l:-l, sz=(i&4)?h:0;
-        world[i]=vadd(_demo.kart.position,vadd(vscale(r,sx),vadd(vscale(f,sy),vscale(u,sz)))); pp[i]=project(self.bounds,camera,world[i]); }
+    for(int i=0;i<8;i++){ float sx=(i&1)?((i&4)?roofW:w):-((i&4)?roofW:w);
+        float sy=(i&2)?((i&4)?roofL:l):-((i&4)?roofL:l), sz=(i&4)?h:0;
+        world[i]=vadd(_demo.kart.position,vadd(vscale(r,sx),vadd(vscale(f,sy),vscale(u,sz+.15f)))); pp[i]=project(self.bounds,camera,world[i]); }
     const int edges[12][2]={{0,1},{1,3},{3,2},{2,0},{4,5},{5,7},{7,6},{6,4},{0,4},{1,5},{2,6},{3,7}};
-    for(int i=0;i<12;i++) if(pp[edges[i][0]].visible&&pp[edges[i][1]].visible) stroke_line(pp[edges[i][0]].point,pp[edges[i][1]].point,_demo.boost_active?[NSColor cyanColor]:[NSColor orangeColor],3);
+    if(pp[4].visible&&pp[5].visible&&pp[7].visible&&pp[6].visible) {
+        NSPoint roof[4]={pp[4].point,pp[5].point,pp[7].point,pp[6].point};
+        fill_polygon(roof,4,kart_body_color(&_demo),rgb(255,230,220));
+    }
+    for(int i=0;i<12;i++) if(pp[edges[i][0]].visible&&pp[edges[i][1]].visible) stroke_line(pp[edges[i][0]].point,pp[edges[i][1]].point,rgb(255,230,220),2);
+    KartVec3 origin=vadd(_demo.kart.position,vscale(u,1.0f));
+    line3d(self.bounds,camera,origin,vadd(origin,vscale(f,4.0f)),rgb(255,245,180),2);
+    float speed=sqrtf(vdot(_demo.kart.linear_velocity,_demo.kart.linear_velocity));
+    if(speed>.01f) line3d(self.bounds,camera,origin,
+        vadd(origin,vscale(_demo.kart.linear_velocity,fminf(speed*.18f,9.0f)/speed)),rgb(80,230,255),3);
 }
 
 - (void)drawRect:(NSRect)dirtyRect
 {
     (void)dirtyRect;
-    [[NSColor colorWithCalibratedRed:.075 green:.095 blue:.13 alpha:1] setFill]; NSRectFill(self.bounds);
 #ifdef KART_DEMO_3D
+    [rgb(19,24,33) setFill]; NSRectFill(self.bounds);
     [self draw3D];
 #else
+    [rgb(22,25,31) setFill]; NSRectFill(self.bounds);
     [self drawTopDown];
 #endif
     [self drawMinimap];
     [self drawSpeedometer];
-    NSString *help=@"Arrows: drive   Shift/W: drift   Cmd/D: boost   K: kart   T: track   G: drag   R: reset";
-    [help drawAtPoint:NSMakePoint(16,12) withAttributes:[self textAttributes:13 color:[NSColor whiteColor] bold:NO]];
-    NSString *status=[NSString stringWithFormat:@"%s | %s | DRIFT %@ | BOOST %@",
-        _demo.track_spec->display_name,_demo.kart_spec->asset_name,
-        drift_active(&_demo.kart)?@"ON":@"off",_demo.boost_active?@"ON":@"off"];
-    [status drawAtPoint:NSMakePoint(16,34) withAttributes:[self textAttributes:13 color:(_demo.boost_active?[NSColor cyanColor]:[NSColor lightGrayColor]) bold:YES]];
+    KartVec3 bodyRight,bodyForward,bodyUp;
+    kart_axes(_demo.kart.orientation,&bodyRight,&bodyForward,&bodyUp); (void)bodyUp;
+#ifdef KART_DEMO_3D
+    float speed=sqrtf(vdot(_demo.kart.linear_velocity,_demo.kart.linear_velocity));
+#else
+    float speed=hypotf(_demo.kart.linear_velocity.x,_demo.kart.linear_velocity.y);
+#endif
+    float forwardSpeed=vdot(_demo.kart.linear_velocity,bodyForward);
+    float lateralSpeed=vdot(_demo.kart.linear_velocity,bodyRight);
+    float slip=atan2f(fabsf(lateralSpeed),fabsf(forwardSpeed))*180.0f/3.14159265358979323846f;
+    NSDictionary *normal=[self textAttributes:13 color:rgb(235,240,245) bold:NO];
+    NSString *telemetry=[NSString stringWithFormat:@"speed %.2f m/s | slip %.1f deg | vf %.1f vs %.1f | AUTO %s",
+        speed,slip,forwardSpeed,lateralSpeed,_demo.kart.drift.slip_detected?"ON":"off"];
+    [telemetry drawAtPoint:NSMakePoint(16,12) withAttributes:normal];
+    NSString *help=@"Arrows: drive  Shift/W: drift  Cmd/D: boost  K: kart list  T: track list  G: drag trigger  R: reset";
+    [help drawAtPoint:NSMakePoint(16,32) withAttributes:normal];
+#ifdef KART_DEMO_3D
+    NSString *selection=[NSString stringWithFormat:@"%s (%s) %.1f x %.1f | kart %s %.3f x %.3f | h %.2f",
+        _demo.track_spec->display_name,_demo.track_spec->asset_name,
+        kart_demo_track_width(_demo.track_spec),kart_demo_track_length(_demo.track_spec),
+        _demo.kart_spec->asset_name,_demo.kart.geometry.half_width*2,
+        _demo.kart.geometry.half_length*2,_demo.kart.position.z];
+#else
+    NSString *selection=[NSString stringWithFormat:@"%s (%s) %.1f x %.1f | kart %s %.3f x %.3f",
+        _demo.track_spec->display_name,_demo.track_spec->asset_name,
+        kart_demo_track_width(_demo.track_spec),kart_demo_track_length(_demo.track_spec),
+        _demo.kart_spec->asset_name,_demo.kart.geometry.half_width*2,
+        _demo.kart.geometry.half_length*2];
+#endif
+    NSColor *selectionColor=_demo.kart.drift.slip_detected?rgb(255,185,55):rgb(180,195,205);
+    [selection drawAtPoint:NSMakePoint(16,52)
+        withAttributes:[self textAttributes:13 color:selectionColor bold:NO]];
+    NSString *state=[NSString stringWithFormat:@"DRIFT %s | ITEM %s %.2fs | INSTANT READY %.2fs | INSTANT %s | drag x%.2f | skids %u",
+        drift_active(&_demo.kart)?"ON":"off",_demo.kart.timed_boost.active?"ON":"off",
+        (float)_demo.kart.timed_boost.remaining_ms*.001f,
+        _demo.kart.instant_boost.opportunity_timer,
+        _demo.kart.instant_boost.active?"ON":"off",
+        _demo.kart.grounded_drag_scale,_demo.skid_count];
+    NSColor *stateColor=_demo.boost_active?rgb(75,225,255):
+        (drift_active(&_demo.kart)?rgb(255,185,55):rgb(180,195,205));
+    [state drawAtPoint:NSMakePoint(16,72)
+        withAttributes:[self textAttributes:13 color:stateColor bold:NO]];
 }
 @end
 

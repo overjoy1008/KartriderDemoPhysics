@@ -1,8 +1,14 @@
 /analysis/ghidra-home/
 /analysis/ghidra-project/
-/build-verify/*
-!/build-verify/README.md
-!/build-verify/kart_topdown.exe
-!/build-verify/kart_3d.exe
+/build-win/*
+!/build-win/README.md
+!/build-win/kart_topdown.exe
+!/build-win/kart_3d.exe
 /input/
 /tools/
+/.build-macos/
+/build-macos/*.zip
+
+# macOS Finder metadata (at any directory depth)
+.DS_Store
+**/.DS_Store

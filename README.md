@@ -19,6 +19,24 @@ top-down program projects that state onto X-Y; the 3D program renders it with
 the existing fixed chase camera. These screenshots were captured from the
 current Windows build while drifting and using the item boost.
 
+## Run the included simulators
+
+No build is required to try the checked-in applications.
+
+On **Windows**, open one of these files:
+
+- `build-win/kart_topdown.exe` — top-down view
+- `build-win/kart_3d.exe` — 3D chase-camera view
+
+On **macOS**, open one of these application bundles:
+
+- `build-macos/Kart Physics Top Down.app` — top-down view
+- `build-macos/Kart Physics 3D.app` — 3D chase-camera view
+
+On macOS, if Gatekeeper blocks the first launch, Control-click the application,
+choose **Open**, and confirm once. The ZIP files in `build-macos` are optional
+distribution copies; the `.app` bundles are the files to run directly.
+
 ## Read the recovery
 
 - **[Physics engine textbook](docs/PHYSICS_ENGINE_TEXTBOOK.md)** builds the
@@ -173,20 +191,29 @@ kart/track presets, flat-world collision callbacks, skid marks, bounds map,
 speedometer, and the `K`/`T` selection menus are shared in behavior with the
 Windows demos. The existing fixed 3D chase view is preserved.
 
-On a Mac with Xcode and CMake installed:
+On a Mac with CMake and either Xcode or the standalone Xcode Command Line
+Tools installed:
 
 ```sh
 bash scripts/build_macos.sh
 ```
 
-This builds and tests both applications, then creates:
+This builds and tests both applications, then creates directly executable app
+bundles plus ZIP copies for distribution:
 
-- `dist-macos/kart_topdown-macos.zip`
-- `dist-macos/kart_3d-macos.zip`
+- `build-macos/Kart Physics Top Down.app`
+- `build-macos/Kart Physics 3D.app`
+- `build-macos/kart_topdown-macos.zip`
+- `build-macos/kart_3d-macos.zip`
+
+CMake's intermediate files are kept separately in the hidden
+`.build-macos` directory; only `build-macos` contains files intended for use or
+distribution.
 
 macOS uses native `.app` bundles rather than Windows `.exe` files. Extract a
-zip and open the contained application. Locally built unsigned applications
-may require Control-click, then **Open**, the first time they are launched.
+zip and open the contained application. The script applies a local ad-hoc
+signature; because it is not an Apple Developer ID signature, the application
+may require Control-click, then **Open**, the first time it is launched.
 
 Controls match Windows except that the item-boost modifier is **Command**:
 

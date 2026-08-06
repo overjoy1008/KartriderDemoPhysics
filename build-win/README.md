@@ -13,7 +13,7 @@ reproducible build artifacts and are intentionally excluded from Git.
 To rebuild and run the verification suite:
 
 ```powershell
-cmake -S . -B build-verify -G "MinGW Makefiles"
-cmake --build build-verify
-ctest --test-dir build-verify --output-on-failure
+cmake -S . -B .build-win -G "MinGW Makefiles"
+cmake --build .build-win
+ctest --test-dir .build-win --output-on-failure
 ```
