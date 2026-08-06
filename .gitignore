@@ -1,6 +1,8 @@
 /analysis/ghidra-home/
 /analysis/ghidra-project/
-/build/
-/build-*/
+/build-verify/*
+!/build-verify/README.md
+!/build-verify/kart_topdown.exe
+!/build-verify/kart_3d.exe
 /input/
 /tools/
