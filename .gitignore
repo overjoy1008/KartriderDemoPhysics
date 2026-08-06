@@ -4,6 +4,7 @@
 !/build-win/README.md
 !/build-win/kart_topdown.exe
 !/build-win/kart_3d.exe
+/.build-win/
 /input/
 /tools/
 /.build-macos/

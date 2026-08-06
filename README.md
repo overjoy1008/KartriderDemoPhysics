@@ -28,6 +28,10 @@ On **Windows**, open one of these files:
 - `build-win/kart_topdown.exe` — top-down view
 - `build-win/kart_3d.exe` — 3D chase-camera view
 
+Each Windows executable is self-contained and can be copied by itself to
+another 64-bit Windows 10/11 computer. No asset directory or separate MinGW
+runtime DLL is required.
+
 On **macOS**, open one of these application bundles:
 
 - `build-macos/Kart Physics Top Down.app` — top-down view
@@ -98,7 +102,7 @@ both suites. The trajectory suite's worst normalized scalar similarity is
 `0.999989`, with zero drift-flag mismatches. These numbers describe the tested
 synthetic flat/planar scenarios, not the unrecovered proprietary track query.
 
-## Build
+## Build from source
 
 ```powershell
 cmake -S . -B build
