@@ -1,0 +1,332 @@
+KartRider.exe camera RTTI and vftable report
+
+SYMBOL 00572690 u_Front_Chase_Cameraman_00572690 type=Label
+  ref-from 00445352 type=DATA
+  containing-function: 00445320 FUN_00445320
+
+SYMBOL 005726bc u_Overhead_Chase_Cameraman_005726bc type=Label
+  ref-from 00445340 type=DATA
+  containing-function: 00445320 FUN_00445320
+
+SYMBOL 0057271c u_ReCamera_Kart_Cameraman_0057271c type=Label
+  ref-from 004455e7 type=DATA
+  containing-function: 004455e0 FUN_004455e0
+
+SYMBOL 00572778 u_Top_Cameraman_00572778 type=Label
+  ref-from 00445797 type=DATA
+  containing-function: 00445790 FUN_00445790
+
+SYMBOL 005727c0 u_Point_Cameraman_005727c0 type=Label
+  ref-from 00445c47 type=DATA
+  containing-function: 00445c40 FUN_00445c40
+
+SYMBOL 00572810 u_Jump_Cameraman_00572810 type=Label
+  ref-from 00446017 type=DATA
+  containing-function: 00446010 FUN_00446010
+
+SYMBOL 0057285c u_Surround_Cameraman_0057285c type=Label
+  ref-from 00447327 type=DATA
+  containing-function: 00447320 FUN_00447320
+  ref-from 00446b97 type=DATA
+  containing-function: 00446b90 FUN_00446b90
+
+SYMBOL 005728dc u_Spot_Cameraman_005728dc type=Label
+  ref-from 00447497 type=DATA
+  containing-function: 00447490 FUN_00447490
+
+SYMBOL 005728fc s_ChaseCameraman_005728fc type=Label
+  ref-from 00447823 type=DATA
+  containing-function: 00447810 FUN_00447810
+
+SYMBOL 0057290c s_KartReCameraman_0057290c type=Label
+  ref-from 00447893 type=DATA
+  containing-function: 00447880 FUN_00447880
+
+SYMBOL 0057291c s_TopCameraman_0057291c type=Label
+  ref-from 00447903 type=DATA
+  containing-function: 004478f0 FUN_004478f0
+
+SYMBOL 0057292c s_PointCameraman_0057292c type=Label
+  ref-from 00447973 type=DATA
+  containing-function: 00447960 FUN_00447960
+
+SYMBOL 0057293c s_JumpCameraman_0057293c type=Label
+  ref-from 004479e3 type=DATA
+  containing-function: 004479d0 FUN_004479d0
+
+SYMBOL 0057294c s_SurroundCameraman_0057294c type=Label
+  ref-from 00447a53 type=DATA
+  containing-function: 00447a40 FUN_00447a40
+
+SYMBOL 00572960 s_FinalCameraman_00572960 type=Label
+  ref-from 00447ac3 type=DATA
+  containing-function: 00447ab0 FUN_00447ab0
+
+SYMBOL 00572970 s_SpotCameraman_00572970 type=Label
+  ref-from 00447b33 type=DATA
+  containing-function: 00447b20 FUN_00447b20
+
+SYMBOL 005729bc u_FinalCameraman_005729bc type=Label
+  ref-from 004480e6 type=DATA
+  containing-function: 00447ed0 FUN_00447ed0
+
+SYMBOL 00572d7c u_camera_00572d7c type=Label
+  ref-from 0044d83e type=DATA
+  containing-function: 0044d460 FUN_0044d460
+  ref-from 004c180b type=DATA
+  containing-function: 004c17d0 FUN_004c17d0
+  ref-from 004c184b type=DATA
+  containing-function: 004c17d0 FUN_004c17d0
+
+SYMBOL 00572ed8 u_KartReCameraman_00572ed8 type=Label
+  ref-from 004566ce type=DATA
+  containing-function: 00455c80 FUN_00455c80
+  ref-from 00451d1b type=DATA
+  containing-function: 004511b0 FUN_004511b0
+
+SYMBOL 00572ef8 u_readyCamera_00572ef8 type=Label
+  ref-from 0045664f type=DATA
+  containing-function: 00455c80 FUN_00455c80
+  ref-from 00451c9c type=DATA
+  containing-function: 004511b0 FUN_004511b0
+
+SYMBOL 00572fec u_SurroundCameraman_00572fec type=Label
+  ref-from 0045723e type=DATA
+  containing-function: 00456cd0 FUN_00456cd0
+  ref-from 00452469 type=DATA
+  containing-function: 00451eb0 FUN_00451eb0
+  ref-from 00452604 type=DATA
+  containing-function: 00451eb0 FUN_00451eb0
+
+SYMBOL 00573050 u_ChaseCameraman_00573050 type=Label
+  ref-from 00456f90 type=DATA
+  containing-function: 00456cd0 FUN_00456cd0
+  ref-from 004564e2 type=DATA
+  containing-function: 00455c80 FUN_00455c80
+  ref-from 00452170 type=DATA
+  containing-function: 00451eb0 FUN_00451eb0
+
+SYMBOL 00576054 s_ReCamera_00576054 type=Label
+  ref-from 0049dd63 type=DATA
+  containing-function: 0049dd50 FUN_0049dd50
+
+SYMBOL 00576c38 u_cameraName_00576c38 type=Label
+  ref-from 004c1997 type=DATA
+  containing-function: 004c17d0 FUN_004c17d0
+
+SYMBOL 00599890 Cameraman::RTTI_Type_Descriptor type=Label
+  ref-from 0058f4c4 type=DATA
+  containing-function: none
+  ref-from 0058f508 type=DATA
+  containing-function: none
+  RTTI traversal:
+    type-pointer 0058f4c4 -> COL 0058f4b8
+    type-pointer 0058f508 -> COL 0058f4fc
+      COL-pointer 00572620 -> vftable 00572624
+        [0] 00572624 -> 004474b0 FUN_004474b0
+        [1] 00572628 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [2] 0057262c -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [3] 00572630 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [4] 00572634 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [5] 00572638 -> 00479d90 FUN_00479d90
+        [6] 0057263c -> 00401f50 FUN_00401f50
+        [7] 00572640 -> 00478aca <no-function>
+        [8] 00572644 -> 00478aca <no-function>
+        [9] 00572648 -> 00478aca <no-function>
+
+SYMBOL 005998a8 ChaseCameraman::RTTI_Type_Descriptor type=Label
+  ref-from 0044781e type=DATA
+  containing-function: 00447810 FUN_00447810
+  ref-from 0058f510 type=DATA
+  containing-function: none
+  ref-from 0058f558 type=DATA
+  containing-function: none
+  RTTI traversal:
+    type-pointer 0044781f -> COL 00447813
+    type-pointer 0058f510 -> COL 0058f504
+    type-pointer 0058f558 -> COL 0058f54c
+      COL-pointer 0057264c -> vftable 00572650
+        [0] 00572650 -> 004474e0 FUN_004474e0
+        [1] 00572654 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [2] 00572658 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [3] 0057265c -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [4] 00572660 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [5] 00572664 -> 00479d90 FUN_00479d90
+        [6] 00572668 -> 00401f50 FUN_00401f50
+        [7] 0057266c -> 00444c00 FUN_00444c00
+        [8] 00572670 -> 00444c30 FUN_00444c30
+        [9] 00572674 -> 00445320 FUN_00445320
+
+SYMBOL 005998c8 KartReCameraman::RTTI_Type_Descriptor type=Label
+  ref-from 0044788e type=DATA
+  containing-function: 00447880 FUN_00447880
+  ref-from 0058f560 type=DATA
+  containing-function: none
+  ref-from 0058f5a8 type=DATA
+  containing-function: none
+  RTTI traversal:
+    type-pointer 0044788f -> COL 00447883
+    type-pointer 0058f560 -> COL 0058f554
+    type-pointer 0058f5a8 -> COL 0058f59c
+      COL-pointer 005726f0 -> vftable 005726f4
+        [0] 005726f4 -> 00447550 FUN_00447550
+        [1] 005726f8 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [2] 005726fc -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [3] 00572700 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [4] 00572704 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [5] 00572708 -> 00479d90 FUN_00479d90
+        [6] 0057270c -> 00401f50 FUN_00401f50
+        [7] 00572710 -> 00445430 FUN_00445430
+        [8] 00572714 -> 00445450 FUN_00445450
+        [9] 00572718 -> 004455e0 FUN_004455e0
+
+SYMBOL 005998e8 TopCameraman::RTTI_Type_Descriptor type=Label
+  ref-from 004478fe type=DATA
+  containing-function: 004478f0 FUN_004478f0
+  ref-from 0058f5b0 type=DATA
+  containing-function: none
+  ref-from 0058f5f8 type=DATA
+  containing-function: none
+  RTTI traversal:
+    type-pointer 004478ff -> COL 004478f3
+    type-pointer 0058f5b0 -> COL 0058f5a4
+    type-pointer 0058f5f8 -> COL 0058f5ec
+      COL-pointer 0057274c -> vftable 00572750
+        [0] 00572750 -> 00447580 FUN_00447580
+        [1] 00572754 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [2] 00572758 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [3] 0057275c -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [4] 00572760 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [5] 00572764 -> 00479d90 FUN_00479d90
+        [6] 00572768 -> 00401f50 FUN_00401f50
+        [7] 0057276c -> 00445660 FUN_00445660
+        [8] 00572770 -> 00445670 FUN_00445670
+        [9] 00572774 -> 00445790 FUN_00445790
+
+SYMBOL 00599904 PointCameraman::RTTI_Type_Descriptor type=Label
+  ref-from 0044796e type=DATA
+  containing-function: 00447960 FUN_00447960
+  ref-from 0058f600 type=DATA
+  containing-function: none
+  ref-from 0058f648 type=DATA
+  containing-function: none
+  RTTI traversal:
+    type-pointer 0044796f -> COL 00447963
+    type-pointer 0058f600 -> COL 0058f5f4
+    type-pointer 0058f648 -> COL 0058f63c
+      COL-pointer 00572794 -> vftable 00572798
+        [0] 00572798 -> 004475b0 FUN_004475b0
+        [1] 0057279c -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [2] 005727a0 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [3] 005727a4 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [4] 005727a8 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [5] 005727ac -> 00479d90 FUN_00479d90
+        [6] 005727b0 -> 00401f50 FUN_00401f50
+        [7] 005727b4 -> 00445810 FUN_00445810
+        [8] 005727b8 -> 00445830 FUN_00445830
+        [9] 005727bc -> 00445c40 FUN_00445c40
+
+SYMBOL 00599924 JumpCameraman::RTTI_Type_Descriptor type=Label
+  ref-from 004479de type=DATA
+  containing-function: 004479d0 FUN_004479d0
+  ref-from 0058f650 type=DATA
+  containing-function: none
+  ref-from 0058f698 type=DATA
+  containing-function: none
+  RTTI traversal:
+    type-pointer 004479df -> COL 004479d3
+    type-pointer 0058f650 -> COL 0058f644
+    type-pointer 0058f698 -> COL 0058f68c
+      COL-pointer 005727e0 -> vftable 005727e4
+        [0] 005727e4 -> 004475e0 FUN_004475e0
+        [1] 005727e8 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [2] 005727ec -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [3] 005727f0 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [4] 005727f4 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [5] 005727f8 -> 00479d90 FUN_00479d90
+        [6] 005727fc -> 00401f50 FUN_00401f50
+        [7] 00572800 -> 00445cc0 FUN_00445cc0
+        [8] 00572804 -> 00445d20 FUN_00445d20
+        [9] 00572808 -> 00446010 FUN_00446010
+
+SYMBOL 00599940 SurroundCameraman::RTTI_Type_Descriptor type=Label
+  ref-from 00447a4e type=DATA
+  containing-function: 00447a40 FUN_00447a40
+  ref-from 0058f6a0 type=DATA
+  containing-function: none
+  ref-from 0058f6e8 type=DATA
+  containing-function: none
+  RTTI traversal:
+    type-pointer 00447a4f -> COL 00447a43
+    type-pointer 0058f6a0 -> COL 0058f694
+    type-pointer 0058f6e8 -> COL 0058f6dc
+      COL-pointer 00572830 -> vftable 00572834
+        [0] 00572834 -> 00447610 FUN_00447610
+        [1] 00572838 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [2] 0057283c -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [3] 00572840 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [4] 00572844 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [5] 00572848 -> 00479d90 FUN_00479d90
+        [6] 0057284c -> 00401f50 FUN_00401f50
+        [7] 00572850 -> 004460d0 FUN_004460d0
+        [8] 00572854 -> 004468d0 FUN_004468d0
+        [9] 00572858 -> 00446b90 FUN_00446b90
+
+SYMBOL 00599960 FinalCameraman::RTTI_Type_Descriptor type=Label
+  ref-from 00447abe type=DATA
+  containing-function: 00447ab0 FUN_00447ab0
+  ref-from 0058f6f0 type=DATA
+  containing-function: none
+  ref-from 0058f738 type=DATA
+  containing-function: none
+  RTTI traversal:
+    type-pointer 00447abf -> COL 00447ab3
+    type-pointer 0058f6f0 -> COL 0058f6e4
+    type-pointer 0058f738 -> COL 0058f72c
+      COL-pointer 00572884 -> vftable 00572888
+        [0] 00572888 -> 00447640 FUN_00447640
+        [1] 0057288c -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [2] 00572890 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [3] 00572894 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [4] 00572898 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [5] 0057289c -> 00479d90 FUN_00479d90
+        [6] 005728a0 -> 00401f50 FUN_00401f50
+        [7] 005728a4 -> 00446c50 FUN_00446c50
+        [8] 005728a8 -> 00447060 FUN_00447060
+        [9] 005728ac -> 00447320 FUN_00447320
+
+SYMBOL 00599980 SpotCameraman::RTTI_Type_Descriptor type=Label
+  ref-from 00447b2e type=DATA
+  containing-function: 00447b20 FUN_00447b20
+  ref-from 0058f740 type=DATA
+  containing-function: none
+  ref-from 0058f788 type=DATA
+  containing-function: none
+  RTTI traversal:
+    type-pointer 00447b2f -> COL 00447b23
+    type-pointer 0058f740 -> COL 0058f734
+    type-pointer 0058f788 -> COL 0058f77c
+      COL-pointer 005728b0 -> vftable 005728b4
+        [0] 005728b4 -> 00447670 FUN_00447670
+        [1] 005728b8 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [2] 005728bc -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [3] 005728c0 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [4] 005728c4 -> 004b4940 CFindReplaceDialog::DoDataExchange
+        [5] 005728c8 -> 00479d90 FUN_00479d90
+        [6] 005728cc -> 00401f50 FUN_00401f50
+        [7] 005728d0 -> 004473a0 FUN_004473a0
+        [8] 005728d4 -> 004473b0 FUN_004473b0
+        [9] 005728d8 -> 00447490 FUN_00447490
+
+SYMBOL 00599b10 the::ReCamera::RTTI_Type_Descriptor type=Label
+  ref-from 0044b408 type=DATA
+  containing-function: 0044b400 FUN_0044b400
+  ref-from 004aace8 type=DATA
+  containing-function: 004aace0 FUN_004aace0
+  ref-from 0049dd5e type=DATA
+  containing-function: 0049dd50 FUN_0049dd50
+  ref-from 004c1db7 type=DATA
+  containing-function: 004c1db0 FUN_004c1db0
+  ref-from 00591820 type=DATA
+  containing-function: none
+

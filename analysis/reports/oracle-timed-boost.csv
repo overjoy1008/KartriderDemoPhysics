@@ -1,0 +1,4 @@
+phase,remaining_ms,timed_active,instant_active,is_boosting,force_x,force_y,force_z
+no_forward,0,0,0,0,0,0,0
+timed,3000,1,0,1,0,-4500,0
+instant,0,0,1,1,0,-4500,0

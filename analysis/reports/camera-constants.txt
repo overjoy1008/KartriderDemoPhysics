@@ -1,0 +1,30 @@
+Chase camera constants
+
+00572678 bits=0x42700000 float=60.0
+0057267c bits=0x3cf5c28f float=0.03
+00572680 bits=0x43c80000 float=400.0
+00572684 bits=0x40b00000 float=5.5
+00572688 bits=0x3c75c28f float=0.015
+00571490 bits=0x3f800000 float=1.0
+00571808 bits=0x0 float=0.0
+005712c0 bits=0x3e800000 float=0.25
+005722c0 bits=0x40400000 float=3.0
+
+FLOAT 90.0 bits=0x42b40000
+  at 00466fb9 block=.text
+  at 00576334 block=.rdata
+    ref 004ac4fc 004ac3e0 FUN_004ac3e0
+
+FLOAT 1.5707964 bits=0x3fc90fdb
+  at 005866f0 block=.rdata
+  at 005866f4 block=.rdata
+  at 005866f8 block=.rdata
+  at 005866fc block=.rdata
+  at 005a4434 block=.data
+    ref 00507a7c 005079c0 FUN_005079c0
+
+FLOAT -1.5707964 bits=0xbfc90fdb
+  at 005a4438 block=.data
+    ref 00507a67 005079c0 FUN_005079c0
+    ref 00507987 005078c0 FUN_005078c0
+

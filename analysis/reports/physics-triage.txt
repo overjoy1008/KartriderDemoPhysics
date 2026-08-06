@@ -1,0 +1,191 @@
+KartRider Demo physics triage
+Program: KartRider.exe
+Language: x86:LE:32:default
+Compiler: windows
+Functions: 9065
+
+[Memory blocks]
+Headers 00400000-00400fff size=0x1000 r=true w=false x=false
+.text 00401000-0056ffff size=0x16f000 r=true w=false x=true
+.rdata 00570000-00595fff size=0x26000 r=true w=false x=false
+.data 00596000-005d74fb size=0x414fc r=true w=true x=false
+.tls 005d8000-005d8fff size=0x1000 r=true w=true x=false
+.data1 005d9000-005dafff size=0x2000 r=true w=true x=false
+.rsrc 005db000-005e0fff size=0x6000 r=true w=false x=false
+tdb ffdff000-ffdfffff size=0x1000 r=true w=true x=false
+
+[Ranked candidate functions]
+  1 score=72 0042e190 FUN_0042e190 reasons=symbol:accel,symbol:brake,symbol:drift,symbol:steer
+  2 score=54 004511b0 FUN_004511b0 reasons=symbol:boost,symbol:drift,symbol:kart,symbol:tire
+  3 score=48 00455c80 FUN_00455c80 reasons=symbol:boost,symbol:drift,symbol:kart
+  4 score=48 00468ac0 FUN_00468ac0 reasons=symbol:kart,symbol:rider
+  5 score=42 00558820 FUN_00558820 reasons=math-call:_cipow
+  6 score=36 00464e90 FUN_00464e90 reasons=symbol:kart
+  7 score=24 0041eb20 FUN_0041eb20 reasons=symbol:kart,symbol:rider
+  8 score=24 00475f00 FUN_00475f00 reasons=symbol:rider
+  9 score=24 004771c0 FUN_004771c0 reasons=symbol:kart
+ 10 score=24 0047800e FUN_0047800e reasons=symbol:drive
+ 11 score=21 00558100 FUN_00558100 reasons=math-call:_cipow
+ 12 score=18 00424b30 FUN_00424b30 reasons=symbol:kart
+ 13 score=18 00428ad0 FUN_00428ad0 reasons=symbol:kart
+ 14 score=18 0044d460 FUN_0044d460 reasons=symbol:kart
+ 15 score=12 00406320 FUN_00406320 reasons=symbol:kart
+ 16 score=12 00411180 FUN_00411180 reasons=symbol:boost
+ 17 score=12 004123e0 FUN_004123e0 reasons=symbol:kart
+ 18 score=12 0042b8e0 FUN_0042b8e0 reasons=symbol:kart
+ 19 score=12 0042b950 FUN_0042b950 reasons=symbol:kart
+ 20 score=12 0042bba0 FUN_0042bba0 reasons=symbol:kart
+ 21 score=12 0042be30 FUN_0042be30 reasons=symbol:kart
+ 22 score=12 0042dc50 FUN_0042dc50 reasons=symbol:kart
+ 23 score=12 004321b0 FUN_004321b0 reasons=symbol:kart
+ 24 score=12 004381c0 FUN_004381c0 reasons=symbol:kart
+ 25 score=12 00439c10 FUN_00439c10 reasons=symbol:kart
+ 26 score=12 00439c70 FUN_00439c70 reasons=symbol:kart
+ 27 score=12 0043bc20 FUN_0043bc20 reasons=symbol:kart
+ 28 score=12 0043c930 FUN_0043c930 reasons=symbol:kart
+ 29 score=12 0043cce0 FUN_0043cce0 reasons=symbol:kart
+ 30 score=12 0043dff0 FUN_0043dff0 reasons=symbol:kart
+ 31 score=12 0043e070 FUN_0043e070 reasons=symbol:kart
+ 32 score=12 0043ee60 FUN_0043ee60 reasons=symbol:kart
+ 33 score=12 0043f400 FUN_0043f400 reasons=symbol:kart
+ 34 score=12 00441a10 FUN_00441a10 reasons=symbol:kart
+ 35 score=12 00441aa0 FUN_00441aa0 reasons=symbol:kart
+ 36 score=12 00443aa0 FUN_00443aa0 reasons=symbol:kart
+ 37 score=12 00447880 FUN_00447880 reasons=symbol:kart
+ 38 score=12 00459ff0 FUN_00459ff0 reasons=symbol:kart
+ 39 score=12 0045b1c0 FUN_0045b1c0 reasons=symbol:rider
+ 40 score=12 0045cec0 FUN_0045cec0 reasons=symbol:rider
+ 41 score=12 00460df0 FUN_00460df0 reasons=symbol:rider
+ 42 score=12 004610d0 FUN_004610d0 reasons=symbol:rider
+ 43 score=12 00465430 FUN_00465430 reasons=symbol:kart
+ 44 score=12 00468db0 FUN_00468db0 reasons=symbol:rider
+ 45 score=12 0046ce50 FUN_0046ce50 reasons=symbol:drift
+ 46 score=12 00476ff0 FUN_00476ff0 reasons=symbol:kart,symbol:rider
+ 47 score=12 00477520 FUN_00477520 reasons=symbol:kart
+ 48 score=12 004b6db0 FUN_004b6db0 reasons=symbol:kart
+ 49 score= 8 00477f73 driveandpathC reasons=function-name:drive
+ 50 score= 6 0040c680 FUN_0040c680 reasons=symbol:rider
+ 51 score= 6 00421db0 FUN_00421db0 reasons=symbol:rider
+ 52 score= 6 00422100 FUN_00422100 reasons=symbol:rider
+ 53 score= 6 00422a50 FUN_00422a50 reasons=symbol:rider
+ 54 score= 6 0042bf50 FUN_0042bf50 reasons=symbol:kart
+ 55 score= 6 0042c9e0 FUN_0042c9e0 reasons=symbol:kart
+ 56 score= 6 0042ed10 FUN_0042ed10 reasons=symbol:kart
+ 57 score= 6 00439960 FUN_00439960 reasons=symbol:kart
+ 58 score= 6 0043af50 FUN_0043af50 reasons=symbol:kart
+ 59 score= 6 0043ded0 FUN_0043ded0 reasons=symbol:kart
+ 60 score= 6 0043f1a0 FUN_0043f1a0 reasons=symbol:kart
+ 61 score= 6 004427a0 FUN_004427a0 reasons=symbol:kart
+ 62 score= 6 004455e0 FUN_004455e0 reasons=symbol:kart
+ 63 score= 6 00448f10 FUN_00448f10 reasons=symbol:tire
+ 64 score= 6 00451eb0 FUN_00451eb0 reasons=symbol:tire
+ 65 score= 6 0045dca0 FUN_0045dca0 reasons=symbol:kart
+ 66 score= 6 00464640 FUN_00464640 reasons=symbol:kart
+ 67 score= 6 00467e60 FUN_00467e60 reasons=symbol:rider
+ 68 score= 6 00475eb0 FUN_00475eb0 reasons=symbol:kart
+ 69 score= 6 0055bbe0 FUN_0055bbe0 reasons=symbol:ground
+ 70 score= 3 00413730 FUN_00413730 reasons=math-call:_cisqrt
+ 71 score= 3 00431ba0 FUN_00431ba0 reasons=math-call:_ciexp
+ 72 score= 3 00449550 FUN_00449550 reasons=math-call:_citan
+ 73 score= 3 0045b760 FUN_0045b760 reasons=math-call:floor
+ 74 score= 3 0046fe10 FUN_0046fe10 reasons=math-call:_ciatan
+ 75 score= 3 00478ac4 MSVCR71.DLL::_CIsqrt reasons=math-call:_cisqrt
+ 76 score= 3 00478b7a MSVCR71.DLL::_CIexp reasons=math-call:_ciexp
+ 77 score= 3 00478b80 MSVCR71.DLL::_CItan reasons=math-call:_citan
+ 78 score= 3 00478b86 MSVCR71.DLL::floor reasons=math-call:floor
+ 79 score= 3 00478b8c MSVCR71.DLL::_CIatan reasons=math-call:_ciatan
+ 80 score= 3 00480160 FUN_00480160 reasons=math-call:_cicos
+ 81 score= 3 00480180 FUN_00480180 reasons=math-call:_cisin
+ 82 score= 3 004827e0 FUN_004827e0 reasons=math-call:_ciacos
+ 83 score= 3 004df350 FUN_004df350 reasons=math-call:_cilog
+ 84 score= 3 004e4b04 FUN_004e4b04 reasons=math-call:floor
+ 85 score= 3 005679f0 MSVCR71.DLL::_CIcos reasons=math-call:_cicos
+ 86 score= 3 005679f6 MSVCR71.DLL::_CIsin reasons=math-call:_cisin
+ 87 score= 3 005679fc MSVCR71.DLL::_CIacos reasons=math-call:_ciacos
+ 88 score= 3 00567a10 MSVCR71.DLL::_CIlog reasons=math-call:_cilog
+ 89 score= 3 00567a22 MSVCR71.DLL::_CIpow reasons=math-call:_cipow
+
+[Domain symbols]
+00477f73 _driveandpathC@12
+00477f73 driveandpathC
+0057091c s_Kart_GamePacket_0057091c
+00570dd8 u_riderIdFilter_00570dd8
+005710d4 u_boosterwave_005710d4
+005710fc u_booster_005710fc
+00571564 u_kart_00571564
+005715ac u_RiderData_005715ac
+005715d8 u_KartRider_005715d8
+005716d4 u_riderData_005716d4
+005718d4 u_kartNumber_005718d4
+005718ec u_kartColor_005718ec
+00571900 u_kartName_00571900
+0057194c s_GoKart_0057194c
+00571954 s_GoKartRecordFrame_00571954
+00571a30 s_GoNetKart_00571a30
+00571ae8 u_SteerLeanFactor_00571ae8
+00571b08 u_DriftLeanFactor_00571b08
+00571b4c u_DriftEscapeForce_00571b4c
+00571b70 u_DriftSlipFactor_00571b70
+00571b90 u_DriftTriggerTime_00571b90
+00571bb4 u_DriftTriggerFactor_00571bb4
+00571c1c u_SteerConstraint_00571c1c
+00571c3c u_MaxSteerAngle_00571c3c
+00571c58 u_SlipBrakeForce_00571c58
+00571c78 u_GripBrakeForce_00571c78
+00571c98 u_BackwardAccelForce_00571c98
+00571cc0 u_ForwardAccelForce_00571cc0
+00571d50 s_GoPlayKart_00571d50
+00571ea0 u_firedkart_00571ea0
+005720a8 u_[GoItemCube:_otherKart]_005720a8
+005720dc u_[GoItemCube:_yourKart]_005720dc
+0057271c u_ReCamera_Kart_Cameraman_0057271c
+0057290c s_KartReCameraman_0057290c
+00572ab4 u_Retire_00572ab4
+00572ed8 u_KartReCameraman_00572ed8
+00572f10 u_retire_00572f10
+00572f64 u_drift_00572f64
+00573348 s_ShadowKartRecord_00573348
+005734d4 u_NewRiderStage_005734d4
+005734f0 u_SelectRiderStage_005734f0
+005736c8 s_NewRiderStage_005736c8
+005739ac s_SelectRiderStage_005739ac
+00573d38 u_kartcard_00573d38
+00573e00 u_kartRect_00573e00
+00573e30 s_KartCard_00573e30
+0057420c u_ridercard_0057420c
+005742dc u_riderNameRect_005742dc
+005742f8 u_riderName_005742f8
+0057430c u_riderRect_0057430c
+00574320 s_RiderCard_00574320
+005746b8 u_drift_005746b8
+00574b1c u_KartRider_Client_00574b1c
+00574bd8 u_selectRider_00574bd8
+00574bf0 u_newRider_00574bf0
+00574d6c s_KartRider.exe_00574d6c
+00574d70 s_Rider.exe_00574d70
+00574dcc u_title=KartRider_Client_00574dcc
+00574dfc u_KartRider.dmp_00574dfc
+005764b0 s_ReKart_005764b0
+0057d5b0 s_Suspension_not_allowed_here_0057d5b0
+005898d0 s_Invalid_background_palette_index_005898d0
+00598fb0 Kart_GamePacket::RTTI_Type_Descriptor
+005992a4 the::GoKart::RTTI_Type_Descriptor
+005992c0 the::GoPlayKart::RTTI_Type_Descriptor
+005993a4 the::ReKartShadow::RTTI_Type_Descriptor
+005993c4 the::KartShadowCaster::RTTI_Type_Descriptor
+005993e8 the::Singleton<struct_the::KartManager>::RTTI_Type_Descriptor
+0059941c the::KartManager::RTTI_Type_Descriptor
+00599510 the::GoKartRecordFrame::RTTI_Type_Descriptor
+005995ac the::GoNetKart::RTTI_Type_Descriptor
+005998c8 KartReCameraman::RTTI_Type_Descriptor
+00599cfc ShadowKartRecord::RTTI_Type_Descriptor
+00599dc4 NewRiderStage::RTTI_Type_Descriptor
+00599e9c the::KartCard::RTTI_Type_Descriptor
+00599f20 SelectRiderStage::RTTI_Type_Descriptor
+00599f40 the::RiderCard::RTTI_Type_Descriptor
+0059a0d8 the::ReDriftEffect::RTTI_Type_Descriptor
+0059a0f8 the::DriftEffectManager::RTTI_Type_Descriptor
+0059ab48 the::ReKart::RTTI_Type_Descriptor
+
+[Vftables]
+005751e0 type_info::vftable

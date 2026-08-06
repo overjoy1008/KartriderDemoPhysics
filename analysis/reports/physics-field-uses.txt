@@ -1,0 +1,1102 @@
+Functions using confirmed GoKart dynamics field offsets
+Caution: scalar matching can include unrelated constants; rank by distinct fields.
+
+0042e190 FUN_0042e190 distinct=20 uses=25
+  +0x128 mass                     [0042e22b, 0042e5ea, 0042e602, 0042e61a, 0042e6c5]
+  +0x15c air_friction             [0042e261]
+  +0x160 drag_factor              [0042e297]
+  +0x164 forward_accel_force      [0042e2cd]
+  +0x168 backward_accel_force     [0042e303]
+  +0x16c grip_brake_force         [0042e339]
+  +0x170 slip_brake_force         [0042e36f]
+  +0x174 max_steer_angle          [0042e3a5]
+  +0x178 steer_constraint         [0042e3db]
+  +0x17c front_grip_factor        [0042e411]
+  +0x180 rear_grip_factor         [0042e447]
+  +0x184 drift_trigger_factor     [0042e47d]
+  +0x188 drift_trigger_time       [0042e4b3]
+  +0x18c drift_slip_factor        [0042e4e9]
+  +0x190 drift_escape_force       [0042e51f]
+  +0x194 corner_draw_factor       [0042e552]
+  +0x198 drift_lean_factor        [0042e588]
+  +0x19c steer_lean_factor        [0042e5be]
+  +0x218 weight_force             [0042e6d4, 0042e6ea]
+  +0x220 derived_weight_force     [0042e6f9]
+0042fc40 FUN_0042fc40 distinct=11 uses=22
+  +0x174 max_steer_angle          [0042fcf3, 0042ffce, 0043010d]
+  +0x178 steer_constraint         [0042fd16]
+  +0x17c front_grip_factor        [0042fe1c]
+  +0x180 rear_grip_factor         [0042fe28]
+  +0x128 mass                     [0042ffab, 004300ec, 00430146, 00430181, 00430282, 004302bd, 00430469, 0043049e]
+  +0x184 drift_trigger_factor     [0042ffdf]
+  +0x188 drift_trigger_time       [0043000c]
+  +0x18c drift_slip_factor        [004301b5, 004301d0]
+  +0x198 drift_lean_factor        [0043020c, 0043022e]
+  +0x19c steer_lean_factor        [00430300]
+  +0x194 corner_draw_factor       [00430334]
+00558100 FUN_00558100 distinct=9 uses=34
+  +0x15c air_friction             [0055810e, 00558154, 005581d7, 00558270, 0055836f, 00558598, 00558686]
+  +0x160 drag_factor              [0055813b, 0055814e, 00558246, 00558262, 0055833a, 00558369, 00558665, 00558678]
+  +0x164 forward_accel_force      [0055817c, 005581b4]
+  +0x16c grip_brake_force         [005581f7, 00558225]
+  +0x168 backward_accel_force     [00558252, 005582a4]
+  +0x17c front_grip_factor        [005582ca]
+  +0x170 slip_brake_force         [00558395, 005583bb, 00558454, 005584b4, 005584fb, 00558552]
+  +0x178 steer_constraint         [005585b2, 005585db, 00558632]
+  +0x174 max_steer_angle          [0055869e, 005586c0, 00558715]
+0053d960 FUN_0053d960 distinct=9 uses=25
+  +0x174 max_steer_angle          [0053d964, 0053de44, 0053de54]
+  +0x188 drift_trigger_time       [0053d96a, 0053da68, 0053ddfa]
+  +0x18c drift_slip_factor        [0053d971, 0053dde8]
+  +0x15c air_friction             [0053d9a1, 0053da25, 0053dabf, 0053de04]
+  +0x164 forward_accel_force      [0053dab1, 0053dd09, 0053de25, 0053de5f]
+  +0x160 drag_factor              [0053dab8, 0053de1d, 0053de35]
+  +0x168 backward_accel_force     [0053db3c, 0053ddc0]
+  +0x16c grip_brake_force         [0053db43, 0053ddf3]
+  +0x170 slip_brake_force         [0053dd28, 0053ddb9]
+0053d670 FUN_0053d670 distinct=9 uses=17
+  +0x16c grip_brake_force         [0053d674, 0053d73c, 0053d94a]
+  +0x180 rear_grip_factor         [0053d67a, 0053d92e]
+  +0x184 drift_trigger_factor     [0053d681]
+  +0x15c air_friction             [0053d68f, 0053d940]
+  +0x160 drag_factor              [0053d718, 0053d861, 0053d903]
+  +0x18c drift_slip_factor        [0053d747]
+  +0x190 drift_escape_force       [0053d751]
+  +0x188 drift_trigger_time       [0053d88f, 0053d90a]
+  +0x164 forward_accel_force      [0053d896, 0053d8fc]
+0049d460 FUN_0049d460 distinct=8 uses=35
+  +0x174 max_steer_angle          [0049d485, 0049d48b, 0049d494]
+  +0x178 steer_constraint         [0049d4a4]
+  +0x180 rear_grip_factor         [0049d4b0, 0049d4b6, 0049d4c2]
+  +0x188 drift_trigger_time       [0049d4c8]
+  +0x17c front_grip_factor        [0049d4dd, 0049d4f0, 0049d503, 0049d57d, 0049d590, 0049d5a3, 0049d618]
+  +0x184 drift_trigger_factor     [0049d511, 0049d524, 0049d537, 0049d5b1, 0049d5c4, 0049d5d7, 0049d640]
+  +0x18c drift_slip_factor        [0049d545, 0049d558, 0049d56a, 0049d5e5, 0049d5f8, 0049d60a, 0049d668]
+  +0x168 backward_accel_force     [0049d62b, 0049d637, 0049d653, 0049d65f, 0049d67b, 0049d687]
+0049d750 FUN_0049d750 distinct=8 uses=19
+  +0x174 max_steer_angle          [0049d768]
+  +0x178 steer_constraint         [0049d77e]
+  +0x17c front_grip_factor        [0049d795, 0049d7bb, 0049d878]
+  +0x180 rear_grip_factor         [0049d7d1]
+  +0x184 drift_trigger_factor     [0049d7e9, 0049d80f, 0049d8a0]
+  +0x188 drift_trigger_time       [0049d824]
+  +0x18c drift_slip_factor        [0049d83c, 0049d862, 0049d8c8]
+  +0x168 backward_accel_force     [0049d88b, 0049d897, 0049d8b3, 0049d8bf, 0049d8db, 0049d8e7]
+0049da50 FUN_0049da50 distinct=8 uses=19
+  +0x174 max_steer_angle          [0049da68]
+  +0x178 steer_constraint         [0049da7e]
+  +0x17c front_grip_factor        [0049da95, 0049dabb, 0049db78]
+  +0x180 rear_grip_factor         [0049dad1]
+  +0x184 drift_trigger_factor     [0049dae9, 0049db0f, 0049dba0]
+  +0x188 drift_trigger_time       [0049db24]
+  +0x18c drift_slip_factor        [0049db3c, 0049db62, 0049dbc8]
+  +0x168 backward_accel_force     [0049db8b, 0049db97, 0049dbb3, 0049dbbf, 0049dbdb, 0049dbe7]
+00559260 FUN_00559260 distinct=8 uses=11
+  +0x188 drift_trigger_time       [005592b7]
+  +0x18c drift_slip_factor        [005592ef, 0055941f]
+  +0x178 steer_constraint         [005593e0]
+  +0x174 max_steer_angle          [005593e6]
+  +0x170 slip_brake_force         [005593ed, 00559465]
+  +0x16c grip_brake_force         [005593f4]
+  +0x168 backward_accel_force     [005593fb]
+  +0x164 forward_accel_force      [00559402, 0055946b]
+0051d040 FUN_0051d040 distinct=8 uses=10
+  +0x180 rear_grip_factor         [0051d0b4, 0051d108, 0051d17c]
+  +0x170 slip_brake_force         [0051d174]
+  +0x174 max_steer_angle          [0051d1da]
+  +0x184 drift_trigger_factor     [0051d1e2]
+  +0x178 steer_constraint         [0051d240]
+  +0x188 drift_trigger_time       [0051d248]
+  +0x17c front_grip_factor        [0051d2a6]
+  +0x18c drift_slip_factor        [0051d2ae]
+00558820 FUN_00558820 distinct=7 uses=34
+  +0x160 drag_factor              [0055893f, 00558a48, 00558a6c, 00558a80, 00558ddf, 00558e03, 00558e17]
+  +0x15c air_friction             [00558945, 00558a5c, 00558a72, 00558df3, 00558e09]
+  +0x188 drift_trigger_time       [0055896c, 00558c2f, 00558ca4, 00558cf4, 005590a0, 00559104, 00559138]
+  +0x164 forward_accel_force      [005589df, 00558d4c, 00558d5c, 00558d6b, 00559016, 00559026, 00559035]
+  +0x16c grip_brake_force         [00558a08, 00558c65, 00558cb3, 00558d02]
+  +0x168 backward_accel_force     [00558c98, 00558ce8, 00558d3b]
+  +0x17c front_grip_factor        [00559193]
+0054ecf0 FUN_0054ecf0 distinct=7 uses=13
+  +0x164 forward_accel_force      [0054ed60]
+  +0x168 backward_accel_force     [0054ed6d]
+  +0x16c grip_brake_force         [0054ed7a]
+  +0x188 drift_trigger_time       [0054edbe]
+  +0x170 slip_brake_force         [0054edfc, 0054ee30, 0054ee48]
+  +0x174 max_steer_angle          [0054ee58, 0054ee80, 0054ee98]
+  +0x178 steer_constraint         [0054eea8, 0054eed0, 0054eee8]
+004bd0a0 FUN_004bd0a0 distinct=7 uses=11
+  +0x178 steer_constraint         [004bd0d1]
+  +0x174 max_steer_angle          [004bd193]
+  +0x184 drift_trigger_factor     [004bd1bf]
+  +0x188 drift_trigger_time       [004bd1c8]
+  +0x18c drift_slip_factor        [004bd1d8]
+  +0x190 drift_escape_force       [004bd1e1, 004bd21a]
+  +0x194 corner_draw_factor       [004bd230, 004bd26c, 004bd28a, 004bd36f]
+0049d900 FUN_0049d900 distinct=7 uses=10
+  +0x174 max_steer_angle          [0049d916]
+  +0x178 steer_constraint         [0049d92c]
+  +0x17c front_grip_factor        [0049d942, 0049d963]
+  +0x180 rear_grip_factor         [0049d989]
+  +0x184 drift_trigger_factor     [0049d99f, 0049d9c0]
+  +0x188 drift_trigger_time       [0049d9e5]
+  +0x18c drift_slip_factor        [0049d9fb, 0049da1c]
+0049dc00 FUN_0049dc00 distinct=7 uses=10
+  +0x174 max_steer_angle          [0049dc16]
+  +0x178 steer_constraint         [0049dc2c]
+  +0x17c front_grip_factor        [0049dc42, 0049dc63]
+  +0x180 rear_grip_factor         [0049dc89]
+  +0x184 drift_trigger_factor     [0049dc9f, 0049dcc0]
+  +0x188 drift_trigger_time       [0049dce5]
+  +0x18c drift_slip_factor        [0049dcfb, 0049dd1c]
+0049d1d0 FUN_0049d1d0 distinct=7 uses=7
+  +0x174 max_steer_angle          [0049d1eb]
+  +0x178 steer_constraint         [0049d1f5]
+  +0x17c front_grip_factor        [0049d202]
+  +0x180 rear_grip_factor         [0049d210]
+  +0x184 drift_trigger_factor     [0049d21d]
+  +0x188 drift_trigger_time       [0049d22b]
+  +0x18c drift_slip_factor        [0049d238]
+0049d350 FUN_0049d350 distinct=6 uses=12
+  +0x17c front_grip_factor        [0049d35c, 0049d36f, 0049d38f]
+  +0x178 steer_constraint         [0049d3a4]
+  +0x184 drift_trigger_factor     [0049d3ad, 0049d3c0, 0049d3e0]
+  +0x180 rear_grip_factor         [0049d3f5]
+  +0x18c drift_slip_factor        [0049d3fe, 0049d411, 0049d431]
+  +0x188 drift_trigger_time       [0049d446]
+0042f6c0 FUN_0042f6c0 distinct=6 uses=8
+  +0x190 drift_escape_force       [0042f755]
+  +0x164 forward_accel_force      [0042f769]
+  +0x128 mass                     [0042f84e, 0042f8bb]
+  +0x16c grip_brake_force         [0042fa2a, 0042fb78]
+  +0x168 backward_accel_force     [0042fa98]
+  +0x170 slip_brake_force         [0042fbac]
+004cb0e0 FUN_004cb0e0 distinct=6 uses=7
+  +0x174 max_steer_angle          [004cb0f2, 004cb109]
+  +0x178 steer_constraint         [004cb116]
+  +0x17c front_grip_factor        [004cb123]
+  +0x180 rear_grip_factor         [004cb12d]
+  +0x184 drift_trigger_factor     [004cb13a]
+  +0x18c drift_slip_factor        [004cb14e]
+004a98a0 FUN_004a98a0 distinct=5 uses=13
+  +0x15c air_friction             [004a99aa, 004a9a9e, 004a9c2a]
+  +0x168 backward_accel_force     [004a99ed, 004a9ac4, 004a9d00]
+  +0x174 max_steer_angle          [004a9a30, 004a9aea, 004a9d6b]
+  +0x180 rear_grip_factor         [004a9a75, 004a9b10, 004a9c95]
+  +0x128 mass                     [004a9ca1]
+004bcf40 FUN_004bcf40 distinct=5 uses=6
+  +0x174 max_steer_angle          [004bcf52, 004bcf69]
+  +0x178 steer_constraint         [004bcf76]
+  +0x184 drift_trigger_factor     [004bcf84]
+  +0x190 drift_escape_force       [004bcf92]
+  +0x194 corner_draw_factor       [004bcfa0]
+004bdc10 FUN_004bdc10 distinct=5 uses=6
+  +0x174 max_steer_angle          [004bdc2d]
+  +0x190 drift_escape_force       [004bdc3a, 004bdd32]
+  +0x194 corner_draw_factor       [004bdc48]
+  +0x198 drift_lean_factor        [004bdc5c]
+  +0x184 drift_trigger_factor     [004bdcfd]
+00497db0 FUN_00497db0 distinct=5 uses=5
+  +0x128 mass                     [00497ed0]
+  +0x164 forward_accel_force      [00497fa6]
+  +0x168 backward_accel_force     [00497fba]
+  +0x170 slip_brake_force         [00497fc7]
+  +0x16c grip_brake_force         [00497fdb]
+00512cf0 FUN_00512cf0 distinct=4 uses=16
+  +0x15c air_friction             [00512d0f]
+  +0x164 forward_accel_force      [00512d16, 00512d82, 00513002, 00513075, 005130c0]
+  +0x128 mass                     [00512da1, 00512dcf, 00512ffb, 00513031, 0051308d]
+  +0x160 drag_factor              [00512da8, 00512e24, 00512ee6, 00512fd3, 00513059]
+00556070 FUN_00556070 distinct=4 uses=16
+  +0x168 backward_accel_force     [005560c9, 00556168, 005563d8, 0055646b]
+  +0x16c grip_brake_force         [005560d7, 00556103, 005563e6, 00556413]
+  +0x178 steer_constraint         [0055620b, 00556282, 005564f0, 00556575]
+  +0x174 max_steer_angle          [00556219, 005562fc, 005564fe, 005565d3]
+00470470 FUN_00470470 distinct=4 uses=8
+  +0x190 drift_escape_force       [004704ac, 004706af]
+  +0x198 drift_lean_factor        [004704de, 004706c7]
+  +0x194 corner_draw_factor       [00470715, 00470724]
+  +0x19c steer_lean_factor        [00470730, 0047073f]
+00498b10 FUN_00498b10 distinct=4 uses=8
+  +0x164 forward_accel_force      [00498b27]
+  +0x168 backward_accel_force     [00498b44]
+  +0x170 slip_brake_force         [00498dd8, 00498e76, 00498ee0, 00498f37]
+  +0x16c grip_brake_force         [00498ea0, 00498ec5]
+00499c70 FUN_00499c70 distinct=4 uses=8
+  +0x128 mass                     [00499c98]
+  +0x164 forward_accel_force      [00499cc3]
+  +0x168 backward_accel_force     [00499cd7, 00499cf7, 00499d03, 00499d1f, 00499d2b]
+  +0x170 slip_brake_force         [00499d34]
+0049d2a0 FUN_0049d2a0 distinct=4 uses=7
+  +0x174 max_steer_angle          [0049d2bd]
+  +0x178 steer_constraint         [0049d2cb, 0049d31f]
+  +0x188 drift_trigger_time       [0049d2fd, 0049d329]
+  +0x180 rear_grip_factor         [0049d307, 0049d333]
+0046c5c0 FUN_0046c5c0 distinct=4 uses=6
+  +0x190 drift_escape_force       [0046c5d5, 0046c93f]
+  +0x198 drift_lean_factor        [0046c5f6, 0046c92a]
+  +0x194 corner_draw_factor       [0046c915]
+  +0x19c steer_lean_factor        [0046c921]
+0046f840 FUN_0046f840 distinct=4 uses=6
+  +0x190 drift_escape_force       [0046f855, 0046fc21]
+  +0x198 drift_lean_factor        [0046f876, 0046fc0c]
+  +0x194 corner_draw_factor       [0046fbf7]
+  +0x19c steer_lean_factor        [0046fc03]
+00470110 FUN_00470110 distinct=4 uses=6
+  +0x190 drift_escape_force       [0047014b, 00470330]
+  +0x198 drift_lean_factor        [0047016f, 00470348]
+  +0x194 corner_draw_factor       [00470360]
+  +0x19c steer_lean_factor        [00470370]
+00471ce0 FUN_00471ce0 distinct=4 uses=6
+  +0x190 drift_escape_force       [00471cf5, 004720c1]
+  +0x198 drift_lean_factor        [00471d16, 004720ac]
+  +0x194 corner_draw_factor       [00472097]
+  +0x19c steer_lean_factor        [004720a3]
+0046b180 FUN_0046b180 distinct=4 uses=4
+  +0x174 max_steer_angle          [0046b19b]
+  +0x190 drift_escape_force       [0046b1a8]
+  +0x194 corner_draw_factor       [0046b1b6]
+  +0x198 drift_lean_factor        [0046b1c4]
+0046b1e0 FUN_0046b1e0 distinct=4 uses=4
+  +0x174 max_steer_angle          [0046b1f3]
+  +0x198 drift_lean_factor        [0046b208]
+  +0x194 corner_draw_factor       [0046b216]
+  +0x190 drift_escape_force       [0046b224]
+0046c0f0 FUN_0046c0f0 distinct=4 uses=4
+  +0x190 drift_escape_force       [0046c122]
+  +0x198 drift_lean_factor        [0046c157]
+  +0x194 corner_draw_factor       [0046c16d]
+  +0x19c steer_lean_factor        [0046c17a]
+00554160 FUN_00554160 distinct=4 uses=4
+  +0x190 drift_escape_force       [005542c1]
+  +0x194 corner_draw_factor       [00554332]
+  +0x18c drift_slip_factor        [00554358]
+  +0x128 mass                     [00554384]
+0051a760 FUN_0051a760 distinct=3 uses=13
+  +0x220 derived_weight_force     [0051a79a, 0051a838, 0051a85a, 0051a8e5, 0051a986, 0051a9a8, 0051a9e9]
+  +0x180 rear_grip_factor         [0051a899, 0051a94c, 0051a9db, 0051aa39, 0051aa41]
+  +0x170 slip_brake_force         [0051a9d1]
+004beda0 FUN_004beda0 distinct=3 uses=6
+  +0x178 steer_constraint         [004bedb3, 004bedef]
+  +0x18c drift_slip_factor        [004bedc1]
+  +0x188 drift_trigger_time       [004bee15, 004bee47, 004beed5]
+0046b310 FUN_0046b310 distinct=3 uses=5
+  +0x190 drift_escape_force       [0046b480]
+  +0x194 corner_draw_factor       [0046b5f4]
+  +0x198 drift_lean_factor        [0046b6a7, 0046b6cc, 0046b6f6]
+0042f460 FUN_0042f460 distinct=3 uses=4
+  +0x218 weight_force             [0042f4bd, 0042f4fd]
+  +0x220 derived_weight_force     [0042f523]
+  +0x128 mass                     [0042f681]
+004afa60 FUN_004afa60 distinct=3 uses=4
+  +0x164 forward_accel_force      [004afef0, 004affe2]
+  +0x170 slip_brake_force         [004aff82]
+  +0x190 drift_escape_force       [004affc0]
+004b0060 FUN_004b0060 distinct=3 uses=4
+  +0x164 forward_accel_force      [004b0282, 004b0376]
+  +0x170 slip_brake_force         [004b0316]
+  +0x190 drift_escape_force       [004b0354]
+004bebe0 FUN_004bebe0 distinct=3 uses=4
+  +0x18c drift_slip_factor        [004bec19]
+  +0x188 drift_trigger_time       [004bec2f]
+  +0x198 drift_lean_factor        [004bec9a, 004beca9]
+004c3f90 FUN_004c3f90 distinct=3 uses=4
+  +0x178 steer_constraint         [004c3f9c, 004c4095]
+  +0x18c drift_slip_factor        [004c401a]
+  +0x188 drift_trigger_time       [004c40d5]
+0042d220 FUN_0042d220 distinct=3 uses=3
+  +0x164 forward_accel_force      [0042d257]
+  +0x188 drift_trigger_time       [0042d265]
+  +0x194 corner_draw_factor       [0042d273]
+0042d490 FUN_0042d490 distinct=3 uses=3
+  +0x164 forward_accel_force      [0042d515]
+  +0x188 drift_trigger_time       [0042d531]
+  +0x194 corner_draw_factor       [0042d556]
+0042d7f0 FUN_0042d7f0 distinct=3 uses=3
+  +0x164 forward_accel_force      [0042d839]
+  +0x188 drift_trigger_time       [0042d84c]
+  +0x194 corner_draw_factor       [0042d867]
+0046bc00 FUN_0046bc00 distinct=3 uses=3
+  +0x190 drift_escape_force       [0046bc0c]
+  +0x194 corner_draw_factor       [0046bc1c]
+  +0x198 drift_lean_factor        [0046bc2c]
+0046bc60 FUN_0046bc60 distinct=3 uses=3
+  +0x190 drift_escape_force       [0046bc70]
+  +0x194 corner_draw_factor       [0046bc89]
+  +0x198 drift_lean_factor        [0046bca8]
+0046bfb0 FUN_0046bfb0 distinct=3 uses=3
+  +0x174 max_steer_angle          [0046bfcb]
+  +0x190 drift_escape_force       [0046bfd8]
+  +0x198 drift_lean_factor        [0046bfe6]
+0046c0a0 FUN_0046c0a0 distinct=3 uses=3
+  +0x174 max_steer_angle          [0046c0b3]
+  +0x198 drift_lean_factor        [0046c0c8]
+  +0x190 drift_escape_force       [0046c0d6]
+0046eb70 FUN_0046eb70 distinct=3 uses=3
+  +0x174 max_steer_angle          [0046eb8b]
+  +0x190 drift_escape_force       [0046eb98]
+  +0x198 drift_lean_factor        [0046eba6]
+0046ec90 FUN_0046ec90 distinct=3 uses=3
+  +0x174 max_steer_angle          [0046eca3]
+  +0x198 drift_lean_factor        [0046ecf0]
+  +0x190 drift_escape_force       [0046ecfe]
+0046ff80 FUN_0046ff80 distinct=3 uses=3
+  +0x174 max_steer_angle          [0046ff9b]
+  +0x190 drift_escape_force       [0046ffa8]
+  +0x198 drift_lean_factor        [0046ffb6]
+00470000 FUN_00470000 distinct=3 uses=3
+  +0x174 max_steer_angle          [00470013]
+  +0x198 drift_lean_factor        [00470028]
+  +0x190 drift_escape_force       [00470036]
+00471200 FUN_00471200 distinct=3 uses=3
+  +0x174 max_steer_angle          [0047121b]
+  +0x190 drift_escape_force       [00471228]
+  +0x198 drift_lean_factor        [00471236]
+00471310 FUN_00471310 distinct=3 uses=3
+  +0x174 max_steer_angle          [00471323]
+  +0x198 drift_lean_factor        [00471370]
+  +0x190 drift_escape_force       [0047137e]
+0049d250 FUN_0049d250 distinct=3 uses=3
+  +0x18c drift_slip_factor        [0049d263]
+  +0x184 drift_trigger_factor     [0049d271]
+  +0x17c front_grip_factor        [0049d27f]
+0049ddc0 FUN_0049ddc0 distinct=3 uses=3
+  +0x174 max_steer_angle          [0049dddb]
+  +0x17c front_grip_factor        [0049dde8]
+  +0x180 rear_grip_factor         [0049ddf6]
+004a6080 FUN_004a6080 distinct=3 uses=3
+  +0x170 slip_brake_force         [004a60a8]
+  +0x164 forward_accel_force      [004a60d2]
+  +0x190 drift_escape_force       [004a6107]
+004bcff0 FUN_004bcff0 distinct=3 uses=3
+  +0x174 max_steer_angle          [004bd003]
+  +0x194 corner_draw_factor       [004bd010]
+  +0x190 drift_escape_force       [004bd01e]
+004bdd50 FUN_004bdd50 distinct=3 uses=3
+  +0x174 max_steer_angle          [004bdd63]
+  +0x194 corner_draw_factor       [004bdd70]
+  +0x190 drift_escape_force       [004bdd7e]
+00516c60 FUN_00516c60 distinct=3 uses=3
+  +0x218 weight_force             [00517023]
+  +0x180 rear_grip_factor         [00517109]
+  +0x220 derived_weight_force     [00517120]
+00517de0 FUN_00517de0 distinct=3 uses=3
+  +0x218 weight_force             [005181a3]
+  +0x180 rear_grip_factor         [00518289]
+  +0x220 derived_weight_force     [005182a0]
+0051daa0 FUN_0051daa0 distinct=3 uses=3
+  +0x218 weight_force             [0051de01]
+  +0x180 rear_grip_factor         [0051dee5]
+  +0x220 derived_weight_force     [0051defc]
+00458000 FUN_00458000 distinct=2 uses=16
+  +0x15c air_friction             [004588cf, 004588fd, 00458914, 00458923, 00458931, 00458979, 004589a3, 004589af, 004589e5, 004589f5, 00458a25, 00458a69, 00458a9b, 00458b03]
+  +0x128 mass                     [00458deb, 00458fd2]
+004c3d50 FUN_004c3d50 distinct=2 uses=9
+  +0x174 max_steer_angle          [004c3db5, 004c3e01, 004c3e54, 004c3e98, 004c3ed0, 004c3ef8, 004c3f50]
+  +0x128 mass                     [004c3eb0, 004c3eeb]
+0042e750 FUN_0042e750 distinct=2 uses=6
+  +0x160 drag_factor              [0042e7ee, 0042e87a, 0042ece2]
+  +0x164 forward_accel_force      [0042e7fa, 0042e887, 0042ecee]
+0046bd00 FUN_0046bd00 distinct=2 uses=6
+  +0x19c steer_lean_factor        [0046bd0f, 0046bd2a]
+  +0x198 drift_lean_factor        [0046bd18, 0046bd41, 0046bd5a, 0046bd6f]
+004984d0 FUN_004984d0 distinct=2 uses=6
+  +0x15c air_friction             [004986ca, 004986d9, 004989fa]
+  +0x160 drag_factor              [0049870d, 0049871c, 00498a68]
+00498f50 FUN_00498f50 distinct=2 uses=6
+  +0x170 slip_brake_force         [00498f5d, 00498f72]
+  +0x128 mass                     [00499002, 00499076, 004990f0, 0049913e]
+0049ec30 FUN_0049ec30 distinct=2 uses=5
+  +0x17c front_grip_factor        [0049ec68, 0049ed0d, 0049ed3d, 0049ed4b]
+  +0x178 steer_constraint         [0049ecf7]
+0049fbf0 FUN_0049fbf0 distinct=2 uses=5
+  +0x17c front_grip_factor        [0049fc28, 0049fcdc, 0049fd0c, 0049fd1a]
+  +0x178 steer_constraint         [0049fcc6]
+004b4ef0 FUN_004b4ef0 distinct=2 uses=5
+  +0x17c front_grip_factor        [004b50b7, 004b544b, 004b5481, 004b5492]
+  +0x178 steer_constraint         [004b542f]
+004b65f0 FUN_004b65f0 distinct=2 uses=5
+  +0x17c front_grip_factor        [004b6628, 004b684f, 004b687f, 004b688d]
+  +0x178 steer_constraint         [004b6839]
+004511b0 FUN_004511b0 distinct=2 uses=4
+  +0x128 mass                     [004513fa, 00451408, 00451426]
+  +0x174 max_steer_angle          [004519da]
+00455c80 FUN_00455c80 distinct=2 uses=4
+  +0x128 mass                     [00456786, 004567a9, 0045683e]
+  +0x15c air_friction             [00456bd9]
+00456cd0 FUN_00456cd0 distinct=2 uses=4
+  +0x178 steer_constraint         [00456cd3]
+  +0x128 mass                     [004572ad, 004572f8, 004573d8]
+0046bd90 FUN_0046bd90 distinct=2 uses=4
+  +0x198 drift_lean_factor        [0046bd9c, 0046bdae, 0046bdc7]
+  +0x19c steer_lean_factor        [0046bdd8]
+00474da0 FUN_00474da0 distinct=2 uses=4
+  +0x190 drift_escape_force       [00474e64, 00474e79]
+  +0x19c steer_lean_factor        [00474eb2, 00474ec2]
+00499d50 FUN_00499d50 distinct=2 uses=4
+  +0x168 backward_accel_force     [00499d72, 00499d7e]
+  +0x16c grip_brake_force         [00499d87, 00499d93]
+004c5880 FUN_004c5880 distinct=2 uses=4
+  +0x128 mass                     [004c58a6, 004c58d1, 004c58e4]
+  +0x174 max_steer_angle          [004c58f6]
+00430640 FUN_00430640 distinct=2 uses=3
+  +0x15c air_friction             [00430666, 0043068c]
+  +0x160 drag_factor              [004306ca]
+00466720 FUN_00466720 distinct=2 uses=3
+  +0x174 max_steer_angle          [0046673d]
+  +0x178 steer_constraint         [00466766, 00466772]
+00467e60 FUN_00467e60 distinct=2 uses=3
+  +0x174 max_steer_angle          [00467e8c]
+  +0x220 derived_weight_force     [00467ef1, 00467f4d]
+00468e20 FUN_00468e20 distinct=2 uses=3
+  +0x174 max_steer_angle          [00468e3d]
+  +0x178 steer_constraint         [00468eb4, 00468ec0]
+00499dd0 FUN_00499dd0 distinct=2 uses=3
+  +0x168 backward_accel_force     [00499dda]
+  +0x16c grip_brake_force         [00499df6, 00499e02]
+004ac130 FUN_004ac130 distinct=2 uses=3
+  +0x174 max_steer_angle          [004ac142, 004ac159]
+  +0x178 steer_constraint         [004ac166]
+004c3b90 FUN_004c3b90 distinct=2 uses=3
+  +0x174 max_steer_angle          [004c3bad]
+  +0x178 steer_constraint         [004c3ce0, 004c3cec]
+004c4940 FUN_004c4940 distinct=2 uses=3
+  +0x174 max_steer_angle          [004c495d]
+  +0x178 steer_constraint         [004c49f2, 004c49fe]
+004c7260 FUN_004c7260 distinct=2 uses=3
+  +0x174 max_steer_angle          [004c727b]
+  +0x178 steer_constraint         [004c729b, 004c72a7]
+005534d0 FUN_005534d0 distinct=2 uses=3
+  +0x17c front_grip_factor        [005535c7]
+  +0x180 rear_grip_factor         [005535e3, 00553621]
+0040c2e0 FUN_0040c2e0 distinct=2 uses=2
+  +0x16c grip_brake_force         [0040c34d]
+  +0x19c steer_lean_factor        [0040c35b]
+0044a350 FUN_0044a350 distinct=2 uses=2
+  +0x218 weight_force             [0044a47e]
+  +0x220 derived_weight_force     [0044a4a6]
+00455b10 FUN_00455b10 distinct=2 uses=2
+  +0x128 mass                     [00455b53]
+  +0x220 derived_weight_force     [00455ba4]
+004685c0 FUN_004685c0 distinct=2 uses=2
+  +0x174 max_steer_angle          [004685d3]
+  +0x220 derived_weight_force     [0046860a]
+0046b2c0 FUN_0046b2c0 distinct=2 uses=2
+  +0x190 drift_escape_force       [0046b2cc]
+  +0x194 corner_draw_factor       [0046b2ec]
+0046c280 FUN_0046c280 distinct=2 uses=2
+  +0x190 drift_escape_force       [0046c28c]
+  +0x198 drift_lean_factor        [0046c29c]
+0046d940 FUN_0046d940 distinct=2 uses=2
+  +0x174 max_steer_angle          [0046d95b]
+  +0x194 corner_draw_factor       [0046d971]
+0046e1d0 FUN_0046e1d0 distinct=2 uses=2
+  +0x128 mass                     [0046e1d3]
+  +0x174 max_steer_angle          [0046e468]
+0046ed20 FUN_0046ed20 distinct=2 uses=2
+  +0x190 drift_escape_force       [0046ed62]
+  +0x198 drift_lean_factor        [0046ed97]
+00470050 FUN_00470050 distinct=2 uses=2
+  +0x190 drift_escape_force       [0047008f]
+  +0x198 drift_lean_factor        [004700c4]
+004700e0 FUN_004700e0 distinct=2 uses=2
+  +0x190 drift_escape_force       [004700ec]
+  +0x198 drift_lean_factor        [004700fc]
+004713a0 FUN_004713a0 distinct=2 uses=2
+  +0x190 drift_escape_force       [004713e2]
+  +0x198 drift_lean_factor        [00471417]
+00471480 FUN_00471480 distinct=2 uses=2
+  +0x190 drift_escape_force       [0047148c]
+  +0x198 drift_lean_factor        [0047149c]
+004727d0 FUN_004727d0 distinct=2 uses=2
+  +0x174 max_steer_angle          [004727eb]
+  +0x190 drift_escape_force       [00472801]
+004728a0 FUN_004728a0 distinct=2 uses=2
+  +0x174 max_steer_angle          [004728bb]
+  +0x190 drift_escape_force       [004728d1]
+00473ae0 FUN_00473ae0 distinct=2 uses=2
+  +0x174 max_steer_angle          [00473afe]
+  +0x190 drift_escape_force       [00473b14]
+00474640 FUN_00474640 distinct=2 uses=2
+  +0x190 drift_escape_force       [004746ca]
+  +0x19c steer_lean_factor        [00474726]
+00474970 FUN_00474970 distinct=2 uses=2
+  +0x174 max_steer_angle          [0047498b]
+  +0x190 drift_escape_force       [004749a1]
+0049b620 FUN_0049b620 distinct=2 uses=2
+  +0x174 max_steer_angle          [0049b63b]
+  +0x17c front_grip_factor        [0049b648]
+0049b660 FUN_0049b660 distinct=2 uses=2
+  +0x174 max_steer_angle          [0049b67b]
+  +0x17c front_grip_factor        [0049b68c]
+0049b980 FUN_0049b980 distinct=2 uses=2
+  +0x15c air_friction             [0049ba11]
+  +0x160 drag_factor              [0049ba2c]
+0049c9f0 FUN_0049c9f0 distinct=2 uses=2
+  +0x174 max_steer_angle          [0049ca0b]
+  +0x17c front_grip_factor        [0049ca18]
+0049ca30 FUN_0049ca30 distinct=2 uses=2
+  +0x174 max_steer_angle          [0049ca4b]
+  +0x17c front_grip_factor        [0049ca5c]
+0049e290 FUN_0049e290 distinct=2 uses=2
+  +0x180 rear_grip_factor         [0049e29a]
+  +0x17c front_grip_factor        [0049e2a8]
+0049e510 FUN_0049e510 distinct=2 uses=2
+  +0x174 max_steer_angle          [0049e52b]
+  +0x17c front_grip_factor        [0049e538]
+004a9db0 FUN_004a9db0 distinct=2 uses=2
+  +0x15c air_friction             [004a9ebd]
+  +0x128 mass                     [004aa02e]
+004beef0 FUN_004beef0 distinct=2 uses=2
+  +0x18c drift_slip_factor        [004beefc]
+  +0x188 drift_trigger_time       [004bef12]
+004c33e0 FUN_004c33e0 distinct=2 uses=2
+  +0x218 weight_force             [004c34fa]
+  +0x220 derived_weight_force     [004c35c0]
+004c5760 FUN_004c5760 distinct=2 uses=2
+  +0x174 max_steer_angle          [004c577d]
+  +0x17c front_grip_factor        [004c5816]
+004c66e0 FUN_004c66e0 distinct=2 uses=2
+  +0x128 mass                     [004c6706]
+  +0x174 max_steer_angle          [004c672b]
+004ca2f0 FUN_004ca2f0 distinct=2 uses=2
+  +0x174 max_steer_angle          [004ca30b]
+  +0x17c front_grip_factor        [004ca35b]
+00518f60 FUN_00518f60 distinct=2 uses=2
+  +0x218 weight_force             [00519331]
+  +0x180 rear_grip_factor         [00519416]
+00519b60 FUN_00519b60 distinct=2 uses=2
+  +0x218 weight_force             [00519f31]
+  +0x180 rear_grip_factor         [0051a016]
+0051bd40 FUN_0051bd40 distinct=2 uses=2
+  +0x180 rear_grip_factor         [0051c046]
+  +0x220 derived_weight_force     [0051c05d]
+0051e620 FUN_0051e620 distinct=2 uses=2
+  +0x218 weight_force             [0051e98f]
+  +0x180 rear_grip_factor         [0051ea6e]
+0051ee20 FUN_0051ee20 distinct=2 uses=2
+  +0x218 weight_force             [0051f28f]
+  +0x180 rear_grip_factor         [0051f37c]
+00547e40 FUN_00547e40 distinct=2 uses=2
+  +0x180 rear_grip_factor         [00547ea2]
+  +0x188 drift_trigger_time       [0054801f]
+0054a790 FUN_0054a790 distinct=2 uses=2
+  +0x180 rear_grip_factor         [0054a832]
+  +0x188 drift_trigger_time       [0054a922]
+00550eb0 FUN_00550eb0 distinct=2 uses=2
+  +0x128 mass                     [00550fd2]
+  +0x19c steer_lean_factor        [005510ab]
+004cf6f0 FUN_004cf6f0 distinct=1 uses=17
+  +0x168 backward_accel_force     [004cf759, 004cf785, 004cf7a1, 004cf80a, 004cf82f, 004cf844, 004cf876, 004cf88c, 004cf8a1, 004cf8b3, 004cf8c6, 004cf8e7, 004cf8fa, 004cf999, 004cf9e2, 004cfcec, 004cfd08]
+004d00a0 FUN_004d00a0 distinct=1 uses=11
+  +0x168 backward_accel_force     [004d00f2, 004d0115, 004d0126, 004d013b, 004d0154, 004d0173, 004d0184, 004d019f, 004d01b0, 004d01cf, 004d01ee]
+00410440 FUN_00410440 distinct=1 uses=10
+  +0x174 max_steer_angle          [004104b0, 004104b6, 00410515, 0041051b, 004105a6, 004105ac, 004105c9, 004105cf, 004105ec, 004105f2]
+004cf3a0 FUN_004cf3a0 distinct=1 uses=7
+  +0x168 backward_accel_force     [004cf3ff, 004cf43b, 004cf469, 004cf47e, 004cf492, 004cf4a6, 004cf4bf]
+004cffa0 FUN_004cffa0 distinct=1 uses=7
+  +0x168 backward_accel_force     [004cffbf, 004cfff1, 004d0024, 004d0039, 004d004d, 004d0061, 004d007a]
+00431230 FUN_00431230 distinct=1 uses=6
+  +0x128 mass                     [004312de, 00431378, 0043137e, 00431718, 0043183b, 00431862]
+0049e110 FUN_0049e110 distinct=1 uses=6
+  +0x17c front_grip_factor        [0049e13a, 0049e14d, 0049e160, 0049e170, 0049e183, 0049e196]
+0050e180 FUN_0050e180 distinct=1 uses=6
+  +0x188 drift_trigger_time       [0050e3e2, 0050e626, 0050e87f, 0050eaac, 0050ec62, 0050ee28]
+00452e60 FUN_00452e60 distinct=1 uses=5
+  +0x128 mass                     [00453764, 00453828, 0045384d, 00453894, 004538b9]
+004b5eb0 FUN_004b5eb0 distinct=1 uses=5
+  +0x174 max_steer_angle          [004b5ee0, 004b5f88, 004b6030, 004b60d8, 004b6180]
+00413d50 FUN_00413d50 distinct=1 uses=4
+  +0x168 backward_accel_force     [00413d5a, 00413d66, 00413d6f, 00413d99]
+00443db0 FUN_00443db0 distinct=1 uses=4
+  +0x190 drift_escape_force       [00443e2b, 00443fe4, 00444077, 00444083]
+00468d70 FUN_00468d70 distinct=1 uses=4
+  +0x178 steer_constraint         [00468d7a, 00468d86, 00468d94, 00468d9d]
+00470e20 FUN_00470e20 distinct=1 uses=4
+  +0x174 max_steer_angle          [00470f14, 00470f1a, 00470f36, 00470f3c]
+004bde30 FUN_004bde30 distinct=1 uses=4
+  +0x190 drift_escape_force       [004bde45, 004bdedf, 004bdf3b, 004bdf78]
+004c4b30 FUN_004c4b30 distinct=1 uses=4
+  +0x174 max_steer_angle          [004c4c95, 004c4cb3, 004c4cd0, 004c4ddc]
+004c78f0 FUN_004c78f0 distinct=1 uses=4
+  +0x188 drift_trigger_time       [004c7925, 004c794a, 004c796f, 004c7994]
+004c9b30 FUN_004c9b30 distinct=1 uses=4
+  +0x174 max_steer_angle          [004c9b8d, 004c9bd8, 004c9c4b, 004c9c94]
+004cb810 FUN_004cb810 distinct=1 uses=4
+  +0x178 steer_constraint         [004cbe8e, 004cbe9a, 004cbf31, 004cbf3d]
+004d02f0 FUN_004d02f0 distinct=1 uses=4
+  +0x168 backward_accel_force     [004d046e, 004d048a, 004d04d4, 004d04e7]
+005545c0 FUN_005545c0 distinct=1 uses=4
+  +0x220 derived_weight_force     [005545ed, 0055463b, 00554664, 0055469b]
+00474510 FUN_00474510 distinct=1 uses=3
+  +0x190 drift_escape_force       [00474539, 004745c1, 004745d8]
+00499190 FUN_00499190 distinct=1 uses=3
+  +0x128 mass                     [0049925d, 00499295, 00499343]
+0049aac0 FUN_0049aac0 distinct=1 uses=3
+  +0x174 max_steer_angle          [0049ab00, 0049ab59, 0049af87]
+0049b790 FUN_0049b790 distinct=1 uses=3
+  +0x17c front_grip_factor        [0049b7d4, 0049b80e, 0049b824]
+0049cb60 FUN_0049cb60 distinct=1 uses=3
+  +0x17c front_grip_factor        [0049cba4, 0049cbde, 0049cbf4]
+004be160 FUN_004be160 distinct=1 uses=3
+  +0x194 corner_draw_factor       [004be16c, 004be18c, 004be1e3]
+004c15b0 FUN_004c15b0 distinct=1 uses=3
+  +0x174 max_steer_angle          [004c1605, 004c1615, 004c1662]
+004c2120 FUN_004c2120 distinct=1 uses=3
+  +0x194 corner_draw_factor       [004c212c, 004c214c, 004c21a3]
+0055b680 FUN_0055b680 distinct=1 uses=3
+  +0x128 mass                     [0055b698, 0055b6e4, 0055b701]
+00413dd0 FUN_00413dd0 distinct=1 uses=2
+  +0x16c grip_brake_force         [00413de8, 00413df4]
+00414660 FUN_00414660 distinct=1 uses=2
+  +0x174 max_steer_angle          [00414672, 00414689]
+0044a210 FUN_0044a210 distinct=1 uses=2
+  +0x19c steer_lean_factor        [0044a21f, 0044a243]
+00465280 FUN_00465280 distinct=1 uses=2
+  +0x198 drift_lean_factor        [004652a3, 004652c0]
+00468930 FUN_00468930 distinct=1 uses=2
+  +0x220 derived_weight_force     [004689f0, 00468a56]
+0046b240 FUN_0046b240 distinct=1 uses=2
+  +0x174 max_steer_angle          [0046b283, 0046b2a0]
+0046d9d0 FUN_0046d9d0 distinct=1 uses=2
+  +0x194 corner_draw_factor       [0046da81, 0046dab2]
+0046dee0 FUN_0046dee0 distinct=1 uses=2
+  +0x194 corner_draw_factor       [0046df04, 0046df0d]
+00473d70 FUN_00473d70 distinct=1 uses=2
+  +0x190 drift_escape_force       [00473e5b, 00473e74]
+004758a0 FUN_004758a0 distinct=1 uses=2
+  +0x19c steer_lean_factor        [004759dd, 004759ed]
+00498380 FUN_00498380 distinct=1 uses=2
+  +0x164 forward_accel_force      [004983d0, 004983dc]
+00498450 FUN_00498450 distinct=1 uses=2
+  +0x164 forward_accel_force      [0049845f, 00498468]
+0049b1b0 FUN_0049b1b0 distinct=1 uses=2
+  +0x174 max_steer_angle          [0049b1d5, 0049b1db]
+0049e2c0 FUN_0049e2c0 distinct=1 uses=2
+  +0x17c front_grip_factor        [0049e2da, 0049e300]
+0049e330 FUN_0049e330 distinct=1 uses=2
+  +0x17c front_grip_factor        [0049e346, 0049e367]
+0049e390 FUN_0049e390 distinct=1 uses=2
+  +0x17c front_grip_factor        [0049e3aa, 0049e3d0]
+0049e400 FUN_0049e400 distinct=1 uses=2
+  +0x17c front_grip_factor        [0049e416, 0049e437]
+004aa480 FUN_004aa480 distinct=1 uses=2
+  +0x18c drift_slip_factor        [004aa48c, 004aa50b]
+004ac2f0 FUN_004ac2f0 distinct=1 uses=2
+  +0x178 steer_constraint         [004ac315, 004ac31b]
+004b4d90 FUN_004b4d90 distinct=1 uses=2
+  +0x174 max_steer_angle          [004b4dca, 004b4e4c]
+004bda30 FUN_004bda30 distinct=1 uses=2
+  +0x178 steer_constraint         [004bda52, 004bda5a]
+004be210 FUN_004be210 distinct=1 uses=2
+  +0x198 drift_lean_factor        [004be2a6, 004be2dd]
+004be500 FUN_004be500 distinct=1 uses=2
+  +0x198 drift_lean_factor        [004be567, 004be570]
+004be5a0 FUN_004be5a0 distinct=1 uses=2
+  +0x198 drift_lean_factor        [004be613, 004be61c]
+004c16c0 FUN_004c16c0 distinct=1 uses=2
+  +0x198 drift_lean_factor        [004c1702, 004c172b]
+004c2d40 FUN_004c2d40 distinct=1 uses=2
+  +0x174 max_steer_angle          [004c2d83, 004c2e0c]
+004c5120 FUN_004c5120 distinct=1 uses=2
+  +0x190 drift_escape_force       [004c5153, 004c5158]
+004c8ce0 FUN_004c8ce0 distinct=1 uses=2
+  +0x188 drift_trigger_time       [004c8d6d, 004c8d8c]
+004cb1f0 FUN_004cb1f0 distinct=1 uses=2
+  +0x174 max_steer_angle          [004cb20f, 004cb218]
+004cb700 FUN_004cb700 distinct=1 uses=2
+  +0x180 rear_grip_factor         [004cb7b8, 004cb7be]
+004cf5f0 FUN_004cf5f0 distinct=1 uses=2
+  +0x168 backward_accel_force     [004cf670, 004cf687]
+004e35c0 FUN_004e35c0 distinct=1 uses=2
+  +0x128 mass                     [004e3886, 004e38c1]
+0054dc30 FUN_0054dc30 distinct=1 uses=2
+  +0x220 derived_weight_force     [0054dc48, 0054dc6f]
+0054dca0 FUN_0054dca0 distinct=1 uses=2
+  +0x220 derived_weight_force     [0054dcb0, 0054dcbd]
+00551760 FUN_00551760 distinct=1 uses=2
+  +0x220 derived_weight_force     [0055179c, 005517c1]
+00410850 FUN_00410850 distinct=1 uses=1
+  +0x174 max_steer_angle          [00410e49]
+00413a80 FUN_00413a80 distinct=1 uses=1
+  +0x16c grip_brake_force         [00413a8a]
+004146e0 FUN_004146e0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004146f3]
+00414710 FUN_00414710 distinct=1 uses=1
+  +0x174 max_steer_angle          [00414722]
+004152d0 FUN_004152d0 distinct=1 uses=1
+  +0x178 steer_constraint         [004152d9]
+00415620 FUN_00415620 distinct=1 uses=1
+  +0x128 mass                     [00415623]
+0042d2e0 FUN_0042d2e0 distinct=1 uses=1
+  +0x128 mass                     [0042d422]
+004305b0 FUN_004305b0 distinct=1 uses=1
+  +0x128 mass                     [004305da]
+00430740 FUN_00430740 distinct=1 uses=1
+  +0x128 mass                     [0043076d]
+00430830 FUN_00430830 distinct=1 uses=1
+  +0x19c steer_lean_factor        [00430833]
+00433ff0 FUN_00433ff0 distinct=1 uses=1
+  +0x17c front_grip_factor        [00433ffa]
+00437320 FUN_00437320 distinct=1 uses=1
+  +0x174 max_steer_angle          [004373a6]
+0043f730 FUN_0043f730 distinct=1 uses=1
+  +0x168 backward_accel_force     [0043f733]
+00444c30 FUN_00444c30 distinct=1 uses=1
+  +0x188 drift_trigger_time       [00444c33]
+00445d20 FUN_00445d20 distinct=1 uses=1
+  +0x128 mass                     [00445d23]
+004476f0 FUN_004476f0 distinct=1 uses=1
+  +0x178 steer_constraint         [004476fa]
+00449e40 FUN_00449e40 distinct=1 uses=1
+  +0x18c drift_slip_factor        [00449e4a]
+00449e80 FUN_00449e80 distinct=1 uses=1
+  +0x16c grip_brake_force         [00449ed5]
+0044c320 FUN_0044c320 distinct=1 uses=1
+  +0x174 max_steer_angle          [0044c504]
+0044fd60 FUN_0044fd60 distinct=1 uses=1
+  +0x19c steer_lean_factor        [0044fd6a]
+00450f80 FUN_00450f80 distinct=1 uses=1
+  +0x180 rear_grip_factor         [00450f8d]
+00450fc0 FUN_00450fc0 distinct=1 uses=1
+  +0x17c front_grip_factor        [00450fcd]
+00454090 FUN_00454090 distinct=1 uses=1
+  +0x188 drift_trigger_time       [004540b0]
+00455c00 FUN_00455c00 distinct=1 uses=1
+  +0x128 mass                     [00455c47]
+00459fb0 FUN_00459fb0 distinct=1 uses=1
+  +0x160 drag_factor              [00459fb6]
+0045a590 FUN_0045a590 distinct=1 uses=1
+  +0x198 drift_lean_factor        [0045a764]
+0045b780 FUN_0045b780 distinct=1 uses=1
+  +0x198 drift_lean_factor        [0045b794]
+00460880 FUN_00460880 distinct=1 uses=1
+  +0x180 rear_grip_factor         [0046088a]
+00463120 FUN_00463120 distinct=1 uses=1
+  +0x174 max_steer_angle          [0046313b]
+004631e0 FUN_004631e0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004631f3]
+00463270 FUN_00463270 distinct=1 uses=1
+  +0x174 max_steer_angle          [0046328b]
+00463690 FUN_00463690 distinct=1 uses=1
+  +0x174 max_steer_angle          [004636ad]
+004637d0 FUN_004637d0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004637e3]
+00463dc0 FUN_00463dc0 distinct=1 uses=1
+  +0x174 max_steer_angle          [00463dec]
+00464150 FUN_00464150 distinct=1 uses=1
+  +0x174 max_steer_angle          [00464163]
+00464640 FUN_00464640 distinct=1 uses=1
+  +0x174 max_steer_angle          [0046466c]
+00464a90 FUN_00464a90 distinct=1 uses=1
+  +0x174 max_steer_angle          [00464aa3]
+004654a0 FUN_004654a0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004654bd]
+00465580 FUN_00465580 distinct=1 uses=1
+  +0x174 max_steer_angle          [00465593]
+00466200 FUN_00466200 distinct=1 uses=1
+  +0x174 max_steer_angle          [0046621d]
+00466390 FUN_00466390 distinct=1 uses=1
+  +0x174 max_steer_angle          [004663a3]
+00466920 FUN_00466920 distinct=1 uses=1
+  +0x174 max_steer_angle          [00466933]
+00466ec0 FUN_00466ec0 distinct=1 uses=1
+  +0x174 max_steer_angle          [00466edd]
+00466fd0 FUN_00466fd0 distinct=1 uses=1
+  +0x174 max_steer_angle          [00466fe3]
+00469050 FUN_00469050 distinct=1 uses=1
+  +0x174 max_steer_angle          [00469063]
+00469590 FUN_00469590 distinct=1 uses=1
+  +0x188 drift_trigger_time       [004695d1]
+00469820 CMFCOutlookBarPaneAdapter::CMFCOutlookBarPaneAdapter distinct=1 uses=1
+  +0x174 max_steer_angle          [0046983b]
+00469850 FUN_00469850 distinct=1 uses=1
+  +0x174 max_steer_angle          [00469863]
+00469960 FUN_00469960 distinct=1 uses=1
+  +0x174 max_steer_angle          [0046997d]
+00469b70 FUN_00469b70 distinct=1 uses=1
+  +0x174 max_steer_angle          [00469b83]
+0046a400 FUN_0046a400 distinct=1 uses=1
+  +0x17c front_grip_factor        [0046a40a]
+0046be60 CMFCOutlookBarPaneAdapter::CMFCOutlookBarPaneAdapter distinct=1 uses=1
+  +0x174 max_steer_angle          [0046be7b]
+0046bef0 FUN_0046bef0 distinct=1 uses=1
+  +0x178 steer_constraint         [0046bf06]
+0046bf20 FUN_0046bf20 distinct=1 uses=1
+  +0x178 steer_constraint         [0046bf36]
+0046bf50 FUN_0046bf50 distinct=1 uses=1
+  +0x178 steer_constraint         [0046bf66]
+0046bf80 FUN_0046bf80 distinct=1 uses=1
+  +0x178 steer_constraint         [0046bf96]
+0046c1c0 FUN_0046c1c0 distinct=1 uses=1
+  +0x174 max_steer_angle          [0046c1cc]
+0046cc50 FUN_0046cc50 distinct=1 uses=1
+  +0x174 max_steer_angle          [0046cd52]
+0046d8a0 CMFCOutlookBarPaneAdapter::CMFCOutlookBarPaneAdapter distinct=1 uses=1
+  +0x174 max_steer_angle          [0046d8bb]
+0046ddf0 FUN_0046ddf0 distinct=1 uses=1
+  +0x194 corner_draw_factor       [0046de1f]
+0046fc60 FUN_0046fc60 distinct=1 uses=1
+  +0x174 max_steer_angle          [0046fc6c]
+004720e0 FUN_004720e0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004720ec]
+00472a10 FUN_00472a10 distinct=1 uses=1
+  +0x174 max_steer_angle          [00472a23]
+00472c90 FUN_00472c90 distinct=1 uses=1
+  +0x190 drift_escape_force       [00472d32]
+00473030 FUN_00473030 distinct=1 uses=1
+  +0x190 drift_escape_force       [0047309c]
+00473200 FUN_00473200 distinct=1 uses=1
+  +0x190 drift_escape_force       [004732a1]
+004738a0 FUN_004738a0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004738bf]
+00473d10 FUN_00473d10 distinct=1 uses=1
+  +0x174 max_steer_angle          [00473d23]
+00474760 FUN_00474760 distinct=1 uses=1
+  +0x174 max_steer_angle          [0047476c]
+00474a60 FUN_00474a60 distinct=1 uses=1
+  +0x174 max_steer_angle          [00474a73]
+00474f70 FUN_00474f70 distinct=1 uses=1
+  +0x190 drift_escape_force       [00475014]
+0047ffd0 FUN_0047ffd0 distinct=1 uses=1
+  +0x128 mass                     [0047ffd3]
+0048ec20 FUN_0048ec20 distinct=1 uses=1
+  +0x180 rear_grip_factor         [0048ec23]
+0049a1c0 FUN_0049a1c0 distinct=1 uses=1
+  +0x128 mass                     [0049a1ca]
+0049a870 FUN_0049a870 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049a876]
+0049a8b0 FUN_0049a8b0 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049a8cb]
+0049b2a0 FUN_0049b2a0 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049b2b8]
+0049b2e0 FUN_0049b2e0 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049b2f8]
+0049b310 FUN_0049b310 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049b328]
+0049b350 FUN_0049b350 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049b368]
+0049b5e0 FUN_0049b5e0 distinct=1 uses=1
+  +0x178 steer_constraint         [0049b5e6]
+0049b6b0 FUN_0049b6b0 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049b6bc]
+0049b6f0 FUN_0049b6f0 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049b6fa]
+0049b900 CMFCOutlookBarPaneAdapter::CMFCOutlookBarPaneAdapter distinct=1 uses=1
+  +0x174 max_steer_angle          [0049b91b]
+0049b930 FUN_0049b930 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049b93a]
+0049bc20 FUN_0049bc20 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049bc36]
+0049bc50 FUN_0049bc50 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049bc66]
+0049c9b0 FUN_0049c9b0 distinct=1 uses=1
+  +0x180 rear_grip_factor         [0049c9b6]
+0049ca80 FUN_0049ca80 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049ca8c]
+0049cac0 FUN_0049cac0 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049caca]
+0049ccd0 FUN_0049ccd0 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049ccda]
+0049cd00 FUN_0049cd00 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049cd16]
+0049cd30 FUN_0049cd30 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049cd46]
+0049cd60 FUN_0049cd60 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049cd76]
+0049cd90 FUN_0049cd90 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049cda6]
+0049d190 FUN_0049d190 distinct=1 uses=1
+  +0x180 rear_grip_factor         [0049d196]
+0049dd80 FUN_0049dd80 distinct=1 uses=1
+  +0x190 drift_escape_force       [0049dd86]
+0049de20 FUN_0049de20 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049de2a]
+0049def0 FUN_0049def0 distinct=1 uses=1
+  +0x17c front_grip_factor        [0049e0df]
+0049e4d0 FUN_0049e4d0 distinct=1 uses=1
+  +0x198 drift_lean_factor        [0049e4d6]
+0049eb90 FUN_0049eb90 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049ebab]
+0049ebd0 FUN_0049ebd0 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049ebeb]
+0049fad0 FUN_0049fad0 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049faeb]
+0049fb20 FUN_0049fb20 distinct=1 uses=1
+  +0x174 max_steer_angle          [0049fb3b]
+004a0b40 FUN_004a0b40 distinct=1 uses=1
+  +0x218 weight_force             [004a0b46]
+004a9150 FUN_004a9150 distinct=1 uses=1
+  +0x164 forward_accel_force      [004a9153]
+004a9760 FUN_004a9760 distinct=1 uses=1
+  +0x18c drift_slip_factor        [004a97d1]
+004aa120 FUN_004aa120 distinct=1 uses=1
+  +0x128 mass                     [004aa36a]
+004aad70 FUN_004aad70 distinct=1 uses=1
+  +0x174 max_steer_angle          [004aad86]
+004ac180 FUN_004ac180 distinct=1 uses=1
+  +0x174 max_steer_angle          [004ac193]
+004ac1b0 FUN_004ac1b0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004ac1c2]
+004b0410 FUN_004b0410 distinct=1 uses=1
+  +0x19c steer_lean_factor        [004b0449]
+004b0e10 FUN_004b0e10 distinct=1 uses=1
+  +0x174 max_steer_angle          [004b0e47]
+004b4ab0 FUN_004b4ab0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004b4acb]
+004b5d70 FUN_004b5d70 distinct=1 uses=1
+  +0x174 max_steer_angle          [004b5d8b]
+004b5e20 FUN_004b5e20 distinct=1 uses=1
+  +0x174 max_steer_angle          [004b5e33]
+004bb730 FUN_004bb730 distinct=1 uses=1
+  +0x188 drift_trigger_time       [004bb733]
+004bd040 FUN_004bd040 distinct=1 uses=1
+  +0x178 steer_constraint         [004bd04a]
+004bd070 FUN_004bd070 distinct=1 uses=1
+  +0x178 steer_constraint         [004bd07d]
+004bd390 FUN_004bd390 distinct=1 uses=1
+  +0x17c front_grip_factor        [004bd393]
+004bdb30 FUN_004bdb30 distinct=1 uses=1
+  +0x178 steer_constraint         [004bdb46]
+004bdb60 FUN_004bdb60 distinct=1 uses=1
+  +0x178 steer_constraint         [004bdb76]
+004bdb90 FUN_004bdb90 distinct=1 uses=1
+  +0x178 steer_constraint         [004bdba6]
+004bdbc0 FUN_004bdbc0 distinct=1 uses=1
+  +0x178 steer_constraint         [004bdbd6]
+004be0c0 FUN_004be0c0 distinct=1 uses=1
+  +0x190 drift_escape_force       [004be0db]
+004be110 FUN_004be110 distinct=1 uses=1
+  +0x194 corner_draw_factor       [004be13f]
+004be3a0 FUN_004be3a0 distinct=1 uses=1
+  +0x190 drift_escape_force       [004be3fd]
+004be850 FUN_004be850 distinct=1 uses=1
+  +0x198 drift_lean_factor        [004be872]
+004bf530 FUN_004bf530 distinct=1 uses=1
+  +0x198 drift_lean_factor        [004bf53a]
+004bffd0 FUN_004bffd0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004bffed]
+004c0030 FUN_004c0030 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c0043]
+004c0690 CMFCOutlookBarPaneAdapter::CMFCOutlookBarPaneAdapter distinct=1 uses=1
+  +0x174 max_steer_angle          [004c06ab]
+004c0810 FUN_004c0810 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c082b]
+004c1360 FUN_004c1360 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c137b]
+004c1f60 FUN_004c1f60 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c1f7b]
+004c1ff0 FUN_004c1ff0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c2003]
+004c2410 FUN_004c2410 distinct=1 uses=1
+  +0x198 drift_lean_factor        [004c2426]
+004c24e0 FUN_004c24e0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c24fb]
+004c2560 FUN_004c2560 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c2575]
+004c2cb0 FUN_004c2cb0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c2ccb]
+004c2d00 FUN_004c2d00 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c2d13]
+004c3030 FUN_004c3030 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c304b]
+004c30d0 FUN_004c30d0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c30e3]
+004c3d00 FUN_004c3d00 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c3d13]
+004c4540 FUN_004c4540 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c455b]
+004c45b0 FUN_004c45b0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c45c3]
+004c4a40 FUN_004c4a40 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c4a53]
+004c5830 FUN_004c5830 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c5843]
+004c6630 FUN_004c6630 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c664b]
+004c66a0 FUN_004c66a0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c66b3]
+004c6980 FUN_004c6980 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c699d]
+004c6ae0 FUN_004c6ae0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c6af3]
+004c72c0 FUN_004c72c0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c72d3]
+004c72f0 FUN_004c72f0 distinct=1 uses=1
+  +0x18c drift_slip_factor        [004c7307]
+004c74a0 FUN_004c74a0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c74bd]
+004c7710 FUN_004c7710 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c7723]
+004c8860 FUN_004c8860 distinct=1 uses=1
+  +0x188 drift_trigger_time       [004c886d]
+004c8880 FUN_004c8880 distinct=1 uses=1
+  +0x188 drift_trigger_time       [004c888a]
+004c89c0 FUN_004c89c0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c89dd]
+004c8b70 FUN_004c8b70 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c8b83]
+004c9a20 FUN_004c9a20 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c9a3d]
+004c9ae0 FUN_004c9ae0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004c9af3]
+004ca370 FUN_004ca370 distinct=1 uses=1
+  +0x174 max_steer_angle          [004ca383]
+004ca3b0 FUN_004ca3b0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004ca3d7]
+004cb170 FUN_004cb170 distinct=1 uses=1
+  +0x174 max_steer_angle          [004cb183]
+004cb1a0 FUN_004cb1a0 distinct=1 uses=1
+  +0x174 max_steer_angle          [004cb1aa]
+004cb2a0 FUN_004cb2a0 distinct=1 uses=1
+  +0x17c front_grip_factor        [004cb2ac]
+004cc220 FUN_004cc220 distinct=1 uses=1
+  +0x188 drift_trigger_time       [004cc23a]
+004cc250 FUN_004cc250 distinct=1 uses=1
+  +0x188 drift_trigger_time       [004cc268]
+004cc290 FUN_004cc290 distinct=1 uses=1
+  +0x188 drift_trigger_time       [004cc29a]
+004cc2c0 FUN_004cc2c0 distinct=1 uses=1
+  +0x17c front_grip_factor        [004cc334]
+004cc360 FUN_004cc360 distinct=1 uses=1
+  +0x184 drift_trigger_factor     [004cc36a]
+004cc7a0 FUN_004cc7a0 distinct=1 uses=1
+  +0x170 slip_brake_force         [004cc7a3]
+004cf040 FUN_004cf040 distinct=1 uses=1
+  +0x168 backward_accel_force     [004cf0a6]
+004cf140 FUN_004cf140 distinct=1 uses=1
+  +0x168 backward_accel_force     [004cf16d]
+004d1620 FUN_004d1620 distinct=1 uses=1
+  +0x174 max_steer_angle          [004d163b]
+004d1670 FUN_004d1670 distinct=1 uses=1
+  +0x174 max_steer_angle          [004d1683]
+004d3e90 FUN_004d3e90 distinct=1 uses=1
+  +0x19c steer_lean_factor        [004d3e93]
+004de8b0 FUN_004de8b0 distinct=1 uses=1
+  +0x190 drift_escape_force       [004de8c3]
+004e6fd1 FUN_004e6fd1 distinct=1 uses=1
+  +0x194 corner_draw_factor       [004e6fd6]
+0051b0e0 FUN_0051b0e0 distinct=1 uses=1
+  +0x180 rear_grip_factor         [0051b3f3]
+0054e570 FUN_0054e570 distinct=1 uses=1
+  +0x198 drift_lean_factor        [0054e9c3]
+005502d0 FUN_005502d0 distinct=1 uses=1
+  +0x188 drift_trigger_time       [00550314]
+00553350 FUN_00553350 distinct=1 uses=1
+  +0x15c air_friction             [005534ab]
+005555d0 FUN_005555d0 distinct=1 uses=1
+  +0x15c air_friction             [00555655]
+005596e0 FUN_005596e0 distinct=1 uses=1
+  +0x128 mass                     [005596f4]
+0055aa00 FUN_0055aa00 distinct=1 uses=1
+  +0x128 mass                     [0055aa0d]
+0055ae30 FUN_0055ae30 distinct=1 uses=1
+  +0x128 mass                     [0055b061]
+0055bf60 FUN_0055bf60 distinct=1 uses=1
+  +0x128 mass                     [0055c038]
+00561090 FUN_00561090 distinct=1 uses=1
+  +0x220 derived_weight_force     [005610d4]
+005613d0 FUN_005613d0 distinct=1 uses=1
+  +0x220 derived_weight_force     [0056154e]
+00561a90 FUN_00561a90 distinct=1 uses=1
+  +0x220 derived_weight_force     [00561c0c]

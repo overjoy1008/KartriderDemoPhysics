@@ -1,0 +1,341 @@
+KartRider.exe camera/speed visual-effect symbol report
+
+SYMBOL 0057091c s_Kart_GamePacket_0057091c type=Label
+  ref 00406333 DATA function=00406320 FUN_00406320
+
+SYMBOL 005710d4 u_boosterwave_005710d4 type=Label
+  ref 00411297 DATA function=00411180 FUN_00411180
+
+SYMBOL 005710fc u_booster_005710fc type=Label
+  ref 004561b2 DATA function=00455c80 FUN_00455c80
+  ref 004561f8 DATA function=00455c80 FUN_00455c80
+  ref 0041118f DATA function=00411180 FUN_00411180
+  ref 004516df DATA function=004511b0 FUN_004511b0
+  ref 00451725 DATA function=004511b0 FUN_004511b0
+
+SYMBOL 00571564 u_kart_00571564 type=Label
+  ref 0041f2f8 DATA function=0041eb20 FUN_0041eb20
+  ref 0041fd1f DATA function=0041eb20 FUN_0041eb20
+  ref 00455dcb DATA function=00455c80 FUN_00455c80
+  ref 00455f11 DATA function=00455c80 FUN_00455c80
+  ref 00455ffa DATA function=00455c80 FUN_00455c80
+  ref 004560d6 DATA function=00455c80 FUN_00455c80
+  ref 0045130d DATA function=004511b0 FUN_004511b0
+  ref 0045143e DATA function=004511b0 FUN_004511b0
+  ref 00451527 DATA function=004511b0 FUN_004511b0
+  ref 00451603 DATA function=004511b0 FUN_004511b0
+  ref 00468b65 DATA function=00468ac0 FUN_00468ac0
+  ref 00468ba5 DATA function=00468ac0 FUN_00468ac0
+  ref 00464eb5 DATA function=00464e90 FUN_00464e90
+  ref 00464ef5 DATA function=00464e90 FUN_00464e90
+
+SYMBOL 005715d8 u_KartRider_005715d8 type=Label
+  ref 0041ebc8 DATA function=0041eb20 FUN_0041eb20
+
+SYMBOL 005718d4 u_kartNumber_005718d4 type=Label
+  ref 0044df6c DATA function=0044d460 FUN_0044d460
+  ref 00428b68 DATA function=00428ad0 FUN_00428ad0
+
+SYMBOL 005718ec u_kartColor_005718ec type=Label
+  ref 0044dee3 DATA function=0044d460 FUN_0044d460
+  ref 00428b35 DATA function=00428ad0 FUN_00428ad0
+  ref 00464f35 DATA function=00464e90 FUN_00464e90
+  ref 00464f68 DATA function=00464e90 FUN_00464e90
+
+SYMBOL 00571900 u_kartName_00571900 type=Label
+  ref 0044de3e DATA function=0044d460 FUN_0044d460
+  ref 00428ae6 DATA function=00428ad0 FUN_00428ad0
+
+SYMBOL 0057194c s_GoKart_0057194c type=Label
+  ref 0042b8f3 DATA function=0042b8e0 FUN_0042b8e0
+
+SYMBOL 00571954 s_GoKartRecordFrame_00571954 type=Label
+  ref 0042b963 DATA function=0042b950 FUN_0042b950
+
+SYMBOL 00571a30 s_GoNetKart_00571a30 type=Label
+  ref 0042dc63 DATA function=0042dc50 FUN_0042dc50
+
+SYMBOL 00571d50 s_GoPlayKart_00571d50 type=Label
+  ref 004321c3 DATA function=004321b0 FUN_004321b0
+
+SYMBOL 00571ea0 u_firedkart_00571ea0 type=Label
+  ref 004384a6 DATA function=004381c0 FUN_004381c0
+  ref 004383bc DATA function=004381c0 FUN_004381c0
+
+SYMBOL 005720a8 u_[GoItemCube:_otherKart]_005720a8 type=Label
+  ref 0043bc65 DATA function=0043bc20 FUN_0043bc20
+
+SYMBOL 005720dc u_[GoItemCube:_yourKart]_005720dc type=Label
+  ref 0043bc43 DATA function=0043bc20 FUN_0043bc20
+
+SYMBOL 00572690 u_Front_Chase_Cameraman_00572690 type=Label
+  ref 00445352 DATA function=00445320 FUN_00445320
+
+SYMBOL 005726bc u_Overhead_Chase_Cameraman_005726bc type=Label
+  ref 00445340 DATA function=00445320 FUN_00445320
+
+SYMBOL 0057271c u_ReCamera_Kart_Cameraman_0057271c type=Label
+  ref 004455e7 DATA function=004455e0 FUN_004455e0
+
+SYMBOL 00572778 u_Top_Cameraman_00572778 type=Label
+  ref 00445797 DATA function=00445790 FUN_00445790
+
+SYMBOL 005727c0 u_Point_Cameraman_005727c0 type=Label
+  ref 00445c47 DATA function=00445c40 FUN_00445c40
+
+SYMBOL 00572810 u_Jump_Cameraman_00572810 type=Label
+  ref 00446017 DATA function=00446010 FUN_00446010
+
+SYMBOL 0057285c u_Surround_Cameraman_0057285c type=Label
+  ref 00447327 DATA function=00447320 FUN_00447320
+  ref 00446b97 DATA function=00446b90 FUN_00446b90
+
+SYMBOL 005728dc u_Spot_Cameraman_005728dc type=Label
+  ref 00447497 DATA function=00447490 FUN_00447490
+
+SYMBOL 005728fc s_ChaseCameraman_005728fc type=Label
+  ref 00447823 DATA function=00447810 FUN_00447810
+
+SYMBOL 0057290c s_KartReCameraman_0057290c type=Label
+  ref 00447893 DATA function=00447880 FUN_00447880
+
+SYMBOL 0057291c s_TopCameraman_0057291c type=Label
+  ref 00447903 DATA function=004478f0 FUN_004478f0
+
+SYMBOL 0057292c s_PointCameraman_0057292c type=Label
+  ref 00447973 DATA function=00447960 FUN_00447960
+
+SYMBOL 0057293c s_JumpCameraman_0057293c type=Label
+  ref 004479e3 DATA function=004479d0 FUN_004479d0
+
+SYMBOL 0057294c s_SurroundCameraman_0057294c type=Label
+  ref 00447a53 DATA function=00447a40 FUN_00447a40
+
+SYMBOL 00572960 s_FinalCameraman_00572960 type=Label
+  ref 00447ac3 DATA function=00447ab0 FUN_00447ab0
+
+SYMBOL 00572970 s_SpotCameraman_00572970 type=Label
+  ref 00447b33 DATA function=00447b20 FUN_00447b20
+
+SYMBOL 005729bc u_FinalCameraman_005729bc type=Label
+  ref 004480e6 DATA function=00447ed0 FUN_00447ed0
+
+SYMBOL 00572d7c u_camera_00572d7c type=Label
+  ref 0044d83e DATA function=0044d460 FUN_0044d460
+  ref 004c180b DATA function=004c17d0 FUN_004c17d0
+  ref 004c184b DATA function=004c17d0 FUN_004c17d0
+
+SYMBOL 00572ed8 u_KartReCameraman_00572ed8 type=Label
+  ref 004566ce DATA function=00455c80 FUN_00455c80
+  ref 00451d1b DATA function=004511b0 FUN_004511b0
+
+SYMBOL 00572ef8 u_readyCamera_00572ef8 type=Label
+  ref 0045664f DATA function=00455c80 FUN_00455c80
+  ref 00451c9c DATA function=004511b0 FUN_004511b0
+
+SYMBOL 00572fec u_SurroundCameraman_00572fec type=Label
+  ref 0045723e DATA function=00456cd0 FUN_00456cd0
+  ref 00452469 DATA function=00451eb0 FUN_00451eb0
+  ref 00452604 DATA function=00451eb0 FUN_00451eb0
+
+SYMBOL 00573050 u_ChaseCameraman_00573050 type=Label
+  ref 00456f90 DATA function=00456cd0 FUN_00456cd0
+  ref 004564e2 DATA function=00455c80 FUN_00455c80
+  ref 00452170 DATA function=00451eb0 FUN_00451eb0
+
+SYMBOL 00573348 s_ShadowKartRecord_00573348 type=Label
+  ref 0045a003 DATA function=00459ff0 FUN_00459ff0
+
+SYMBOL 00573498 u_lensflare_00573498 type=Label
+  ref 0045a7ae DATA function=0045a590 FUN_0045a590
+
+SYMBOL 00573d38 u_kartcard_00573d38 type=Label
+  ref 00464998 DATA function=00464640 FUN_00464640
+
+SYMBOL 00573e00 u_kartRect_00573e00 type=Label
+  ref 00464f9b DATA function=00464e90 FUN_00464e90
+  ref 00464fce DATA function=00464e90 FUN_00464e90
+
+SYMBOL 00573e30 s_KartCard_00573e30 type=Label
+  ref 00465443 DATA function=00465430 FUN_00465430
+
+SYMBOL 00574b1c u_KartRider_Client_00574b1c type=Label
+  ref 004771c9 DATA function=004771c0 FUN_004771c0
+  ref 00477245 DATA function=004771c0 FUN_004771c0
+  ref 004772f1 DATA function=004771c0 FUN_004771c0
+  ref 004772f5 DATA function=004771c0 FUN_004771c0
+  ref 00475eb9 DATA function=00475eb0 FUN_00475eb0
+
+SYMBOL 00574d6c s_KartRider.exe_00574d6c type=Label
+  ref 004770b0 READ function=00476ff0 FUN_00476ff0
+
+SYMBOL 00574dcc u_title=KartRider_Client_00574dcc type=Label
+  ref 0047753c DATA function=00477520 FUN_00477520
+
+SYMBOL 00574dfc u_KartRider.dmp_00574dfc type=Label
+  ref 00477526 DATA function=00477520 FUN_00477520
+
+SYMBOL 00576054 s_ReCamera_00576054 type=Label
+  ref 0049dd63 DATA function=0049dd50 FUN_0049dd50
+
+SYMBOL 005764b0 s_ReKart_005764b0 type=Label
+  ref 004b6dc3 DATA function=004b6db0 FUN_004b6db0
+
+SYMBOL 00576c38 u_cameraName_00576c38 type=Label
+  ref 004c1997 DATA function=004c17d0 FUN_004c17d0
+
+SYMBOL 00589594 s_trailing_spaces_removed_from_key_00589594 type=Label
+  ref 0055a37b DATA function=0055a2c0 FUN_0055a2c0
+
+SYMBOL 00598fb0 Kart_GamePacket::RTTI_Type_Descriptor type=Label
+  ref 0040632e DATA function=00406320 FUN_00406320
+  ref 0058e224 DATA function=none
+  ref 0058e26c DATA function=none
+
+SYMBOL 005992a4 the::GoKart::RTTI_Type_Descriptor type=Label
+  ref 0042b8ee DATA function=0042b8e0 FUN_0042b8e0
+  ref 00443b90 DATA function=00443aa0 FUN_00443aa0
+  ref 0042bcc0 DATA function=0042bba0 FUN_0042bba0
+  ref 0042be47 DATA function=0042be30 FUN_0042be30
+  ref 0042c0f5 DATA function=0042bf50 FUN_0042bf50
+  ref 0043f1bc DATA function=0043f1a0 FUN_0043f1a0
+  ref 0043f4f0 DATA function=0043f400 FUN_0043f400
+  ref 0043f119 DATA function=0043ee60 FUN_0043ee60
+  ref 0043e269 DATA function=0043e070 FUN_0043e070
+  ref 004123f0 DATA function=004123e0 FUN_004123e0
+  ref 00441a55 DATA function=00441a10 FUN_00441a10
+  ref 00441ad6 DATA function=00441aa0 FUN_00441aa0
+  ref 00439cbe DATA function=00439c70 FUN_00439c70
+  ref 00439c33 DATA function=00439c10 FUN_00439c10
+  ref 0043deeb DATA function=0043ded0 FUN_0043ded0
+  ref 0043e01e DATA function=0043dff0 FUN_0043dff0
+  ref 0043cca0 DATA function=0043c930 FUN_0043c930
+  ref 0042c9e7 DATA function=0042c9e0 FUN_0042c9e0
+  ref 00424b3b DATA function=00424b30 FUN_00424b30
+  ref 00424b68 DATA function=00424b30 FUN_00424b30
+  ref 0043cf2a DATA function=0043cce0 FUN_0043cce0
+  ref 0058eb94 DATA function=none
+  ref 0058ebdc DATA function=none
+
+SYMBOL 005992c0 the::GoPlayKart::RTTI_Type_Descriptor type=Label
+  ref 00443b8b DATA function=00443aa0 FUN_00443aa0
+  ref 0042bcf2 DATA function=0042bba0 FUN_0042bba0
+  ref 0042be79 DATA function=0042be30 FUN_0042be30
+  ref 0043f4eb DATA function=0043f400 FUN_0043f400
+  ref 0043f114 DATA function=0043ee60 FUN_0043ee60
+  ref 0043af6d DATA function=0043af50 FUN_0043af50
+  ref 0043e264 DATA function=0043e070 FUN_0043e070
+  ref 004321be DATA function=004321b0 FUN_004321b0
+  ref 004123eb DATA function=004123e0 FUN_004123e0
+  ref 004427d0 DATA function=004427a0 FUN_004427a0
+  ref 0043997d DATA function=00439960 FUN_00439960
+  ref 00441a50 DATA function=00441a10 FUN_00441a10
+  ref 00441ad1 DATA function=00441aa0 FUN_00441aa0
+  ref 00439cb9 DATA function=00439c70 FUN_00439c70
+  ref 00439c2e DATA function=00439c10 FUN_00439c10
+  ref 0043e019 DATA function=0043dff0 FUN_0043dff0
+  ref 0043cc9b DATA function=0043c930 FUN_0043c930
+  ref 00424b63 DATA function=00424b30 FUN_00424b30
+  ref 0043cf25 DATA function=0043cce0 FUN_0043cce0
+  ref 0058ed04 DATA function=none
+  ref 0058ed50 DATA function=none
+
+SYMBOL 005993a4 the::ReKartShadow::RTTI_Type_Descriptor type=Label
+  ref 0058e8c0 DATA function=none
+  ref 0058e910 DATA function=none
+  ref 0058e960 DATA function=none
+
+SYMBOL 005993c4 the::KartShadowCaster::RTTI_Type_Descriptor type=Label
+  ref 0058e9ac DATA function=none
+  ref 0058ea4c DATA function=none
+
+SYMBOL 005993e8 the::Singleton<struct_the::KartManager>::RTTI_Type_Descriptor type=Label
+  ref 0058e9c4 DATA function=none
+
+SYMBOL 0059941c the::KartManager::RTTI_Type_Descriptor type=Label
+  ref 0058e9dc DATA function=none
+  ref 0058ea20 DATA function=none
+
+SYMBOL 00599510 the::GoKartRecordFrame::RTTI_Type_Descriptor type=Label
+  ref 0042b95e DATA function=0042b950 FUN_0042b950
+  ref 0058ebe4 DATA function=none
+  ref 0058ec28 DATA function=none
+
+SYMBOL 005995ac the::GoNetKart::RTTI_Type_Descriptor type=Label
+  ref 0042ed3b DATA function=0042ed10 FUN_0042ed10
+  ref 0042dc5e DATA function=0042dc50 FUN_0042dc50
+  ref 0058ec7c DATA function=none
+  ref 0058ecc8 DATA function=none
+
+SYMBOL 00599890 Cameraman::RTTI_Type_Descriptor type=Label
+  ref 0058f4c4 DATA function=none
+  ref 0058f508 DATA function=none
+
+SYMBOL 005998a8 ChaseCameraman::RTTI_Type_Descriptor type=Label
+  ref 0044781e DATA function=00447810 FUN_00447810
+  ref 0058f510 DATA function=none
+  ref 0058f558 DATA function=none
+
+SYMBOL 005998c8 KartReCameraman::RTTI_Type_Descriptor type=Label
+  ref 0044788e DATA function=00447880 FUN_00447880
+  ref 0058f560 DATA function=none
+  ref 0058f5a8 DATA function=none
+
+SYMBOL 005998e8 TopCameraman::RTTI_Type_Descriptor type=Label
+  ref 004478fe DATA function=004478f0 FUN_004478f0
+  ref 0058f5b0 DATA function=none
+  ref 0058f5f8 DATA function=none
+
+SYMBOL 00599904 PointCameraman::RTTI_Type_Descriptor type=Label
+  ref 0044796e DATA function=00447960 FUN_00447960
+  ref 0058f600 DATA function=none
+  ref 0058f648 DATA function=none
+
+SYMBOL 00599924 JumpCameraman::RTTI_Type_Descriptor type=Label
+  ref 004479de DATA function=004479d0 FUN_004479d0
+  ref 0058f650 DATA function=none
+  ref 0058f698 DATA function=none
+
+SYMBOL 00599940 SurroundCameraman::RTTI_Type_Descriptor type=Label
+  ref 00447a4e DATA function=00447a40 FUN_00447a40
+  ref 0058f6a0 DATA function=none
+  ref 0058f6e8 DATA function=none
+
+SYMBOL 00599960 FinalCameraman::RTTI_Type_Descriptor type=Label
+  ref 00447abe DATA function=00447ab0 FUN_00447ab0
+  ref 0058f6f0 DATA function=none
+  ref 0058f738 DATA function=none
+
+SYMBOL 00599980 SpotCameraman::RTTI_Type_Descriptor type=Label
+  ref 00447b2e DATA function=00447b20 FUN_00447b20
+  ref 0058f740 DATA function=none
+  ref 0058f788 DATA function=none
+
+SYMBOL 00599b10 the::ReCamera::RTTI_Type_Descriptor type=Label
+  ref 0044b408 DATA function=0044b400 FUN_0044b400
+  ref 004aace8 DATA function=004aace0 FUN_004aace0
+  ref 0049dd5e DATA function=0049dd50 FUN_0049dd50
+  ref 004c1db7 DATA function=004c1db0 FUN_004c1db0
+  ref 00591820 DATA function=none
+
+SYMBOL 00599cfc ShadowKartRecord::RTTI_Type_Descriptor type=Label
+  ref 00459ffe DATA function=00459ff0 FUN_00459ff0
+  ref 0058fb98 DATA function=none
+  ref 0058fbdc DATA function=none
+
+SYMBOL 00599e9c the::KartCard::RTTI_Type_Descriptor type=Label
+  ref 0045dd10 DATA function=0045dca0 FUN_0045dca0
+  ref 0046543e DATA function=00465430 FUN_00465430
+  ref 005901bc DATA function=none
+  ref 005901c4 DATA function=none
+
+SYMBOL 0059ab48 the::ReKart::RTTI_Type_Descriptor type=Label
+  ref 004b6dbe DATA function=004b6db0 FUN_004b6db0
+  ref 00591fb4 DATA function=none
+  ref 00591fbc DATA function=none
+  ref 00592014 DATA function=none
+
+SYMBOL 0059abe4 the::ReLensFlare::RTTI_Type_Descriptor type=Label
+  ref 00592318 DATA function=none
+  ref 00592320 DATA function=none
+
