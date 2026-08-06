@@ -47,6 +47,12 @@ distribution copies; the `.app` bundles are the files to run directly.
   current implementation bottom-up from vectors and coordinate axes through
   suspension, tire forces, drift states, boosts, drag, collision, and
   quaternion integration. Its equations and update order follow the C code.
+- **[Track code mapping](docs/TRACK_CODE_MAPPING.md)** maps the verified
+  `T`-menu codes to their Korean original names, historical Item/Racing
+  classification, and 1–5 difficulty ratings.
+- **[Track asset pipeline](docs/TRACK_ASSET_PIPELINE.md)** documents the
+  read-only RHO inventory, minimap/texture extraction, `track.1s` decoding,
+  and C-friendly KTRK mesh preparation.
 - [Recovery notes](analysis/RECOVERY_NOTES.md) connect recovered formulas to
   executable addresses and supporting reports.
 - [Differential-oracle results](analysis/RECOVERY_NOTES.md#differential-oracle-results)
@@ -78,8 +84,9 @@ distribution copies; the `.app` bundles are the files to run directly.
 - an engine-independent world-query interface and complete fixed 5 ms
   simulation pipeline.
 - the original HUD `|velocity| * 3.6` km/h conversion;
-- all 26 playable demo kart parameter/model-AABB presets and all 15 demo track
-  mesh-AABB sizes.
+- all 26 playable demo kart parameter/model-AABB presets and all 13 demo track
+  mesh-AABB sizes, every one of them re-derived from that track's decoded
+  `track.1s` mesh so the scene, walls, minimap and spawn share one source.
 
 The source addresses are recorded next to recovered formulas. Raw Ghidra output
 and ranking reports are kept under `analysis/reports`; reusable headless scripts
@@ -129,19 +136,50 @@ After a Windows build, launch `build/kart_topdown.exe` or
 | Reset | `R` | `R` |
 
 Press `K` or `T` to open a selectable list. Use the mouse, or the arrow keys
-and Enter, to apply one of the 26 kart presets or 15 track bounds immediately.
+and Enter, to apply one of the 26 kart presets or 14 track bounds immediately.
+The track list shows the supplied Korean public name, original `I`/`R` mode
+classification, and difficulty for all 13 identified tracks, plus the synthetic
+`flat_test` reference track described below. The Track Map
+panel uses each archive's original `xt_minimap.png`, and every track resets at
+the centre of its decoded start-line road quad. Only Forest Log and Village
+Overpass have their start *direction* checked against the original game; see
+the confidence boundary below.
 There is no mode-switch key: top-down and 3D are separate executables that
 share the same physics implementation.
+
+### `flat_test` reference track
+
+Both demos open on `flat_test`, a synthetic track with **no mesh**: just the
+flat ground plane and the cyan AABB walls. It exists to isolate the recovered
+physics from the decoded scene geometry, so anything odd on screen is the
+dynamics rather than a triangle query. Its footprint matches Forest Log
+(`896.391 x 807.183`) and it is centred on the world origin. Press `T` to switch
+to any of the 13 real tracks.
+
+### World axis gizmo
+
+Both demos draw a **world** X/Y/Z triad in the bottom-left corner: X red, Y
+green, Z blue, in the usual convention. The arrows always show the world frame,
+never the kart's body axes, so the widget shows how the world is oriented from
+the current viewpoint — in the 3D demo it turns as the chase camera yaws. An
+axis pointing nearly straight at or away from the camera has no useful screen
+direction, so it is drawn with the "out of / into the page" ring symbol instead
+of an arrow; in the top-down view that is always Z.
 
 ## Top-down demo
 
 On Windows the build also produces `kart_topdown.exe`. It runs the full 3D
-physics state on a flat world and renders only the X-Y projection using the
+physics state and renders only the X-Y projection using the
 Win32 API, so no graphics package is required. It starts with the demo-selected
-`burst3` and the original Forest Log (`forest_I01`) mesh-AABB footprint
-`896.391 x 807.183`; the camera follows the kart over a 10-unit reference grid.
-The top-right bounds panel shows the full track, the selected kart's exact
-width and length, and its current position as an oriented triangle.
+`burst3` on the `flat_test` reference track; the camera follows the kart over a
+10-unit reference grid. The top-right bounds panel shows the full track, the
+selected kart's exact width and length, and its current position as an oriented
+triangle.
+
+The camera is oriented so world **+Y points up** the screen and world +X points
+left, matching the original minimap artwork, so the main view and the Track Map
+panel always agree. Both axes are negated together, which is a rotation rather
+than a mirror, so steering handedness is unchanged.
 
 - Up: accelerate
 - Down: reverse or brake
@@ -149,7 +187,7 @@ width and length, and its current position as an oriented triangle.
 - Shift or `W`: drift
 - Ctrl or `D`: start the original 3-second item boost
 - `K`: open the 26-entry kart selection list
-- `T`: open the 15-entry track selection list
+- `T`: open the 14-entry track selection list
 - `G`: emulate the original ground-drag trigger enter/leave (`x4` / `x0.25`)
 - `R`: reset
 
@@ -176,9 +214,39 @@ force.
 ## 3D demo
 
 The Windows build also produces `kart_3d.exe`. It uses the same recovered
-physics and world callbacks, with a software-rendered perspective chase camera,
-3D ground grid, the same default Forest Log footprint and track walls, and a
-kart body sized from the selected model AABB. Its input signs, frame stepping,
+physics and world callbacks, with a software-rendered perspective chase camera.
+All 13 real tracks embed and draw the decoded original `track.1s` KTRK scene
+mesh; `flat_test` deliberately has none.
+The scenes are stored as raw DEFLATE inside the executable and inflated at
+startup by `src/kart_inflate.c`, which keeps 12.1 MB of mesh data down to
+3.7 MB of resources and needs no external library. No asset directory is needed
+at run time.
+Every mesh in an embedded scene is solid, scenery included. What a face is used
+for comes from its **normal**, not its name: `|n_z| >= 0.20` is drivable ground
+for the wheel rays, `|n_z| <= 0.55` is a wall for the body. The `road`/`wall`
+flags come from substring matches on node names, which are unreliable enough
+that they now only pick the wireframe colour — they miss Korean node names
+entirely, and used to let the kart drive straight through rocks and ledges.
+Meshes are rejected by their bounds before any triangle is tested, so covering
+the whole scene costs 0.8–2.5% of a 5 ms substep. The recovered rectangular AABB
+remains an outer safety wall. The kart body is sized from the selected model
+AABB.
+
+Those collision faces are also shaded, translucently, so the surface the physics
+actually uses is visible rather than inferred from wireframe alone: warm sand
+for ground, blue for walls, using the same thresholds as
+`src/kart_track_collision.c`. The fill is composited at roughly one third
+opacity, so the wireframe and the ground grid stay readable through it.
+
+### Falling out of the world
+
+The scenes only carry road triangles where the original track had road, so
+leaving the road — off an edge, or through a gap at speed — drops the kart into
+a void it can never land in. Both simulators detect this and respawn
+automatically, showing `FELL THROUGH THE TRACK - RESPAWNED` for a moment. The
+threshold is `kart_demo_track_fall_limit()`: 40 units below the lowest geometry
+in that scene, far enough that landing hard on the lowest road never trips it.
+Its input signs, frame stepping,
 runtime drag trigger, item/instant boost handling, and
 kart/track selection match the top-down demo. Fading rear-wheel skid marks,
 boost flame and body color, heading/velocity vectors, slip telemetry, and the
@@ -238,7 +306,24 @@ Controls match Windows except that the item-boost modifier is **Command**:
 
 Parameter names/defaults and the core formulas are directly supported by the
 listed executable addresses in `analysis/RECOVERY_NOTES.md`. Kart dimensions
-and track bounds now come from the installed demo's model assets. The standalone
-world is still a flat rectangle using each track's exact full-scene AABB; it
-does not claim to reconstruct that track's road mesh or proprietary triangle
-query.
+come from the installed demo's model assets. All 13 track bounds and start
+lines are derived from the decoded `track.1s` meshes by
+`scripts/derive_track_constants.py`, and all 13 use the selected yellow KTRK
+triangles for ground and wall contact on Windows. The exact proprietary
+node-selection query is still not claimed as recovered.
+
+The start **direction** is the weakest link. A start line's position and its
+axis are readable from the stripe quad, but nothing in `track.1s` records which
+way round the lap is driven, so the simulator assumes the **positive world
+axis**: a Y-axis start line faces world +Y, an X-axis one faces world +X. Those
+are the same axes the corner gizmo shows. The track
+table grades each entry:
+
+| Grade | Tracks | Meaning |
+|---|---|---|
+| `confirmed` | `forest_I01`, `village_R01` | direction compared against the original game |
+| `assumed dir` | 9 tracks | stripe clearly elongated, so the axis is certain; the sign is assumed |
+| `assumed axis` | `ice_I01`, `ice_I02`, `ice_R01` | start quad nearly square, so even the axis is a guess |
+
+A wrong sign only means the kart starts facing backwards; press `R` after
+turning around. Correcting one is a single enum change in `src/kart_demo_data.c`.

@@ -1,10 +1,15 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+#include "kart_axis_gizmo_win32.h"
 #include "kart_demo_data.h"
 #include "kart_demo_win32_ui.h"
 #include "kart_input.h"
+#include "kart_minimap_win32.h"
 #include "kart_simulation.h"
+#include "kart_track_collision.h"
+#include "kart_track_scene.h"
+#include "kart_track_scene_resources.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -45,6 +50,11 @@ typedef struct Demo3DState {
     bool previous_skid_active;
     bool boost_active;
     KartSteeringInputState steering;
+    /* Counts down after an out-of-world respawn so the HUD can say why the
+       kart moved. */
+    DWORD respawn_notice_ms;
+    KartTrackScene scenes[KART_TRACK_SCENE_CAPACITY];
+    KartDemoMinimapSet minimaps;
 } Demo3DState;
 
 typedef struct Camera3D {
@@ -60,6 +70,65 @@ typedef struct ProjectedPoint {
     float depth;
     bool visible;
 } ProjectedPoint;
+
+static bool load_track_scene_resource(
+    HINSTANCE instance,
+    int resource_id,
+    KartTrackScene *scene)
+{
+#if defined(KART_EMBED_TRACK_SCENES)
+    HRSRC resource = FindResourceA(
+        instance, MAKEINTRESOURCEA(resource_id), RT_RCDATA);
+    HGLOBAL loaded;
+    const void *data;
+    DWORD size;
+    if (resource == NULL) {
+        return false;
+    }
+    loaded = LoadResource(instance, resource);
+    size = SizeofResource(instance, resource);
+    data = loaded != NULL ? LockResource(loaded) : NULL;
+    return data != NULL && size != 0 &&
+           kart_track_scene_load_compressed(scene, data, (size_t)size);
+#else
+    (void)instance;
+    (void)resource_id;
+    (void)scene;
+    return false;
+#endif
+}
+
+static void load_track_scenes(HINSTANCE instance, Demo3DState *demo)
+{
+    unsigned int i;
+    const unsigned int count = kart_demo_track_count();
+    for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
+        /* Id 0 marks a track with no mesh, such as the flat test track. */
+        if (KART_TRACK_SCENE_RESOURCE_IDS[i] == 0) continue;
+        load_track_scene_resource(
+            instance, KART_TRACK_SCENE_RESOURCE_IDS[i], &demo->scenes[i]);
+    }
+}
+
+static void free_track_scenes(Demo3DState *demo)
+{
+    unsigned int i;
+    for (i = 0; i < KART_TRACK_SCENE_CAPACITY; ++i) {
+        kart_track_scene_free(&demo->scenes[i]);
+    }
+}
+
+static const KartTrackScene *active_track_scene(const Demo3DState *demo)
+{
+    unsigned int i;
+    const unsigned int count = kart_demo_track_count();
+    for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
+        if (kart_demo_track_at(i) == demo->track_spec) {
+            return demo->scenes[i].mesh_count != 0 ? &demo->scenes[i] : NULL;
+        }
+    }
+    return NULL;
+}
 
 static KartVec3 vec_add(KartVec3 a, KartVec3 b)
 {
@@ -151,6 +220,21 @@ static bool query_flat_ground(
     return true;
 }
 
+static bool query_track_ground(
+    void *user_data,
+    KartVec3 start,
+    KartVec3 delta,
+    KartGroundHit *hit)
+{
+    const Demo3DState *demo = (const Demo3DState *)user_data;
+    const KartTrackScene *scene = active_track_scene(demo);
+    if (scene != NULL) {
+        return kart_track_scene_query_ground(
+            scene, demo->track_spec, start, delta, hit);
+    }
+    return query_flat_ground(user_data, start, delta, hit);
+}
+
 static unsigned int query_track_walls(
     void *user_data,
     const KartSimulationState *state,
@@ -160,7 +244,11 @@ static unsigned int query_track_walls(
     const Demo3DState *demo = (const Demo3DState *)user_data;
     const float track_half_width = kart_demo_track_width(demo->track_spec) * 0.5f;
     const float track_half_height = kart_demo_track_length(demo->track_spec) * 0.5f;
-    unsigned int count = 0;
+    const KartTrackScene *scene = active_track_scene(demo);
+    unsigned int count = scene != NULL
+        ? kart_track_scene_query_body_collisions(
+            scene, demo->track_spec, state, contacts, capacity)
+        : 0;
 #define ADD_CONTACT(nx, ny) do { \
     if (count < capacity) { \
         contacts[count].normal = (KartVec3){(nx), (ny), 0.0f}; \
@@ -192,6 +280,8 @@ static int key_down(int virtual_key)
 
 static void reset_kart(Demo3DState *demo)
 {
+    KartVec3 start_position;
+    KartQuat start_orientation;
     if (demo->kart_spec == NULL) {
         demo->kart_spec = kart_demo_default_kart();
     }
@@ -200,6 +290,12 @@ static void reset_kart(Demo3DState *demo)
     }
     kart_simulation_init(
         &demo->kart, &demo->kart_spec->dynamics, &demo->kart_spec->geometry);
+    if (kart_demo_track_start_position(demo->track_spec, &start_position)) {
+        demo->kart.position = start_position;
+    }
+    if (kart_demo_track_start_orientation(demo->track_spec, &start_orientation)) {
+        demo->kart.orientation = start_orientation;
+    }
     demo->previous_tick = GetTickCount();
     demo->simulation_time_ms = 0;
     demo->skid_head = 0;
@@ -360,6 +456,239 @@ static void draw_line_3d(
     }
 }
 
+static void draw_track_scene_pass(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartDemoTrackSpec *track,
+    const KartTrackScene *scene,
+    bool collision_candidates)
+{
+    const float draw_radius = 210.0f;
+    const float draw_radius_squared = draw_radius * draw_radius;
+    uint32_t mesh_index;
+
+    for (mesh_index = 0; mesh_index < scene->mesh_count; ++mesh_index) {
+        const KartTrackSceneMesh *mesh = &scene->meshes[mesh_index];
+        const bool candidate = (mesh->flags & 3u) != 0;
+        const uint32_t triangle_count = mesh->index_count / 3u;
+        const uint32_t stride = candidate ? 1u : 5u;
+        uint32_t triangle;
+        if (candidate != collision_candidates) {
+            continue;
+        }
+        for (triangle = 0; triangle < triangle_count; triangle += stride) {
+            const uint32_t base = triangle * 3u;
+            const KartVec3 a = kart_track_scene_world_vertex(
+                &mesh->vertices[mesh->indices[base]], track);
+            const KartVec3 b = kart_track_scene_world_vertex(
+                &mesh->vertices[mesh->indices[base + 1u]], track);
+            const KartVec3 c = kart_track_scene_world_vertex(
+                &mesh->vertices[mesh->indices[base + 2u]], track);
+            const float center_x = (a.x + b.x + c.x) / 3.0f;
+            const float center_y = (a.y + b.y + c.y) / 3.0f;
+            const float delta_x = center_x - camera.position.x;
+            const float delta_y = center_y - camera.position.y;
+            if (delta_x * delta_x + delta_y * delta_y > draw_radius_squared) {
+                continue;
+            }
+            draw_line_3d(dc, client, camera, a, b);
+            draw_line_3d(dc, client, camera, b, c);
+            draw_line_3d(dc, client, camera, c, a);
+        }
+    }
+}
+
+/* Sutherland-Hodgman clip of a convex polygon against the camera near plane.
+   Road triangles span tens of units, so one close to the camera routinely has a
+   vertex behind it; dropping those would leave the ground under the kart
+   unshaded. Clipping a triangle by one plane yields at most four points. */
+static int clip_to_near_plane(
+    const KartVec3 *input,
+    int count,
+    Camera3D camera,
+    float near_depth,
+    KartVec3 *output)
+{
+    int out_count = 0;
+    int i;
+    for (i = 0; i < count; ++i) {
+        const KartVec3 current = input[i];
+        const KartVec3 next = input[(i + 1) % count];
+        const float depth_current =
+            vec_dot(vec_sub(current, camera.position), camera.forward) - near_depth;
+        const float depth_next =
+            vec_dot(vec_sub(next, camera.position), camera.forward) - near_depth;
+        if (depth_current >= 0.0f) {
+            output[out_count++] = current;
+        }
+        if ((depth_current >= 0.0f) != (depth_next >= 0.0f)) {
+            const float t = depth_current / (depth_current - depth_next);
+            output[out_count++] =
+                vec_add(current, vec_scale(vec_sub(next, current), t));
+        }
+    }
+    return out_count;
+}
+
+static LONG clamp_device_coordinate(LONG value)
+{
+    /* Vertices just past the near plane project a long way off screen. GDI is
+       happy with large coordinates but not unbounded ones. */
+    const LONG limit = 30000;
+    if (value < -limit) return -limit;
+    if (value > limit) return limit;
+    return value;
+}
+
+/* Fills the faces the physics treats as solid. Drawn opaque here and blended in
+   by the caller, so a surface reads as a tint over whatever is behind it.
+
+   Every mesh is filled, scenery included, because every mesh now collides. The
+   colour comes from the face normal using the same thresholds as
+   kart_track_collision.c, so what is shaded as floor is exactly what the wheel
+   rays can hit and what is shaded as wall is what the body can hit. */
+static void fill_track_scene_faces(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartDemoTrackSpec *track,
+    const KartTrackScene *scene)
+{
+    const float draw_radius_squared = 210.0f * 210.0f;
+    /* Further out than the wireframe's near plane, which keeps the projected
+       coordinates of a freshly clipped edge within a sane range. */
+    const float near_depth = 0.5f;
+    HBRUSH floor_brush = CreateSolidBrush(RGB(196, 176, 120));
+    HBRUSH wall_brush = CreateSolidBrush(RGB(96, 150, 210));
+    HGDIOBJ old_brush = SelectObject(dc, floor_brush);
+    HGDIOBJ old_pen = SelectObject(dc, GetStockObject(NULL_PEN));
+    uint32_t mesh_index;
+
+    for (mesh_index = 0; mesh_index < scene->mesh_count; ++mesh_index) {
+        const KartTrackSceneMesh *mesh = &scene->meshes[mesh_index];
+        const uint32_t triangle_count = mesh->index_count / 3u;
+        uint32_t triangle;
+        for (triangle = 0; triangle < triangle_count; ++triangle) {
+            const uint32_t base = triangle * 3u;
+            const KartVec3 vertices[3] = {
+                kart_track_scene_world_vertex(
+                    &mesh->vertices[mesh->indices[base]], track),
+                kart_track_scene_world_vertex(
+                    &mesh->vertices[mesh->indices[base + 1u]], track),
+                kart_track_scene_world_vertex(
+                    &mesh->vertices[mesh->indices[base + 2u]], track),
+            };
+            const float center_x =
+                (vertices[0].x + vertices[1].x + vertices[2].x) / 3.0f;
+            const float center_y =
+                (vertices[0].y + vertices[1].y + vertices[2].y) / 3.0f;
+            const float delta_x = center_x - camera.position.x;
+            const float delta_y = center_y - camera.position.y;
+            KartVec3 normal;
+            float normal_z;
+            KartVec3 clipped[8];
+            POINT points[8];
+            int clipped_count;
+            int i;
+            if (delta_x * delta_x + delta_y * delta_y > draw_radius_squared) {
+                continue;
+            }
+            clipped_count = clip_to_near_plane(
+                vertices, 3, camera, near_depth, clipped);
+            if (clipped_count < 3) {
+                continue;
+            }
+            for (i = 0; i < clipped_count; ++i) {
+                const ProjectedPoint projected =
+                    project_point(client, camera, clipped[i]);
+                points[i].x = clamp_device_coordinate(projected.point.x);
+                points[i].y = clamp_device_coordinate(projected.point.y);
+            }
+            /* The normal comes from the unclipped triangle so the floor/wall
+               split matches what the collision query sees. */
+            normal = vec_normalize(vec_cross(
+                vec_sub(vertices[1], vertices[0]),
+                vec_sub(vertices[2], vertices[0])));
+            normal_z = normal.z < 0.0f ? -normal.z : normal.z;
+            if (normal_z >= 0.20f) {
+                SelectObject(dc, floor_brush);
+            } else {
+                SelectObject(dc, wall_brush);
+            }
+            Polygon(dc, points, clipped_count);
+        }
+    }
+    SelectObject(dc, old_pen);
+    SelectObject(dc, old_brush);
+    DeleteObject(floor_brush);
+    DeleteObject(wall_brush);
+}
+
+/* Composites the filled faces at partial alpha, then draws the wireframe over
+   them at full strength. Copying the frame into the layer first means untouched
+   pixels blend with themselves and stay exactly as they were. */
+static void draw_track_scene_faces(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartDemoTrackSpec *track,
+    const KartTrackScene *scene)
+{
+    const int width = client.right - client.left;
+    const int height = client.bottom - client.top;
+    /* Roughly one third opacity: enough to read the surface, light enough that
+       the wireframe and the grid behind it stay legible. */
+    BLENDFUNCTION blend = {AC_SRC_OVER, 0, 85, 0};
+    HDC layer;
+    HBITMAP bitmap;
+    HGDIOBJ old_bitmap;
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    layer = CreateCompatibleDC(dc);
+    if (layer == NULL) {
+        return;
+    }
+    bitmap = CreateCompatibleBitmap(dc, width, height);
+    if (bitmap == NULL) {
+        DeleteDC(layer);
+        return;
+    }
+    old_bitmap = SelectObject(layer, bitmap);
+    BitBlt(layer, 0, 0, width, height, dc, 0, 0, SRCCOPY);
+    fill_track_scene_faces(layer, client, camera, track, scene);
+    AlphaBlend(dc, 0, 0, width, height, layer, 0, 0, width, height, blend);
+    SelectObject(layer, old_bitmap);
+    DeleteObject(bitmap);
+    DeleteDC(layer);
+}
+
+static void draw_track_scene(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartDemoTrackSpec *track,
+    const KartTrackScene *scene)
+{
+    HPEN scenery_pen;
+    HPEN road_pen;
+    HGDIOBJ old_pen;
+    if (scene == NULL) {
+        return;
+    }
+    draw_track_scene_faces(dc, client, camera, track, scene);
+    scenery_pen = CreatePen(PS_SOLID, 1, RGB(93, 125, 95));
+    road_pen = CreatePen(PS_SOLID, 2, RGB(205, 194, 159));
+    old_pen = SelectObject(dc, scenery_pen);
+    draw_track_scene_pass(dc, client, camera, track, scene, false);
+    SelectObject(dc, road_pen);
+    draw_track_scene_pass(dc, client, camera, track, scene, true);
+    SelectObject(dc, old_pen);
+    DeleteObject(scenery_pen);
+    DeleteObject(road_pen);
+}
+
 static void draw_track(
     HDC dc,
     RECT client,
@@ -437,7 +766,7 @@ static void draw_track_minimap(
     const Demo3DState *demo)
 {
     const int panel_width = 220;
-    const int panel_height = 190;
+    const int panel_height = 248;
     const int margin = 16;
     const float track_width = kart_demo_track_width(demo->track_spec);
     const float track_length = kart_demo_track_length(demo->track_spec);
@@ -462,6 +791,14 @@ static void draw_track_minimap(
         (LONG)center_x + half_width,
         (LONG)center_y + half_height,
     };
+    const RECT image_rect = {
+        panel.left + 15,
+        panel.top + 42,
+        panel.right - 15,
+        panel.bottom - 16,
+    };
+    const KartDemoMinimap *minimap = kart_demo_minimap_for_track(
+        &demo->minimaps, demo->track_spec);
     KartVec3 right;
     KartVec3 forward;
     KartVec3 up;
@@ -476,20 +813,25 @@ static void draw_track_minimap(
     HGDIOBJ old_brush = SelectObject(dc, panel_brush);
     HGDIOBJ old_pen = SelectObject(dc, panel_pen);
     int division;
-    static const char label[] = "TRACK BOUNDS";
+    static const char label[] = "TRACK MAP";
     char kart_size[96];
 
     Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
-    SelectObject(dc, grid_pen);
-    for (division = 1; division < 4; ++division) {
-        const int x = boundary.left +
-            (boundary.right - boundary.left) * division / 4;
-        const int y = boundary.top +
-            (boundary.bottom - boundary.top) * division / 4;
-        MoveToEx(dc, x, boundary.top, NULL);
-        LineTo(dc, x, boundary.bottom);
-        MoveToEx(dc, boundary.left, y, NULL);
-        LineTo(dc, boundary.right, y);
+    if (minimap != NULL) {
+        boundary = image_rect;
+        kart_demo_draw_minimap_bitmap(dc, image_rect, minimap);
+    } else {
+        SelectObject(dc, grid_pen);
+        for (division = 1; division < 4; ++division) {
+            const int x = boundary.left +
+                (boundary.right - boundary.left) * division / 4;
+            const int y = boundary.top +
+                (boundary.bottom - boundary.top) * division / 4;
+            MoveToEx(dc, x, boundary.top, NULL);
+            LineTo(dc, x, boundary.bottom);
+            MoveToEx(dc, boundary.left, y, NULL);
+            LineTo(dc, boundary.right, y);
+        }
     }
     SelectObject(dc, wall_pen);
     SelectObject(dc, GetStockObject(NULL_BRUSH));
@@ -498,10 +840,15 @@ static void draw_track_minimap(
     orientation_axes(demo->kart.orientation, &right, &forward, &up);
     (void)right;
     (void)up;
-    kart_point = (POINT){
-        (LONG)(center_x + demo->kart.position.x * scale),
-        (LONG)(center_y + demo->kart.position.y * scale),
-    };
+    if (minimap != NULL) {
+        kart_point = kart_demo_minimap_kart_point(
+            image_rect, minimap, demo->track_spec, demo->kart.position);
+    } else {
+        kart_point = kart_demo_minimap_bounds_point(
+            boundary, demo->track_spec, demo->kart.position);
+    }
+    right = kart_demo_minimap_direction(demo->track_spec, right);
+    forward = kart_demo_minimap_direction(demo->track_spec, forward);
     kart_triangle[0] = (POINT){
         kart_point.x + (LONG)(forward.x * 9.0f),
         kart_point.y + (LONG)(forward.y * 9.0f),
@@ -807,6 +1154,8 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
 
     camera = make_chase_camera(&demo->kart, client);
     draw_track(buffer, client, camera, demo->track_spec);
+    draw_track_scene(
+        buffer, client, camera, demo->track_spec, active_track_scene(demo));
     draw_skid_marks(buffer, client, camera, demo);
     draw_boost_effect(buffer, client, camera, demo);
     draw_kart(
@@ -843,11 +1192,12 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     snprintf(
         status,
         sizeof(status),
-        "%s (%s) %.1f x %.1f | kart %s %.3f x %.3f | h %.2f",
+        "%s (%s) %.1f x %.1f | scene %s | kart %s %.3f x %.3f | h %.2f",
         demo->track_spec->display_name,
         demo->track_spec->asset_name,
         kart_demo_track_width(demo->track_spec),
         kart_demo_track_length(demo->track_spec),
+        active_track_scene(demo) != NULL ? "KTRK+collision" : "bounds",
         demo->kart_spec->asset_name,
         demo->kart.geometry.half_width * 2.0f,
         demo->kart.geometry.half_length * 2.0f,
@@ -855,7 +1205,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     SetTextColor(
         buffer,
         demo->kart.drift.slip_detected ? RGB(255, 185, 55) : RGB(180, 195, 205));
-    TextOutA(buffer, 16, 52, status, (int)strlen(status));
+    kart_demo_text_out_utf8(buffer, 16, 52, status);
     snprintf(
         status,
         sizeof(status),
@@ -872,8 +1222,30 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         demo->boost_active ? RGB(75, 225, 255) :
         (drift_visual_active(&demo->kart) ? RGB(255, 185, 55) : RGB(180, 195, 205)));
     TextOutA(buffer, 16, 72, status, (int)strlen(status));
+    if (demo->respawn_notice_ms != 0) {
+        static const char notice[] = "FELL THROUGH THE TRACK - RESPAWNED";
+        SetTextColor(buffer, RGB(255, 120, 120));
+        TextOutA(buffer, 16, 92, notice, (int)strlen(notice));
+    }
     kart_demo_draw_speedometer(
         buffer, client, speedometer_kmh, demo->boost_active);
+    {
+        /* Project each world axis onto the chase camera's basis. Screen Y grows
+           downward and camera.forward points into the screen, so both are
+           negated to get screen-space directions. */
+        static const KartVec3 WORLD_AXES[3] = {
+            {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
+        float axis_x[3];
+        float axis_y[3];
+        float axis_toward[3];
+        int axis;
+        for (axis = 0; axis < 3; ++axis) {
+            axis_x[axis] = vec_dot(WORLD_AXES[axis], camera.right);
+            axis_y[axis] = -vec_dot(WORLD_AXES[axis], camera.up);
+            axis_toward[axis] = -vec_dot(WORLD_AXES[axis], camera.forward);
+        }
+        kart_demo_draw_axis_gizmo(buffer, client, axis_x, axis_y, axis_toward);
+    }
 
     BitBlt(target, 0, 0, client.right, client.bottom, buffer, 0, 0, SRCCOPY);
     SelectObject(buffer, old_bitmap);
@@ -889,6 +1261,8 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         CREATESTRUCT *create = (CREATESTRUCT *)lparam;
         demo = (Demo3DState *)create->lpCreateParams;
         SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)demo);
+        load_track_scenes(create->hInstance, demo);
+        kart_demo_minimap_set_load(create->hInstance, &demo->minimaps);
         reset_kart(demo);
         SetTimer(window, 1, 16, NULL);
         return 0;
@@ -913,7 +1287,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         DWORD elapsed;
         KartSimulationControls controls = {0};
         const KartSimulationWorld world = {
-            .query_ground = query_flat_ground,
+            .query_ground = query_track_ground,
             .query_body_collisions = query_track_walls,
             .user_data = demo,
         };
@@ -971,6 +1345,15 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         } else if (elapsed != 0) {
             kart_simulate_milliseconds(&demo->kart, &controls, &world, elapsed);
         }
+        if (demo->kart.position.z <
+            kart_demo_track_fall_limit(demo->track_spec)) {
+            reset_kart(demo);
+            demo->respawn_notice_ms = 1500;
+        } else if (demo->respawn_notice_ms > elapsed) {
+            demo->respawn_notice_ms -= elapsed;
+        } else {
+            demo->respawn_notice_ms = 0;
+        }
         demo->boost_active = kart_any_boost_active(
             &demo->kart.timed_boost, &demo->kart.instant_boost);
         demo->simulation_time_ms += elapsed;
@@ -989,6 +1372,10 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
     }
     case WM_DESTROY:
         KillTimer(window, 1);
+        if (demo != NULL) {
+            free_track_scenes(demo);
+            kart_demo_minimap_set_free(&demo->minimaps);
+        }
         PostQuitMessage(0);
         return 0;
     default:

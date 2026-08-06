@@ -8,9 +8,36 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <wchar.h>
 
 #define KART_DEMO_KART_MENU_BASE 1000U
 #define KART_DEMO_TRACK_MENU_BASE 2000U
+
+static void kart_demo_utf8_to_wide(
+    const char *source,
+    wchar_t *destination,
+    int capacity)
+{
+    if (capacity <= 0) return;
+    destination[0] = L'\0';
+    if (source == NULL) return;
+    if (MultiByteToWideChar(
+            CP_UTF8, 0, source, -1, destination, capacity) == 0) {
+        destination[0] = L'\0';
+    }
+    destination[capacity - 1] = L'\0';
+}
+
+static void kart_demo_text_out_utf8(
+    HDC dc,
+    int x,
+    int y,
+    const char *text)
+{
+    wchar_t wide[512];
+    kart_demo_utf8_to_wide(text, wide, 512);
+    TextOutW(dc, x, y, wide, (int)wcslen(wide));
+}
 
 static const KartDemoKartSpec *kart_demo_popup_select_kart(
     HWND window,
@@ -75,24 +102,36 @@ static const KartDemoTrackSpec *kart_demo_popup_select_track(
     if (menu == NULL) {
         return current;
     }
-    AppendMenuA(menu, MF_STRING | MF_DISABLED, 0, "SELECT TRACK");
-    AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(menu, MF_STRING | MF_DISABLED, 0, L"트랙 선택");
+    AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
     for (i = 0; i < kart_demo_track_count(); ++i) {
         const KartDemoTrackSpec *spec = kart_demo_track_at(i);
         UINT flags = MF_STRING;
-        char label[160];
+        char utf8_label[256];
+        wchar_t label[256];
         if (spec == current) {
             flags |= MF_CHECKED;
         }
-        snprintf(
-            label,
-            sizeof(label),
-            "%s (%s)    %.1f x %.1f",
-            spec->display_name,
-            spec->asset_name,
-            kart_demo_track_width(spec),
-            kart_demo_track_length(spec));
-        AppendMenuA(
+        if (spec->difficulty != 0) {
+            snprintf(
+                utf8_label,
+                sizeof(utf8_label),
+                "%s  [%s]  난이도 %u  (%s)",
+                spec->display_name,
+                spec->race_mode,
+                spec->difficulty,
+                spec->asset_name);
+        } else {
+            snprintf(
+                utf8_label,
+                sizeof(utf8_label),
+                "%s  [%s]  난이도 ?  (%s)",
+                spec->display_name,
+                spec->race_mode,
+                spec->asset_name);
+        }
+        kart_demo_utf8_to_wide(utf8_label, label, 256);
+        AppendMenuW(
             menu, flags, KART_DEMO_TRACK_MENU_BASE + i, label);
     }
     GetWindowRect(window, &window_rect);

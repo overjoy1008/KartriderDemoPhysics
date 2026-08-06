@@ -122,9 +122,17 @@ static bool drift_active(const KartSimulationState *kart)
 
 static void reset_demo(MacDemoState *demo)
 {
+    KartVec3 startPosition;
+    KartQuat startOrientation;
     if (!demo->kart_spec) demo->kart_spec = kart_demo_default_kart();
     if (!demo->track_spec) demo->track_spec = kart_demo_default_track();
     kart_simulation_init(&demo->kart, &demo->kart_spec->dynamics, &demo->kart_spec->geometry);
+    if (kart_demo_track_start_position(demo->track_spec, &startPosition)) {
+        demo->kart.position = startPosition;
+    }
+    if (kart_demo_track_start_orientation(demo->track_spec, &startOrientation)) {
+        demo->kart.orientation = startOrientation;
+    }
     demo->simulation_time_ms = 0;
     demo->skid_head = demo->skid_count = 0;
     demo->previous_skid_active = false;
@@ -315,9 +323,17 @@ static void line3d(NSRect bounds, MacCamera camera, KartVec3 a, KartVec3 b, NSCo
     NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Select Track"];
     for (unsigned int i=0; i<kart_demo_track_count(); ++i) {
         const KartDemoTrackSpec *spec = kart_demo_track_at(i);
-        NSString *title = [NSString stringWithFormat:@"%s (%s)   %.1f x %.1f",
-            spec->display_name, spec->asset_name,
-            kart_demo_track_width(spec), kart_demo_track_length(spec)];
+        NSString *displayName=[NSString stringWithUTF8String:spec->display_name];
+        NSString *raceMode=[NSString stringWithUTF8String:spec->race_mode];
+        NSString *assetName=[NSString stringWithUTF8String:spec->asset_name];
+        NSString *title;
+        if (spec->difficulty != 0) {
+            title = [NSString stringWithFormat:@"%@  [%@]  난이도 %u  (%@)",
+                displayName, raceMode, spec->difficulty, assetName];
+        } else {
+            title = [NSString stringWithFormat:@"%@  [%@]  난이도 ?  (%@)",
+                displayName, raceMode, assetName];
+        }
         NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title action:@selector(selectTrack:) keyEquivalent:@""];
         item.target = self; item.tag = i;
         item.state = spec == _demo.track_spec ? NSControlStateValueOn : NSControlStateValueOff;
@@ -400,29 +416,52 @@ static void line3d(NSRect bounds, MacCamera camera, KartVec3 a, KartVec3 b, NSCo
 
 - (void)drawMinimap
 {
-    NSRect panel = NSMakeRect(self.bounds.size.width-236,16,220,190);
+    NSRect panel = NSMakeRect(self.bounds.size.width-236,16,220,248);
     [rgb(15,19,26) setFill]; NSRectFill(panel);
     NSBezierPath *panelPath=[NSBezierPath bezierPathWithRect:panel];
     [rgb(54,64,73) setStroke]; [panelPath setLineWidth:1]; [panelPath stroke];
     float tw=kart_demo_track_width(_demo.track_spec), th=kart_demo_track_length(_demo.track_spec);
-    float scale=fminf(200.0f/tw,132.0f/th);
+    float scale=fminf(200.0f/tw,190.0f/th);
     float centerY=(NSMinY(panel)+42+NSMaxY(panel)-10)*0.5f;
     NSRect track=NSMakeRect(NSMidX(panel)-tw*scale/2,centerY-th*scale/2,tw*scale,th*scale);
-    for(int division=1;division<4;division++) {
-        float x=NSMinX(track)+track.size.width*division/4.0f;
-        float y=NSMinY(track)+track.size.height*division/4.0f;
-        stroke_line(NSMakePoint(x,NSMinY(track)),NSMakePoint(x,NSMaxY(track)),rgb(86,98,108),1);
-        stroke_line(NSMakePoint(NSMinX(track),y),NSMakePoint(NSMaxX(track),y),rgb(86,98,108),1);
+    NSString *resourceName=[NSString stringWithFormat:@"minimap_%s",_demo.track_spec->asset_name];
+    NSString *resourcePath=[[NSBundle mainBundle] pathForResource:resourceName ofType:@"png"];
+    NSImage *minimap=resourcePath?[[NSImage alloc] initWithContentsOfFile:resourcePath]:nil;
+    BOOL hasMinimap=minimap!=nil;
+    if(hasMinimap) {
+        track=NSMakeRect(NSMinX(panel)+15,NSMinY(panel)+42,190,190);
+        [minimap drawInRect:track fromRect:NSZeroRect operation:NSCompositingOperationSourceOver
+            fraction:1.0 respectFlipped:YES hints:nil];
+    } else {
+        for(int division=1;division<4;division++) {
+            float x=NSMinX(track)+track.size.width*division/4.0f;
+            float y=NSMinY(track)+track.size.height*division/4.0f;
+            stroke_line(NSMakePoint(x,NSMinY(track)),NSMakePoint(x,NSMaxY(track)),rgb(86,98,108),1);
+            stroke_line(NSMakePoint(NSMinX(track),y),NSMakePoint(NSMaxX(track),y),rgb(86,98,108),1);
+        }
     }
     NSBezierPath *p=[NSBezierPath bezierPathWithRect:track]; [rgb(75,220,255) setStroke]; [p setLineWidth:3]; [p stroke];
     KartVec3 r,f,u; kart_axes(_demo.kart.orientation,&r,&f,&u); (void)u;
-    NSPoint center=NSMakePoint(NSMidX(track)+_demo.kart.position.x*scale,centerY+_demo.kart.position.y*scale);
+    NSPoint center;
+    float screenFY=f.y,screenRY=r.y;
+    if(hasMinimap) {
+        BOOL mirrorX=kart_demo_track_mirror_x(_demo.track_spec);
+        float nx=mirrorX
+            ? fminf(1.0f,fmaxf(0.0f,0.5f-_demo.kart.position.x/tw))
+            : fminf(1.0f,fmaxf(0.0f,_demo.kart.position.x/tw+0.5f));
+        float ny=fminf(1.0f,fmaxf(0.0f,_demo.kart.position.y/th+0.5f));
+        center=NSMakePoint(NSMinX(track)+nx*track.size.width,NSMaxY(track)-ny*track.size.height);
+        if(mirrorX) { f.x=-f.x; r.x=-r.x; }
+        screenFY=-f.y; screenRY=-r.y;
+    } else {
+        center=NSMakePoint(NSMidX(track)+_demo.kart.position.x*scale,centerY+_demo.kart.position.y*scale);
+    }
     NSPoint tri[3]={
-        NSMakePoint(center.x+f.x*9,center.y+f.y*9),
-        NSMakePoint(center.x-f.x*6+r.x*5,center.y-f.y*6+r.y*5),
-        NSMakePoint(center.x-f.x*6-r.x*5,center.y-f.y*6-r.y*5)};
+        NSMakePoint(center.x+f.x*9,center.y+screenFY*9),
+        NSMakePoint(center.x-f.x*6+r.x*5,center.y-screenFY*6+screenRY*5),
+        NSMakePoint(center.x-f.x*6-r.x*5,center.y-screenFY*6-screenRY*5)};
     fill_polygon(tri,3,rgb(255,180,45),rgb(255,235,175));
-    [@"TRACK BOUNDS" drawAtPoint:NSMakePoint(NSMinX(panel)+8,NSMinY(panel)+6)
+    [@"TRACK MAP" drawAtPoint:NSMakePoint(NSMinX(panel)+8,NSMinY(panel)+6)
         withAttributes:[self textAttributes:12 color:rgb(180,205,215) bold:NO]];
     NSString *size=[NSString stringWithFormat:@"KART %s  %.3f x %.3f",
         _demo.kart_spec->asset_name,_demo.kart.geometry.half_width*2,
@@ -560,14 +599,14 @@ static void line3d(NSRect bounds, MacCamera camera, KartVec3 a, KartVec3 b, NSCo
     NSString *help=@"Arrows: drive  Shift/W: drift  Cmd/D: boost  K: kart list  T: track list  G: drag trigger  R: reset";
     [help drawAtPoint:NSMakePoint(16,32) withAttributes:normal];
 #ifdef KART_DEMO_3D
-    NSString *selection=[NSString stringWithFormat:@"%s (%s) %.1f x %.1f | kart %s %.3f x %.3f | h %.2f",
-        _demo.track_spec->display_name,_demo.track_spec->asset_name,
+    NSString *selection=[NSString stringWithFormat:@"%@ (%s) %.1f x %.1f | kart %s %.3f x %.3f | h %.2f",
+        [NSString stringWithUTF8String:_demo.track_spec->display_name],_demo.track_spec->asset_name,
         kart_demo_track_width(_demo.track_spec),kart_demo_track_length(_demo.track_spec),
         _demo.kart_spec->asset_name,_demo.kart.geometry.half_width*2,
         _demo.kart.geometry.half_length*2,_demo.kart.position.z];
 #else
-    NSString *selection=[NSString stringWithFormat:@"%s (%s) %.1f x %.1f | kart %s %.3f x %.3f",
-        _demo.track_spec->display_name,_demo.track_spec->asset_name,
+    NSString *selection=[NSString stringWithFormat:@"%@ (%s) %.1f x %.1f | kart %s %.3f x %.3f",
+        [NSString stringWithUTF8String:_demo.track_spec->display_name],_demo.track_spec->asset_name,
         kart_demo_track_width(_demo.track_spec),kart_demo_track_length(_demo.track_spec),
         _demo.kart_spec->asset_name,_demo.kart.geometry.half_width*2,
         _demo.kart.geometry.half_length*2];

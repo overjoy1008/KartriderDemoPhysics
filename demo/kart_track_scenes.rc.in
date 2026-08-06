@@ -1,0 +1,3 @@
+#include "kart_track_scene_resources.h"
+
+@KART_TRACK_SCENE_RC_ENTRIES@

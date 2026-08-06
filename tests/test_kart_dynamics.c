@@ -111,6 +111,8 @@ static void test_speedometer_and_demo_assets(void)
     const KartDemoKartSpec *marathon = kart_demo_find_kart("marathon5");
     const KartDemoTrackSpec *forest = kart_demo_find_track("forest_I01");
     const KartDemoTrackSpec *village = kart_demo_find_track("village_R01");
+    KartVec3 start;
+    KartQuat start_orientation;
 
     assert(near(kart_speed_kmh(velocity), 18.0f, 0.0001f));
     assert(kart_speedometer_kmh(velocity) == 18);
@@ -123,6 +125,140 @@ static void test_speedometer_and_demo_assets(void)
     assert(marathon != NULL && near(marathon->dynamics.corner_draw_factor, 0.2f, 0.0001f));
     assert(forest != NULL && near(kart_demo_track_width(forest), 896.391f, 0.01f));
     assert(village != NULL && near(kart_demo_track_length(village), 1712.1172f, 0.01f));
+    assert(forest->difficulty == 1 && strcmp(forest->race_mode, "아이템") == 0);
+    assert(village->difficulty == 2 && strcmp(village->race_mode, "스피드") == 0);
+    assert(kart_demo_track_start_position(forest, &start));
+    assert(kart_demo_track_mirror_x(forest));
+    assert(near(start.x, -296.9286f, 0.001f));
+    assert(near(start.y, 53.9684f, 0.001f));
+    assert(near(kart_demo_track_scene_ground_z(forest), 27.07603f, 0.0001f));
+    assert(kart_demo_track_start_orientation(forest, &start_orientation));
+    assert(near(start_orientation.z, 1.0f, 0.0001f));
+    assert(near(start_orientation.w, 0.0f, 0.0001f));
+    assert(kart_demo_track_start_position(village, &start));
+    assert(kart_demo_track_mirror_x(village));
+    assert(near(start.x, 457.7419f, 0.001f));
+    assert(near(start.y, -221.4766f, 0.001f));
+    assert(near(kart_demo_track_scene_ground_z(village), 26.84984f, 0.0001f));
+    assert(forest->start_kind == KART_TRACK_START_CONFIRMED);
+    assert(village->start_kind == KART_TRACK_START_CONFIRMED);
+}
+
+/* Body forward for a start orientation, matching the demos' orientation_axes:
+   the default basis points forward at -Y. */
+static KartVec3 start_forward(KartQuat q)
+{
+    return (KartVec3){
+        -2.0f * (q.x * q.y - q.w * q.z),
+        -(1.0f - 2.0f * (q.x * q.x + q.z * q.z)),
+        -2.0f * (q.y * q.z + q.w * q.x),
+    };
+}
+
+/* The AABB, the embedded scene, the safety wall, the minimap normalization and
+   the spawn all read the same track record, so a track whose scene metadata
+   disagrees with its bounds would place the mesh away from its own walls. */
+static void test_demo_track_table_is_consistent(void)
+{
+    const unsigned int count = kart_demo_track_count();
+    const KartDemoTrackSpec *flat = kart_demo_find_track("flat_test");
+    const KartDemoTrackSpec *forest = kart_demo_find_track("forest_I01");
+    unsigned int i;
+    unsigned int confirmed = 0;
+    unsigned int without_scene = 0;
+    assert(count == KART_DEMO_TRACK_COUNT);
+
+    /* The demos open on the synthetic flat track, which keeps the flat ground
+       and the AABB walls and matches Forest Log's footprint. */
+    assert(flat != NULL && !flat->has_scene);
+    assert(kart_demo_default_track() == flat);
+    assert(forest != NULL);
+    assert(near(kart_demo_track_width(flat), kart_demo_track_width(forest), 0.01f));
+    assert(near(kart_demo_track_length(flat), kart_demo_track_length(forest), 0.01f));
+    /* Centred on the world origin, so the axis gizmo reads against the walls. */
+    assert(near(flat->minimum.x, -flat->maximum.x, 0.0001f));
+    assert(near(flat->minimum.y, -flat->maximum.y, 0.0001f));
+    assert(flat->start_kind == KART_TRACK_START_NONE);
+
+    for (i = 0; i < count; ++i) {
+        const KartDemoTrackSpec *track = kart_demo_track_at(i);
+        KartVec3 start;
+        KartQuat orientation;
+        assert(track != NULL);
+        assert(kart_demo_track_width(track) > 1.0f);
+        assert(kart_demo_track_length(track) > 1.0f);
+        assert(track->maximum.z > track->minimum.z);
+        /* Every scene uses the same export, so the mirror is not per-track. */
+        assert(kart_demo_track_mirror_x(track));
+        assert(kart_demo_track_start_kind_label(track)[0] != '\0');
+
+        /* The respawn floor must sit clear below every scene triangle, so a
+           kart resting on the lowest road never trips it, and clear below the
+           spawn plane at world z 0. */
+        {
+            const float fall_limit = kart_demo_track_fall_limit(track);
+            const float scene_floor =
+                track->minimum.z - kart_demo_track_scene_ground_z(track);
+            assert(fall_limit < 0.0f);
+            assert(fall_limit < scene_floor);
+            assert(scene_floor - fall_limit >= 20.0f);
+        }
+
+        if (track->start_kind == KART_TRACK_START_NONE) {
+            assert(track->start_axis == KART_TRACK_AXIS_NONE);
+            /* Only the spawn position falls back to the bounds centre; the
+               facing still matches every other track rather than pointing at
+               -Y. */
+            assert(!kart_demo_track_start_position(track, &start));
+            assert(kart_demo_track_start_orientation(track, &orientation));
+            assert(near(orientation.z, 1.0f, 0.0001f));
+            assert(near(orientation.w, 0.0f, 0.0001f));
+            /* Without a start quad the ground plane falls back to the bounds. */
+            assert(near(kart_demo_track_scene_ground_z(track),
+                        track->minimum.z, 0.0001f));
+            continue;
+        }
+
+        assert(track->start_axis != KART_TRACK_AXIS_NONE);
+        assert(kart_demo_track_start_position(track, &start));
+        assert(kart_demo_track_start_orientation(track, &orientation));
+        /* The start line is inside its own track bounds. */
+        assert(track->start_line.x >= track->minimum.x);
+        assert(track->start_line.x <= track->maximum.x);
+        assert(track->start_line.y >= track->minimum.y);
+        assert(track->start_line.y <= track->maximum.y);
+        /* The spawn is bounds-relative, so it stays inside the safety walls. */
+        assert(start.x >= -kart_demo_track_width(track) * 0.5f);
+        assert(start.x <= kart_demo_track_width(track) * 0.5f);
+        assert(start.y >= -kart_demo_track_length(track) * 0.5f);
+        assert(start.y <= kart_demo_track_length(track) * 0.5f);
+        assert(near(kart_demo_track_scene_ground_z(track),
+                    track->start_line.z, 0.0001f));
+        assert(near(orientation.w * orientation.w + orientation.z * orientation.z,
+                    1.0f, 0.0001f));
+        /* The assumed racing direction is the positive world axis in both
+           cases, so a Y-axis start faces world +Y and an X-axis start faces
+           world +X. */
+        {
+            const KartVec3 forward = start_forward(orientation);
+            if (track->start_axis == KART_TRACK_AXIS_X) {
+                assert(near(forward.x, 1.0f, 0.0001f));
+                assert(near(forward.y, 0.0f, 0.0001f));
+            } else {
+                assert(near(forward.x, 0.0f, 0.0001f));
+                assert(near(forward.y, 1.0f, 0.0001f));
+            }
+            assert(near(forward.z, 0.0f, 0.0001f));
+        }
+        if (track->start_kind == KART_TRACK_START_CONFIRMED) ++confirmed;
+    }
+    for (i = 0; i < count; ++i) {
+        if (!kart_demo_track_at(i)->has_scene) ++without_scene;
+    }
+    /* Only the two tracks checked against the original game may claim it, and
+       the flat test track is the only one without a decoded mesh. */
+    assert(confirmed == 2);
+    assert(without_scene == 1);
 }
 
 static void test_runtime_grounded_drag_scale(void)
@@ -717,6 +853,7 @@ int main(void)
     test_original_low_speed_lateral_branch();
     test_corner_draw_force();
     test_speedometer_and_demo_assets();
+    test_demo_track_table_is_consistent();
     test_runtime_grounded_drag_scale();
     test_static_suspension_equilibrium();
     test_drift_trigger_timing();

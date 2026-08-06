@@ -1,5 +1,7 @@
 /analysis/ghidra-home/
 /analysis/ghidra-project/
+/analysis/tools/ghidra-dist/
+/analysis/tools/rho-reader-upstream/
 /build-win/*
 !/build-win/README.md
 !/build-win/kart_topdown.exe
@@ -9,6 +11,10 @@
 /tools/
 /.build-macos/
 /build-macos/*.zip
+/.nuget-packages/
+/asset_tools/*/bin/
+/asset_tools/*/obj/
+/analysis/track-assets/
 
 # macOS Finder metadata (at any directory depth)
 .DS_Store
