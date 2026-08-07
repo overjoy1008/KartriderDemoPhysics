@@ -155,7 +155,13 @@ After a Windows build, launch `build/kart_topdown.exe` or
 | 3-second item boost | Ctrl or `D` | Command or `D` |
 | Choose kart / track | `K` / `T` | `K` / `T` |
 | Toggle grounded-drag trigger | `G` | `G` |
-| Reset | `R` | `R` |
+| Save a screenshot | `A` | — |
+| Dismiss the `K` / `T` menu | `Esc` | `Esc` |
+| Reset and restart the countdown | `R` | `R` |
+
+`Esc` only closes the kart and track menus. The window is closed the usual way,
+with Alt+F4 or the title bar. Keys are ignored unless the demo window is the
+foreground window, so the kart will not drive while you are typing elsewhere.
 
 Press `K` or `T` to open a selectable list. Use the mouse, or the arrow keys
 and Enter, to apply one of the 26 kart presets or 14 track bounds immediately.
@@ -280,6 +286,30 @@ has reached about 1.75 and then steps down to the 1.5 cap. That is what the
 original does. And there is no separate instant-boost sound — the original
 triggers `booster.wav` from the kart's vftable slot 26 flag, which covers the
 item boost and the instant boost alike.
+
+### Race start countdown
+
+Both demos open on a countdown recovered from `FUN_00451EB0` / `FUN_00456CD0`,
+which are the same state machine at two different field offsets. Entering the
+ready state sets `deadline = now + 7000 ms`; the cues then fire as the deadline
+approaches, each tested as `deadline <= now + offset`:
+
+| Threshold | Cue |
+|---|---|
+| `deadline - 3000` | `count_3` |
+| `deadline - 2000` | `count_2` |
+| `deadline - 1000` | `count_1` |
+| `deadline` | `count_go`, every kart released |
+
+The throttle does nothing until GO. Pressing forward within **±100 ms** of the
+deadline grants a **1000 ms** boost — the start boost, from the accelerate
+action of the input handler `FUN_004529D0`. It runs through
+`GoKart_StartTimedBoost` at `0x00431AB0`, which raises the same flag vftable
+slot 26 reports, so it drives the booster sound and the camera's wide field of
+view exactly like an item boost. `R` restarts the countdown.
+
+One simulator-side rule: releasing the accelerator ends a boost immediately
+rather than letting its timer run out. The original only expires the timer.
 
 ### Falling out of the world
 

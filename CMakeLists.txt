@@ -16,6 +16,7 @@ add_library(kart_dynamics STATIC
     src/kart_inflate.c
     src/kart_camera.c
     src/kart_engine_sound.c
+    src/kart_countdown.c
 )
 target_include_directories(kart_dynamics PUBLIC include)
 target_compile_features(kart_dynamics PUBLIC c_std_11)
@@ -80,6 +81,10 @@ add_executable(kart_sound_tests tests/test_engine_sound.c)
 target_link_libraries(kart_sound_tests PRIVATE kart_dynamics)
 add_test(NAME kart_sound_tests COMMAND kart_sound_tests)
 
+add_executable(kart_countdown_tests tests/test_countdown.c)
+target_link_libraries(kart_countdown_tests PRIVATE kart_dynamics)
+add_test(NAME kart_countdown_tests COMMAND kart_countdown_tests)
+
 if(WIN32)
     set(KART_MINIMAP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/analysis/track-assets/extracted")
     set(MINIMAP_DESERT_I01 "${KART_MINIMAP_ROOT}/track_desert_I01/xt_minimap.png")
@@ -114,10 +119,21 @@ if(WIN32)
     set(KART_SOUND_CRASH "${KART_SOUND_ROOT}/sound_fx_kart/crash.wav")
     set(KART_SOUND_SHOCK "${KART_SOUND_ROOT}/sound_fx_kart/shock.wav")
     set(KART_SOUND_BOOSTER "${KART_SOUND_ROOT}/sound_fx_item/booster/booster.wav")
+    # Supplied separately rather than extracted, converted to the same
+    # 16-bit mono 22050 Hz PCM as the rest.
+    set(KART_SOUND_INSTANT_BOOST "${KART_SOUND_ROOT}/custom/boosterDrift.wav")
+    set(KART_SOUND_BOOSTER_IDLE "${KART_SOUND_ROOT}/custom/boosterPlay.wav")
+    set(KART_SOUND_COUNT_3 "${KART_SOUND_ROOT}/sound_fx_etc/count_3.wav")
+    set(KART_SOUND_COUNT_2 "${KART_SOUND_ROOT}/sound_fx_etc/count_2.wav")
+    set(KART_SOUND_COUNT_1 "${KART_SOUND_ROOT}/sound_fx_etc/count_1.wav")
+    set(KART_SOUND_COUNT_GO "${KART_SOUND_ROOT}/sound_fx_etc/count_go.wav")
     set(KART_HAVE_ALL_SOUNDS TRUE)
     foreach(KART_SOUND_FILE IN ITEMS
             "${KART_SOUND_MOTOR}" "${KART_SOUND_DRIFT}" "${KART_SOUND_CRASH}"
-            "${KART_SOUND_SHOCK}" "${KART_SOUND_BOOSTER}")
+            "${KART_SOUND_SHOCK}" "${KART_SOUND_BOOSTER}"
+            "${KART_SOUND_INSTANT_BOOST}" "${KART_SOUND_BOOSTER_IDLE}"
+            "${KART_SOUND_COUNT_3}" "${KART_SOUND_COUNT_2}"
+            "${KART_SOUND_COUNT_1}" "${KART_SOUND_COUNT_GO}")
         if(NOT EXISTS "${KART_SOUND_FILE}")
             set(KART_HAVE_ALL_SOUNDS FALSE)
         endif()

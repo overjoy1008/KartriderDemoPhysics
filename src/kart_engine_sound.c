@@ -25,6 +25,7 @@ void kart_sound_driver_reset(KartSoundDriver *driver)
     driver->motor_volume = 0.0f;
     driver->drift_active = false;
     driver->booster_active = false;
+    driver->instant_boost_active = false;
     driver->initialized = false;
 }
 
@@ -33,6 +34,7 @@ KartSoundState kart_sound_driver_update(
     float speed,
     bool drift_active,
     bool boost_active,
+    bool instant_boost_active,
     float crash_magnitude,
     float shock_magnitude,
     unsigned int now_ms)
@@ -66,9 +68,16 @@ KartSoundState kart_sound_driver_update(
 
     /* The booster is level triggered every frame in the original; its mode 0xC
        single-instance guard is what stops it restarting. Reproducing that as a
-       rising edge gives the same audible result without needing the guard. */
+       rising edge gives the same audible result without needing the guard.
+
+       Each activation starts a fresh voice even while an earlier one is still
+       playing, so rapid repeats overlap instead of being swallowed. That is a
+       simulator-side choice: the original's guard would have dropped them. */
     state.start_booster = boost_active && !driver->booster_active;
     driver->booster_active = boost_active;
+    state.start_instant_boost =
+        instant_boost_active && !driver->instant_boost_active;
+    driver->instant_boost_active = instant_boost_active;
 
     if (crash_magnitude > 0.0f) {
         state.start_crash = true;

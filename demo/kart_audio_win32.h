@@ -13,8 +13,10 @@
 
 #include <stdbool.h>
 
-#define KART_AUDIO_MAX_SOUNDS 8
-#define KART_AUDIO_MAX_VOICES 16
+/* motor, drift, booster, instant boost, idle, four countdown cues, crash and
+   shock is eleven; leave headroom. */
+#define KART_AUDIO_MAX_SOUNDS 16
+#define KART_AUDIO_MAX_VOICES 24
 
 typedef struct KartAudio KartAudio;
 
@@ -33,6 +35,9 @@ int kart_audio_play_loop(KartAudio *audio, int sound, float volume, float pitch)
 /* Fire and forget. Ignored if this sound already has a one-shot running, which
    is the original's mode-0xC/0xE single-instance guard. */
 void kart_audio_play_once(KartAudio *audio, int sound, float volume);
+/* Same, but always starts a fresh voice so repeats layer over each other
+   instead of being dropped. Used for the boosters. */
+void kart_audio_play_overlapping(KartAudio *audio, int sound, float volume);
 void kart_audio_stop_voice(KartAudio *audio, int voice);
 void kart_audio_set_voice(KartAudio *audio, int voice, float volume, float pitch);
 

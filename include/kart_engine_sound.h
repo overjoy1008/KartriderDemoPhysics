@@ -50,6 +50,7 @@ typedef struct KartSoundDriver {
     float motor_volume;
     bool drift_active;
     bool booster_active;
+    bool instant_boost_active;
     bool initialized;
 } KartSoundDriver;
 
@@ -62,6 +63,7 @@ typedef struct KartSoundState {
     bool drift_looping;
     /* Edges, true for the single update that should start the one-shot. */
     bool start_booster;
+    bool start_instant_boost;
     bool start_crash;
     bool start_shock;
     float crash_volume;
@@ -71,8 +73,11 @@ typedef struct KartSoundState {
 void kart_sound_driver_reset(KartSoundDriver *driver);
 
 /* speed is the magnitude of the kart's linear velocity, as the original reads
-   it from kart+0x5C. boost_active is the kart's vftable slot 26 flag, the same
-   one that widens the chase camera's field of view.
+   it from kart+0x5C.
+
+   The original drives one booster sound from the kart's vftable slot 26 flag,
+   which covers the item boost and the instant boost alike. This split is a
+   simulator-side choice so the two can have different samples.
 
    crash_magnitude and shock_magnitude are zero when nothing was hit. */
 KartSoundState kart_sound_driver_update(
@@ -80,6 +85,7 @@ KartSoundState kart_sound_driver_update(
     float speed,
     bool drift_active,
     bool boost_active,
+    bool instant_boost_active,
     float crash_magnitude,
     float shock_magnitude,
     unsigned int now_ms);

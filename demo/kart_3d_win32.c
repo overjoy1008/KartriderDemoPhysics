@@ -3,10 +3,12 @@
 
 #include "kart_axis_gizmo_win32.h"
 #include "kart_camera.h"
+#include "kart_countdown.h"
 #include "kart_demo_data.h"
 #include "kart_demo_win32_ui.h"
 #include "kart_input.h"
 #include "kart_minimap_win32.h"
+#include "kart_screenshot_win32.h"
 #include "kart_simulation.h"
 #include "kart_sound_win32.h"
 #include "kart_track_collision.h"
@@ -48,6 +50,7 @@ typedef struct Demo3DState {
     bool kart_key_was_down;
     bool track_key_was_down;
     bool drag_key_was_down;
+    bool shot_key_was_down;
     bool drag_trigger_active;
     bool previous_skid_active;
     bool boost_active;
@@ -55,11 +58,21 @@ typedef struct Demo3DState {
     /* Counts down after an out-of-world respawn so the HUD can say why the
        kart moved. */
     DWORD respawn_notice_ms;
+    /* Counts down after a screenshot so the HUD can show where it went. */
+    DWORD shot_notice_ms;
+    char shot_name[64];
     /* Recovered chase camera; advanced with the same elapsed time as the
        simulation. */
     KartChaseCameraFollow camera_follow;
     KartChaseCameraPose camera_pose;
     KartDemoSound sound;
+    KartCountdown countdown;
+    unsigned int countdown_remaining_ms;
+    /* Counts down after GO so the START flash outlives the single cue frame. */
+    DWORD start_notice_ms;
+    /* Drift plus throttle held on the line: booster idle loop and boost look. */
+    bool countdown_rev_active;
+    bool forward_key_was_down;
     KartTrackScene scenes[KART_TRACK_SCENE_CAPACITY];
     KartDemoMinimapSet minimaps;
 } Demo3DState;
@@ -280,8 +293,19 @@ static unsigned int query_track_walls(
     return count;
 }
 
+/* GetAsyncKeyState is global, so without this gate the kart would keep driving
+   while the user is typing in another application. */
+static bool demo_has_focus(HWND window)
+{
+    const HWND foreground = GetForegroundWindow();
+    return foreground == window || IsChild(window, foreground);
+}
+
+static HWND g_input_window = NULL;
+
 static int key_down(int virtual_key)
 {
+    if (g_input_window != NULL && !demo_has_focus(g_input_window)) return 0;
     return (GetAsyncKeyState(virtual_key) & 0x8000) != 0;
 }
 
@@ -310,6 +334,18 @@ static void reset_kart(Demo3DState *demo)
     demo->previous_skid_active = false;
     demo->boost_active = false;
     demo->drag_trigger_active = false;
+    /* The original spends the first 4 s of the 7 s countdown on the intro
+       camera sweep. The demo has no intro, so the arming time is backdated to
+       where that sweep ends and the digits appear about a second after a reset;
+       the deadline the boost window is measured against is unchanged. Only the
+       first reset arms it; R and respawns put the kart back on the line without
+       running the lights again. */
+    if (!demo->countdown.armed) {
+        kart_countdown_start(
+            &demo->countdown,
+            demo->previous_tick - KART_DEMO_COUNTDOWN_PREROLL_MS);
+        demo->start_notice_ms = 0;
+    }
     /* The original snaps the camera after a reset rather than swinging to the
        new pose over 400 ms. */
     kart_chase_camera_follow_reset(&demo->camera_follow);
@@ -1137,7 +1173,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     int speedometer_kmh;
     char status[384];
     const char *help =
-        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  K: kart list  T: track list  G: drag trigger  R: reset  Esc: exit";
+        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  K: kart list  T: track list  G: drag trigger  A: screenshot  R: reset  Esc: close menu";
 
     GetClientRect(window, &client);
     buffer = CreateCompatibleDC(target);
@@ -1222,6 +1258,17 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         SetTextColor(buffer, RGB(255, 120, 120));
         TextOutA(buffer, 16, 92, notice, (int)strlen(notice));
     }
+    /* 3, 2, 1 as the deadline approaches, then START; the recovered cues fire at
+       the same thresholds. */
+    kart_demo_draw_countdown(
+        buffer, client, demo->countdown_remaining_ms,
+        (unsigned int)demo->start_notice_ms);
+    if (demo->shot_notice_ms != 0) {
+        char notice[96];
+        snprintf(notice, sizeof(notice), "SAVED %s", demo->shot_name);
+        SetTextColor(buffer, RGB(140, 235, 255));
+        TextOutA(buffer, 16, 112, notice, (int)strlen(notice));
+    }
     kart_demo_draw_speedometer(
         buffer, client, speedometer_kmh, demo->boost_active);
     {
@@ -1256,6 +1303,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         CREATESTRUCT *create = (CREATESTRUCT *)lparam;
         demo = (Demo3DState *)create->lpCreateParams;
         SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)demo);
+        g_input_window = window;
         load_track_scenes(create->hInstance, demo);
         kart_demo_sound_start(create->hInstance, &demo->sound);
         kart_demo_minimap_set_load(create->hInstance, &demo->minimaps);
@@ -1308,12 +1356,19 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             const bool kart_key_down = key_down('K') != 0;
             const bool track_key_down = key_down('T') != 0;
             const bool drag_key_down = key_down('G') != 0;
+            const bool shot_key_down = key_down('A') != 0;
             if (kart_key_down && !demo->kart_key_was_down) {
                 const KartDemoKartSpec *selected =
                     kart_demo_popup_select_kart(window, demo->kart_spec);
                 if (selected != demo->kart_spec) {
+                    /* Swap the kart under the driver: tuning and hull change,
+                       the pose, velocity and boost state carry over. */
                     demo->kart_spec = selected;
-                    reset_kart(demo);
+                    demo->kart.config = selected->dynamics;
+                    demo->kart.geometry = selected->geometry;
+                    demo->kart.grounded_drag_scale =
+                        selected->geometry.grounded_drag_scale *
+                        (demo->drag_trigger_active ? 4.0f : 1.0f);
                 }
                 demo->previous_tick = GetTickCount();
             }
@@ -1322,6 +1377,8 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                     kart_demo_popup_select_track(window, demo->track_spec);
                 if (selected != demo->track_spec) {
                     demo->track_spec = selected;
+                    /* A new track is a new race, so the lights run again. */
+                    demo->countdown.armed = false;
                     reset_kart(demo);
                 }
                 demo->previous_tick = GetTickCount();
@@ -1333,11 +1390,64 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             }
             demo->kart_key_was_down = kart_key_down;
             demo->track_key_was_down = track_key_down;
+            if (shot_key_down && !demo->shot_key_was_down) {
+                if (kart_demo_save_screenshot(
+                        window, demo->shot_name, sizeof(demo->shot_name))) {
+                    demo->shot_notice_ms = 2000;
+                } else {
+                    snprintf(demo->shot_name, sizeof(demo->shot_name),
+                             "screenshot failed");
+                    demo->shot_notice_ms = 2000;
+                }
+            }
+            demo->shot_key_was_down = shot_key_down;
             demo->drag_key_was_down = drag_key_down;
         }
-        if (key_down(VK_ESCAPE)) {
-            DestroyWindow(window);
-        } else if (key_down('R')) {
+        /* Escape only dismisses the K and T popups, which TrackPopupMenu
+           already handles. Closing the window is left to the usual Alt+F4 and
+           title-bar routes. */
+        {
+            /* Recovered countdown: cues at T-3000/-2000/-1000 and release at T.
+               The kart is held at the line until GO. */
+            const KartCountdownCues cues =
+                kart_countdown_update(&demo->countdown, now);
+            const bool forward_down = controls.forward_input != 0.0f;
+            if (cues.play_three) kart_demo_sound_play_count(&demo->sound, 0);
+            if (cues.play_two) kart_demo_sound_play_count(&demo->sound, 1);
+            if (cues.play_one) kart_demo_sound_play_count(&demo->sound, 2);
+            if (cues.play_go) {
+                kart_demo_sound_play_count(&demo->sound, 3);
+                demo->start_notice_ms = 1500;
+            }
+            demo->countdown_remaining_ms = cues.remaining_ms;
+
+            /* The start boost is granted on the press itself, measured against
+               the same deadline the countdown uses. */
+            if (forward_down && !demo->forward_key_was_down &&
+                kart_countdown_start_boost_granted(&demo->countdown, now)) {
+                kart_timed_boost_start(
+                    &demo->kart.timed_boost, 1.0f,
+                    KART_START_BOOST_DURATION_MS);
+            }
+            demo->forward_key_was_down = forward_down;
+
+            /* Holding drift with the throttle before GO revs the booster: the
+               idle loop plays and the kart reads as boosting until either key
+               is let go. No other booster works before the line drops. */
+            demo->countdown_rev_active =
+                !cues.released && forward_down && controls.drift_input;
+            kart_demo_sound_set_booster_idle(
+                &demo->sound, demo->countdown_rev_active);
+
+            if (!cues.released) {
+                /* Before GO the throttle does nothing but the engine still
+                   idles, which is what the countdown is for. */
+                controls.forward_input = 0.0f;
+                controls.reverse_input = 0.0f;
+                controls.boost_active = false;
+            }
+        }
+        if (key_down('R')) {
             reset_kart(demo);
         } else if (elapsed != 0) {
             step = kart_simulate_milliseconds(&demo->kart, &controls, &world, elapsed);
@@ -1351,8 +1461,20 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         } else {
             demo->respawn_notice_ms = 0;
         }
+        if (demo->shot_notice_ms > elapsed) {
+            demo->shot_notice_ms -= elapsed;
+        } else {
+            demo->shot_notice_ms = 0;
+        }
+        if (demo->start_notice_ms > elapsed) {
+            demo->start_notice_ms -= elapsed;
+        } else {
+            demo->start_notice_ms = 0;
+        }
         demo->boost_active = kart_any_boost_active(
-            &demo->kart.timed_boost, &demo->kart.instant_boost);
+                                 &demo->kart.timed_boost,
+                                 &demo->kart.instant_boost) ||
+                             demo->countdown_rev_active;
         {
             /* The original reads the kart's velocity magnitude and its
                booster-like flag, then advances the whole camera together. */
@@ -1360,12 +1482,15 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             const float speed = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
             demo->camera_pose = kart_chase_camera_update(
                 &demo->camera_follow, demo->kart.position,
-                demo->kart.orientation, speed, demo->boost_active, elapsed,
+                demo->kart.orientation, speed,
+                /* Revving on the line only looks like a boost; the camera is
+                   left alone until a real one fires. */
+                demo->boost_active && !demo->countdown_rev_active, elapsed,
                 KART_CHASE_FOLLOW_OVERHEAD_MS);
         }
         demo->simulation_time_ms += elapsed;
         kart_demo_sound_update(
-            &demo->sound, &demo->kart, demo->boost_active,
+            &demo->sound, &demo->kart,
             step.wall_impact_speed, step.ground_impact_speed, now);
         update_skid_marks(demo);
         InvalidateRect(window, NULL, FALSE);

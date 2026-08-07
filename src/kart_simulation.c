@@ -393,6 +393,13 @@ KartSimulationStepResult kart_simulate_milliseconds(
         result.substeps += 1;
     }
     kart_timed_boost_step_milliseconds(&state->timed_boost, frame_elapsed_ms);
+    /* Releasing the accelerator ends the boost immediately instead of letting
+       it run out its remaining time. This is a simulator-side rule; the
+       original only expires the timer. */
+    if (active_controls->forward_input == 0.0f && state->timed_boost.active) {
+        state->timed_boost.remaining_ms = 0;
+        state->timed_boost.active = false;
+    }
     result.grounded = state->grounded;
     return result;
 }

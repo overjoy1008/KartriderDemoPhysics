@@ -10,6 +10,9 @@
 #include <string.h>
 #include <wchar.h>
 
+/* Backdate applied when arming the countdown, see the reset paths. */
+#define KART_DEMO_COUNTDOWN_PREROLL_MS 3000U
+
 #define KART_DEMO_KART_MENU_BASE 1000U
 #define KART_DEMO_TRACK_MENU_BASE 2000U
 
@@ -217,6 +220,60 @@ static void kart_demo_draw_speedometer(
     DeleteObject(panel_pen);
     DeleteObject(digits_font);
     DeleteObject(unit_font);
+}
+
+/* Race-start overlay: the 3-2-1 digits while the countdown runs, then the START
+   flash once it releases. Drawn at the middle of the client area in the same
+   heavy face as the speedometer, with a drop shadow so it stays readable over a
+   bright track. */
+static void kart_demo_draw_countdown(
+    HDC dc,
+    RECT client,
+    unsigned int remaining_ms,
+    unsigned int start_notice_ms)
+{
+    char digits[8];
+    const char *label;
+    COLORREF colour;
+    int height;
+    HFONT font;
+    HGDIOBJ old_font;
+    RECT box;
+
+    if (remaining_ms != 0) {
+        const unsigned int seconds = (remaining_ms + 999u) / 1000u;
+        if (seconds > 3u) return;
+        snprintf(digits, sizeof(digits), "%u", seconds);
+        label = digits;
+        colour = RGB(245, 248, 250);
+        height = -96;
+    } else if (start_notice_ms != 0) {
+        label = "START!";
+        colour = RGB(120, 255, 155);
+        height = -64;
+    } else {
+        return;
+    }
+
+    box.left = client.left;
+    box.right = client.right;
+    box.top = (client.top + client.bottom) / 2 - 130;
+    box.bottom = box.top + 200;
+    font = CreateFontA(
+        height, 0, 0, 0, FW_HEAVY, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        ANTIALIASED_QUALITY, FF_DONTCARE, "Segoe UI");
+    old_font = SelectObject(dc, font);
+    SetBkMode(dc, TRANSPARENT);
+    OffsetRect(&box, 4, 4);
+    SetTextColor(dc, RGB(18, 22, 28));
+    DrawTextA(dc, label, -1, &box, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    OffsetRect(&box, -4, -4);
+    SetTextColor(dc, colour);
+    DrawTextA(dc, label, -1, &box, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    SelectObject(dc, old_font);
+    DeleteObject(font);
 }
 
 #endif
