@@ -158,7 +158,9 @@ const KartDemoKartSpec *kart_demo_find_kart(const char *asset_name)
 
 const KartDemoKartSpec *kart_demo_default_kart(void)
 {
-    return kart_demo_find_kart("burst3");
+    /* The original demo's kartlist.xml offers only burst3; cotten5 is a
+       simulator-side choice, not the demo's selection. */
+    return kart_demo_find_kart("cotten5");
 }
 
 _Static_assert(

@@ -343,6 +343,14 @@ static void simulate_substep(
                 kart_resolve_linear_collision(&collision_input);
             state->linear_velocity = collision.velocity;
             state->angular_velocity = collision.angular_velocity;
+            if (collision.incoming) {
+                float *strongest = collision.wall_contact
+                    ? &result->wall_impact_speed
+                    : &result->ground_impact_speed;
+                if (collision.normal_speed > *strongest) {
+                    *strongest = collision.normal_speed;
+                }
+            }
         }
         result->body_contacts += count;
     }

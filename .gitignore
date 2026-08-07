@@ -16,6 +16,7 @@
 /asset_tools/*/obj/
 /analysis/track-assets/
 /analysis/kart-assets/
+/analysis/sound-assets/
 
 # macOS Finder metadata (at any directory depth)
 .DS_Store

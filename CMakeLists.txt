@@ -15,6 +15,7 @@ add_library(kart_dynamics STATIC
     src/kart_demo_data.c
     src/kart_inflate.c
     src/kart_camera.c
+    src/kart_engine_sound.c
 )
 target_include_directories(kart_dynamics PUBLIC include)
 target_compile_features(kart_dynamics PUBLIC c_std_11)
@@ -75,6 +76,10 @@ add_executable(kart_camera_tests tests/test_camera_follow.c)
 target_link_libraries(kart_camera_tests PRIVATE kart_dynamics)
 add_test(NAME kart_camera_tests COMMAND kart_camera_tests)
 
+add_executable(kart_sound_tests tests/test_engine_sound.c)
+target_link_libraries(kart_sound_tests PRIVATE kart_dynamics)
+add_test(NAME kart_sound_tests COMMAND kart_sound_tests)
+
 if(WIN32)
     set(KART_MINIMAP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/analysis/track-assets/extracted")
     set(MINIMAP_DESERT_I01 "${KART_MINIMAP_ROOT}/track_desert_I01/xt_minimap.png")
@@ -102,6 +107,32 @@ if(WIN32)
             set(KART_HAVE_ALL_MINIMAPS FALSE)
         endif()
     endforeach()
+    # The original effect samples. Without them the demos build and run silent.
+    set(KART_SOUND_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/analysis/sound-assets")
+    set(KART_SOUND_MOTOR "${KART_SOUND_ROOT}/sound_fx_kart/motor.wav")
+    set(KART_SOUND_DRIFT "${KART_SOUND_ROOT}/sound_fx_kart/drift.wav")
+    set(KART_SOUND_CRASH "${KART_SOUND_ROOT}/sound_fx_kart/crash.wav")
+    set(KART_SOUND_SHOCK "${KART_SOUND_ROOT}/sound_fx_kart/shock.wav")
+    set(KART_SOUND_BOOSTER "${KART_SOUND_ROOT}/sound_fx_item/booster/booster.wav")
+    set(KART_HAVE_ALL_SOUNDS TRUE)
+    foreach(KART_SOUND_FILE IN ITEMS
+            "${KART_SOUND_MOTOR}" "${KART_SOUND_DRIFT}" "${KART_SOUND_CRASH}"
+            "${KART_SOUND_SHOCK}" "${KART_SOUND_BOOSTER}")
+        if(NOT EXISTS "${KART_SOUND_FILE}")
+            set(KART_HAVE_ALL_SOUNDS FALSE)
+        endif()
+    endforeach()
+    set(KART_AUDIO_SOURCES demo/kart_audio_win32.c)
+    if(KART_HAVE_ALL_SOUNDS)
+        configure_file(
+            demo/kart_sounds.rc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_sounds.rc
+            @ONLY)
+        list(APPEND KART_AUDIO_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/kart_sounds.rc)
+    else()
+        message(STATUS "Original demo sounds not found; the demos will run silent")
+    endif()
+
     set(KART_MINIMAP_SOURCES demo/kart_minimap_win32.c)
     if(KART_HAVE_ALL_MINIMAPS)
         configure_file(
@@ -119,12 +150,18 @@ if(WIN32)
         demo/kart_topdown_win32.c
         src/kart_track_scene.c
         src/kart_track_collision.c
-        ${KART_MINIMAP_SOURCES})
+        ${KART_MINIMAP_SOURCES}
+        ${KART_AUDIO_SOURCES})
     target_include_directories(kart_topdown PRIVATE include demo)
     if(KART_HAVE_ALL_MINIMAPS)
         target_compile_definitions(kart_topdown PRIVATE KART_EMBED_MINIMAPS=1)
     endif()
-    target_link_libraries(kart_topdown PRIVATE kart_dynamics user32 gdi32 windowscodecs ole32)
+    if(KART_HAVE_ALL_SOUNDS)
+        target_compile_definitions(kart_topdown PRIVATE KART_EMBED_SOUNDS=1)
+    endif()
+    # winmm provides waveOut.
+    target_link_libraries(kart_topdown PRIVATE
+        kart_dynamics user32 gdi32 winmm windowscodecs ole32)
 
     # Track codes in TRACKS[] order; the RCDATA ids in
     # demo/kart_track_scene_resources.h follow the same order.
@@ -168,7 +205,8 @@ if(WIN32)
         demo/kart_3d_win32.c
         src/kart_track_scene.c
         src/kart_track_collision.c
-        ${KART_MINIMAP_SOURCES})
+        ${KART_MINIMAP_SOURCES}
+        ${KART_AUDIO_SOURCES})
     if(KART_HAVE_ALL_SCENES)
         set(KART_TRACK_SCENE_RC_ENTRIES "")
         foreach(KART_TRACK_CODE IN LISTS KART_TRACK_CODES)
@@ -195,9 +233,21 @@ if(WIN32)
     if(KART_HAVE_ALL_MINIMAPS)
         target_compile_definitions(kart_3d PRIVATE KART_EMBED_MINIMAPS=1)
     endif()
-    # msimg32 provides AlphaBlend, used for the translucent road/wall faces.
+    if(KART_HAVE_ALL_SOUNDS)
+        target_compile_definitions(kart_3d PRIVATE KART_EMBED_SOUNDS=1)
+    endif()
+    # msimg32 provides AlphaBlend for the translucent faces; winmm provides waveOut.
     target_link_libraries(kart_3d PRIVATE
-        kart_dynamics user32 gdi32 msimg32 windowscodecs ole32)
+        kart_dynamics user32 gdi32 msimg32 winmm windowscodecs ole32)
+
+    # The mixer is Win32-only, so its cursor test lives here rather than with
+    # the platform-independent suites above.
+    add_executable(kart_audio_tests
+        tests/test_audio_cursor.c
+        demo/kart_audio_win32.c)
+    target_include_directories(kart_audio_tests PRIVATE include demo)
+    target_link_libraries(kart_audio_tests PRIVATE kart_dynamics winmm)
+    add_test(NAME kart_audio_tests COMMAND kart_audio_tests)
 
     # tools/ holds local-only harnesses and is not tracked, so a fresh clone
     # must still configure.

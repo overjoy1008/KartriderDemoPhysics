@@ -191,7 +191,7 @@ $v_f$는 전후 속도, $v_s$는 횡방향 미끄러짐 속도다. 드리프트�
 | 드리프트 기울기 | $k_{lean,d}$ | 0.07 |
 | 일반 조향 기울기 | $k_{lean,s}$ | 0.01 |
 
-실제 데모 프리셋은 `practice`, `standard`, `marathon`, `saber`, `solid` 계열의 값으로 덮어쓴다. 기본 선택 카트 `burst3`은 Standard 계열이며, 모델 AABB에서 얻은 크기는 약 $1.616\times2.136$ 월드 단위다.
+실제 데모 프리셋은 `practice`, `standard`, `marathon`, `saber`, `solid` 계열의 값으로 덮어쓴다. 원본 데모가 선택하는 `burst3`은 Standard 계열이며, 모델 AABB에서 얻은 크기는 약 $1.616\times2.136$ 월드 단위다. 시뮬레이터가 시작 카트로 쓰는 `cotten5`도 Standard 계열이고 크기는 약 $1.751\times2.278$이다.
 
 ## 4. 시간: 가변 프레임을 5 ms 조각으로 나누기
 

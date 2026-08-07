@@ -129,6 +129,7 @@ static string Classify(string path)
     /* Plain-text descriptors such as kart parameter.xml, which carry the model
        dimensions the simulator's presets are checked against. */
     if (extension is ".xml" or ".txt" or ".ini") return "config";
+    if (extension is ".wav" or ".ogg" or ".mp3") return "sound";
     return "other";
 }
 

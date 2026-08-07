@@ -105,7 +105,7 @@ static void test_corner_draw_force(void)
 static void test_speedometer_and_demo_assets(void)
 {
     const KartVec3 velocity = {3.0f, 4.0f, 0.0f};
-    const KartDemoKartSpec *burst = kart_demo_default_kart();
+    const KartDemoKartSpec *burst = kart_demo_find_kart("burst3");
     const KartDemoKartSpec *cotten = kart_demo_find_kart("cotten5");
     const KartDemoKartSpec *saber = kart_demo_find_kart("saber5");
     const KartDemoKartSpec *marathon = kart_demo_find_kart("marathon5");
@@ -121,6 +121,9 @@ static void test_speedometer_and_demo_assets(void)
     assert(near(burst->dynamics.drift_trigger_time, 0.2f, 0.0001f));
     assert(near(burst->geometry.half_width, 0.8080695f, 0.0001f));
     assert(cotten != NULL && near(cotten->geometry.half_length, 1.13917575f, 0.0001f));
+    /* Both demos open on this kart. It is a simulator-side choice: the demo's
+       own kartlist.xml offers only burst3. */
+    assert(kart_demo_default_kart() == cotten);
     assert(saber != NULL && near(saber->dynamics.grip_brake_force, 3000.0f, 0.0001f));
     assert(marathon != NULL && near(marathon->dynamics.corner_draw_factor, 0.2f, 0.0001f));
     assert(forest != NULL && near(kart_demo_track_width(forest), 896.391f, 0.01f));
@@ -421,6 +424,9 @@ static void test_drag_and_linear_integration(void)
     assert(near(velocity.x, 9.996f, 0.0001f));
 }
 
+/* 0x00430830 splits on the contact normal's Z against 0.65 (0x00571D48):
+   a steep face is a wall, a shallow one is ground. Expectations below are hand
+   evaluated from the recovered formulas. */
 static void test_collision_response(void)
 {
     KartCollisionInput input = {
@@ -433,29 +439,67 @@ static void test_collision_response(void)
     };
     KartCollisionOutput output = kart_resolve_linear_collision(&input);
 
+    /* Wall. v_n = (-10,0,0), v_t = (0,5,0).
+       loss = min(1.5*10, 0.6*5) = 3, dv = -1.5*v_n - normalize(v_t)*3. */
     assert(output.incoming);
-    assert(output.hard_impact);
+    assert(output.wall_contact);
     assert(near(output.velocity.x, 5.0f, 0.0001f));
     assert(near(output.velocity.y, 2.0f, 0.0001f));
     assert(near(output.tangential_speed_removed, 3.0f, 0.0001f));
+    /* Normal restitution is 0.5: -10 becomes +5. */
+    assert(near(output.velocity.x, -0.5f * -10.0f, 0.0001f));
 
+    /* The sweep fraction must not steer the branch. It used to, which put wall
+       physics on shallow ground and ground physics on walls. */
     input.sweep_fraction = 0.8f;
     output = kart_resolve_linear_collision(&input);
-    assert(output.incoming);
-    assert(!output.hard_impact);
-    assert(near(output.velocity.x, 2.0f, 0.0001f));
-    assert(near(output.velocity.y, 5.0f, 0.0001f));
-    assert(near(output.angular_velocity.x, 0.0f, 0.0001f));
-    assert(near(output.angular_velocity.y, -0.1f, 0.0001f));
+    assert(output.wall_contact);
+    assert(near(output.velocity.x, 5.0f, 0.0001f));
+    assert(near(output.velocity.y, 2.0f, 0.0001f));
+    input.sweep_fraction = 0.5f;
 
+    /* The wall branch zeroes the correction's Z, so vertical speed survives a
+       wall hit untouched. */
+    input.velocity = (KartVec3){-10.0f, 5.0f, -3.0f};
+    output = kart_resolve_linear_collision(&input);
+    assert(output.wall_contact);
+    assert(near(output.velocity.x, 5.0f, 0.0001f));
+    assert(near(output.velocity.y, 2.0f, 0.0001f));
+    assert(near(output.velocity.z, -3.0f, 0.0001f));
+
+    /* Ground: normal.z = 0.8 > 0.65. v = v_t - 0.2*v_n, no tangential loss.
+       dot(n,v) = -6, v_n = (-3.6,0,-4.8), v_t = (-6.4,5,4.8). */
+    input.velocity = (KartVec3){-10.0f, 5.0f, 0.0f};
+    input.normal = (KartVec3){0.6f, 0.0f, 0.8f};
+    output = kart_resolve_linear_collision(&input);
+    assert(output.incoming);
+    assert(!output.wall_contact);
+    assert(near(output.velocity.x, -5.68f, 0.0001f));
+    assert(near(output.velocity.y, 5.0f, 0.0001f));
+    assert(near(output.velocity.z, 5.76f, 0.0001f));
+    assert(near(output.tangential_speed_removed, 0.0f, 0.0001f));
+    assert(near(output.wall_yaw_kick, 0.0f, 0.0001f));
+    /* w = cross(n, up) = (0,-0.6,0); x takes -dot(w,right)*0.1 = 0,
+       y takes +dot(w,forward)*0.1 = -0.06. */
+    assert(near(output.angular_velocity.x, 0.0f, 0.0001f));
+    assert(near(output.angular_velocity.y, -0.06f, 0.0001f));
+    assert(near(output.angular_velocity.z, 0.0f, 0.0001f));
+
+    /* Wall yaw kick: |dot(n,forward)| = 0.8 > |dot(n,right)| = 0.6, so the kick
+       uses the right term, scaled by clamp(|dot(n,v)|, 1, 30) = 10. */
     input.velocity = (KartVec3){-6.0f, -8.0f, 0.0f};
     input.normal = (KartVec3){0.6f, 0.8f, 0.0f};
-    input.sweep_fraction = 0.5f;
     output = kart_resolve_linear_collision(&input);
-    assert(output.hard_impact);
+    assert(output.wall_contact);
     assert(near(output.normal_speed, 10.0f, 0.0001f));
-    assert(near(output.hard_yaw_kick, 6.0f, 0.0001f));
+    assert(near(output.wall_yaw_kick, 6.0f, 0.0001f));
     assert(near(output.angular_velocity.z, 6.0f, 0.0001f));
+
+    /* Same-direction spin already strong enough suppresses the kick. */
+    input.angular_velocity = (KartVec3){0.0f, 0.0f, 1.0f};
+    output = kart_resolve_linear_collision(&input);
+    assert(near(output.wall_yaw_kick, 0.0f, 0.0001f));
+    assert(near(output.angular_velocity.z, 1.0f, 0.0001f));
 }
 
 static void test_drive_and_brake_forces(void)

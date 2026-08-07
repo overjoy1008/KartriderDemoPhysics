@@ -7,6 +7,7 @@
 #include "kart_input.h"
 #include "kart_minimap_win32.h"
 #include "kart_simulation.h"
+#include "kart_sound_win32.h"
 #include "kart_track_collision.h"
 #include "kart_track_scene.h"
 #include "kart_track_scene_resources.h"
@@ -57,6 +58,7 @@ typedef struct DemoState {
        kart moved. */
     DWORD respawn_notice_ms;
     KartTrackScene scenes[KART_TRACK_SCENE_CAPACITY];
+    KartDemoSound sound;
 } DemoState;
 
 static bool load_track_scene_resource(
@@ -782,6 +784,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         demo = (DemoState *)create->lpCreateParams;
         SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)demo);
         load_track_scenes(create->hInstance, demo);
+        kart_demo_sound_start(create->hInstance, &demo->sound);
         kart_demo_minimap_set_load(create->hInstance, &demo->minimaps);
         reset_kart(demo);
         SetTimer(window, 1, 16, NULL);
@@ -805,6 +808,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
     case WM_TIMER: {
         DWORD now;
         DWORD elapsed;
+        KartSimulationStepResult step = {0};
         KartSimulationControls controls = {0};
         const KartSimulationWorld world = {
             .query_ground = query_track_ground,
@@ -862,7 +866,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         if (key_down('R')) {
             reset_kart(demo);
         } else if (elapsed != 0) {
-            kart_simulate_milliseconds(&demo->kart, &controls, &world, elapsed);
+            step = kart_simulate_milliseconds(&demo->kart, &controls, &world, elapsed);
         }
         if (demo->kart.position.z <
             kart_demo_track_fall_limit(demo->track_spec)) {
@@ -876,6 +880,9 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         demo->boost_active = kart_any_boost_active(
             &demo->kart.timed_boost, &demo->kart.instant_boost);
         demo->simulation_time_ms += elapsed;
+        kart_demo_sound_update(
+            &demo->sound, &demo->kart, demo->boost_active,
+            step.wall_impact_speed, step.ground_impact_speed, now);
         update_skid_marks(demo);
         InvalidateRect(window, NULL, FALSE);
         return 0;
@@ -892,6 +899,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
     case WM_DESTROY:
         KillTimer(window, 1);
         if (demo != NULL) {
+            kart_demo_sound_stop(&demo->sound);
             kart_demo_minimap_set_free(&demo->minimaps);
             free_track_scenes(demo);
         }

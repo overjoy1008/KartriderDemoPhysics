@@ -499,8 +499,16 @@ KartPoseOutput kart_integrate_pose(const KartPoseInput *input)
 KartCollisionOutput kart_resolve_linear_collision(
     const KartCollisionInput *input)
 {
-    /* Linear-velocity portion of 0x00430830. */
-    static const float hard_impact_fraction = 0.6499999761581421f;
+    /* Linear-velocity portion of 0x00430830.
+
+       The branch is on the contact normal's Z, not on the sweep fraction:
+         00430A3B  FLD  float ptr [EBP + -0x50]     ; contact normal .z
+         00430A3E  FCOMP float ptr [0x00571D48]     ; 0.65f
+       0x00426C20 initializes the contact record as two 12-byte vectors, so the
+       local at record+0xC+8 is normal.z while the sweep fraction is the next
+       slot. A steep face takes the wall branch; a shallow one takes the
+       ground branch. */
+    static const float wall_normal_z_limit = 0.6499999761581421f;
     static const float hard_normal_impulse = 1.5f;
     static const float hard_tangent_limit = 0.6000000238418579f;
     static const float soft_restitution = 0.20000000298023224f;
@@ -520,7 +528,7 @@ KartCollisionOutput kart_resolve_linear_collision(
     normal_velocity = vec3_scale(input->normal, signed_normal_speed);
     tangent_velocity = vec3_add(input->velocity, vec3_scale(normal_velocity, -1.0f));
 
-    if (input->sweep_fraction <= hard_impact_fraction) {
+    if (input->normal.z <= wall_normal_z_limit) {
         const float tangent_speed = sqrtf(vec3_dot(tangent_velocity, tangent_velocity));
         const float normal_forward = vec3_dot(input->normal, input->body_forward);
         const float normal_right = vec3_dot(input->normal, input->body_right);
@@ -528,7 +536,7 @@ KartCollisionOutput kart_resolve_linear_collision(
         KartVec3 tangent_direction = {0};
         KartVec3 correction;
 
-        out.hard_impact = true;
+        out.wall_contact = true;
         out.tangential_speed_removed = fminf(
             out.normal_speed * hard_normal_impulse,
             tangent_speed * hard_tangent_limit);
@@ -545,17 +553,17 @@ KartCollisionOutput kart_resolve_linear_collision(
 
         if (fabsf(normal_forward) <= fabsf(normal_right)) {
             const float side_sign = normal_right <= 0.0f ? 1.0f : -1.0f;
-            out.hard_yaw_kick = normal_forward * side_sign * turn_speed;
+            out.wall_yaw_kick = normal_forward * side_sign * turn_speed;
         } else {
             const float forward_sign = normal_forward <= 0.0f ? -1.0f : 1.0f;
-            out.hard_yaw_kick = normal_right * forward_sign * turn_speed;
+            out.wall_yaw_kick = normal_right * forward_sign * turn_speed;
         }
 
         /* The candidate is accepted unless existing same-direction spin is strong. */
-        if (out.hard_yaw_kick * out.angular_velocity.z <= 1.0f) {
-            out.angular_velocity.z += out.hard_yaw_kick;
+        if (out.wall_yaw_kick * out.angular_velocity.z <= 1.0f) {
+            out.angular_velocity.z += out.wall_yaw_kick;
         } else {
-            out.hard_yaw_kick = 0.0f;
+            out.wall_yaw_kick = 0.0f;
         }
     } else {
         const KartVec3 wall_turn_axis = vec3_cross(input->normal, input->body_up);

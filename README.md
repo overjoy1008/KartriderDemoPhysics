@@ -91,6 +91,13 @@ distribution copies; the `.app` bundles are the files to run directly.
   a booster-linked 75-to-110 degree field of view, and the Z-only smoothing of
   the final camera position. See
   [camera recovery notes](analysis/CAMERA_RECOVERY_NOTES.md).
+- the kart sound driving from `FUN_00452E60`: the engine loop's pitch and
+  volume both follow `speed * 0.01171875 + 0.25`, refreshed only every 64 ms,
+  with volume pinned at 1.0 from speed 64 and pitch pinned at 1.5 from speed
+  128; the drift loop runs exactly while the kart's drift flag is set; the
+  booster is triggered by the same flag that widens the chase camera's field of
+  view; crash and shock are one-shots at `clamp(magnitude * k, 0.1, 1.0)` with
+  `k` of 0.1 and 0.04. See [the sound section](#sound) below.
 - the original HUD `|velocity| * 3.6` km/h conversion;
 - all 26 playable demo kart presets, checked against the demo's own
   `Data/kart.rho`: 416/416 `Dynamics` values match each kart's `parameter.xml`,
@@ -185,8 +192,9 @@ of an arrow; in the top-down view that is always Z.
 
 On Windows the build also produces `kart_topdown.exe`. It runs the full 3D
 physics state and renders only the X-Y projection using the
-Win32 API, so no graphics package is required. It starts with the demo-selected
-`burst3` on the `flat_test` reference track; the camera follows the kart over a
+Win32 API, so no graphics package is required. It starts on `cotten5` on the
+`flat_test` reference track — the kart is a simulator-side choice, since the
+demo's own `kartlist.xml` offers only `burst3`. The camera follows the kart over a
 10-unit reference grid. The top-right bounds panel shows the full track, the
 selected kart's exact width and length, and its current position as an oriented
 triangle.
@@ -252,6 +260,26 @@ actually uses is visible rather than inferred from wireframe alone: warm sand
 for ground, blue for walls, using the same thresholds as
 `src/kart_track_collision.c`. The fill is composited at roughly one third
 opacity, so the wireframe and the ground grid stay readable through it.
+
+### Sound
+
+Both Windows demos play the demo's own effect samples — `motor.wav`,
+`drift.wav`, `crash.wav` and `shock.wav` from `kart.rho`, and
+`booster/booster.wav` from `sound_fx_item.rho`. All five are 16-bit mono
+22050 Hz PCM and are embedded in the executables byte for byte.
+
+The driving logic in `src/kart_engine_sound.c` is recovered from `FUN_00452E60`
+and `FUN_00458000`; `tests/test_engine_sound.c` pins its constants. Playback is
+`demo/kart_audio_win32.c`, a small streaming mixer over `waveOut` with per-voice
+looping, volume, and pitch by resampling — no third-party audio library. A
+machine with no output device simply runs silent.
+
+Two details worth knowing. The engine volume curve is continuous, reaching 1.0
+exactly at speed 64, but the pitch curve is not: just under speed 128 the ramp
+has reached about 1.75 and then steps down to the 1.5 cap. That is what the
+original does. And there is no separate instant-boost sound — the original
+triggers `booster.wav` from the kart's vftable slot 26 flag, which covers the
+item boost and the instant boost alike.
 
 ### Falling out of the world
 

@@ -110,6 +110,12 @@ typedef struct KartSimulationStepResult {
     unsigned int body_contacts;
     bool grounded;
     bool landed;
+    /* Largest incoming normal speed resolved during the step, split the way
+       0x00430830 caches it: the wall branch stores its magnitude at kart+0x2FC
+       and the ground branch at kart+0x304. The original's crash and shock
+       sounds scale their volume by these. Zero when nothing was hit. */
+    float wall_impact_speed;
+    float ground_impact_speed;
 } KartSimulationStepResult;
 
 KartSimulationGeometry kart_simulation_default_geometry(void);

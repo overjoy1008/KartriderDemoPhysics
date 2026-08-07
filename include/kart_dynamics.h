@@ -112,6 +112,8 @@ typedef struct KartCollisionInput {
     KartVec3 body_right;
     KartVec3 body_forward;
     KartVec3 body_up;
+    /* Carried in the original's contact record and passed through for
+       completeness; the response branch does not read it. */
     float sweep_fraction;
 } KartCollisionInput;
 
@@ -119,10 +121,12 @@ typedef struct KartCollisionOutput {
     KartVec3 velocity;
     KartVec3 angular_velocity;
     bool incoming;
-    bool hard_impact;
+    /* True when the contact took the wall branch, i.e. normal.z <= 0.65. */
+    bool wall_contact;
     float normal_speed;
+    /* Wall branch only. */
     float tangential_speed_removed;
-    float hard_yaw_kick;
+    float wall_yaw_kick;
 } KartCollisionOutput;
 
 typedef enum KartLongitudinalMode {
