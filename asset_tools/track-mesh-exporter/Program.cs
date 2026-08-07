@@ -5,35 +5,41 @@ using KartLibrary.Game.Engine.Relements;
 using KartLibrary.Game.Engine.Track;
 using KartLibrary.IO;
 
-if (args.Length != 3 || args[0] != "export")
+// "export" reads a track.1s, whose root is a TrackContainer.
+// "export-kart" reads a kart model.1s, whose root is the Relement scene itself.
+if (args.Length != 3 || (args[0] != "export" && args[0] != "export-kart"))
 {
-    Console.Error.WriteLine("Usage: track-mesh-exporter export <track.1s> <output-prefix-below-workspace>");
+    Console.Error.WriteLine("Usage: track-mesh-exporter export      <track.1s> <output-prefix-below-workspace>");
+    Console.Error.WriteLine("       track-mesh-exporter export-kart <model.1s> <output-prefix-below-workspace>");
     return 2;
 }
 
+bool kartModel = args[0] == "export-kart";
 string input = Path.GetFullPath(args[1]);
 string outputPrefix = Path.GetFullPath(args[2]);
 string workspace = Path.GetFullPath(Directory.GetCurrentDirectory()) + Path.DirectorySeparatorChar;
 if (!outputPrefix.StartsWith(workspace, StringComparison.OrdinalIgnoreCase))
     throw new IOException("Output must remain inside the current workspace.");
-if (!File.Exists(input)) throw new FileNotFoundException("track.1s not found", input);
+if (!File.Exists(input)) throw new FileNotFoundException("input .1s not found", input);
 Directory.CreateDirectory(Path.GetDirectoryName(outputPrefix)!);
 
 KartObjectManager.Initialize();
-TrackContainer container;
+Relement scene;
 using (FileStream stream = new(input, FileMode.Open, FileAccess.Read, FileShare.Read))
 using (BinaryReader reader = new(stream))
 {
     Dictionary<short, KartObject> objects = new();
     Dictionary<short, object> fields = new();
-    container = reader.ReadKartObject<TrackContainer>(objects, fields);
+    scene = kartModel
+        ? reader.ReadKartObject<Relement>(objects, fields)
+        : reader.ReadKartObject<TrackContainer>(objects, fields).TrackScene;
 }
 
 List<MeshData> meshes = new();
 // KartRider track coordinates already use X/Y as the ground plane and Z as height.
 // Keeping identity also reproduces the AABBs previously measured from demo track.1s.
 Matrix4x4 axis = Matrix4x4.Identity;
-Collect(container.TrackScene, axis, meshes);
+Collect(scene, axis, meshes);
 
 Vector3 min = new(float.PositiveInfinity);
 Vector3 max = new(float.NegativeInfinity);
@@ -96,7 +102,28 @@ static void Collect(Relement node, Matrix4x4 parent, List<MeshData> meshes)
 {
     Matrix4x4 transform = Matrix4x4.CreateScale(node.Scale) * node.Transform *
                           Matrix4x4.CreateTranslation(node.Position) * parent;
-    if (node is ReTriList triList && triList.Vertex?.Vertices is not null && triList.Vertex.Indexes is not null)
+    // Kart models store geometry as ReToonRigid: separate vertex, normal and
+    // texcoord arrays indexed per face corner. Only the vertex indices matter
+    // for the mesh itself.
+    if (node is ReToonRigid toon && toon.Vertices is not null && toon.MeshFaces is not null)
+    {
+        List<uint> indices = new(toon.MeshFaces.Length * 3);
+        foreach (ReToonRigidMeshFace face in toon.MeshFaces)
+        {
+            indices.Add((uint)face.VertexIndex1);
+            indices.Add((uint)face.VertexIndex2);
+            indices.Add((uint)face.VertexIndex3);
+        }
+        Vector2[,]? uv = null;
+        if (toon.TexCoords is not null && toon.TexCoords.Length >= toon.Vertices.Length)
+        {
+            uv = new Vector2[toon.Vertices.Length, 1];
+            for (int i = 0; i < toon.Vertices.Length; i++)
+                uv[i, 0] = new Vector2(toon.TexCoords[i].X, toon.TexCoords[i].Y);
+        }
+        AddIndexed(node, toon.Vertices, uv, indices, transform, meshes);
+    }
+    else if (node is ReTriList triList && triList.Vertex?.Vertices is not null && triList.Vertex.Indexes is not null)
         AddIndexed(node, triList.Vertex.Vertices, triList.Vertex.TextureUVs, triList.Vertex.Indexes.Select(i => (uint)(ushort)i), transform, meshes);
     else if (node is ReTriStrip triStrip && triStrip.Vertex?.Vertices is not null && triStrip.Vertex.Indexes is not null)
     {

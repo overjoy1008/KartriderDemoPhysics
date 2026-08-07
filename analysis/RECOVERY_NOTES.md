@@ -144,7 +144,17 @@ The contact record returned by `0x00433310` is eight 32-bit values: contact
 point `float[3]`, triangle normal `float[3]`, sweep fraction, and a surface
 identifier. In `0x00430830`, an incoming contact has `dot(normal, velocity) < 0`.
 
-For a sweep fraction at or below `0.65`, the horizontal correction is:
+The branch constant `0x00571D48` is `0.65f`, and it is tested against the
+contact **normal's Z**, not the sweep fraction. `0x00426C20` initializes the
+record as two 12-byte vectors at `+0` and `+0xC`, so in `0x00430830` the local
+at `+0xC+8` is `normal.z`; the sweep fraction is the next slot (`param_1[6]`).
+The branch below is therefore the wall case — a steep face — and the far branch
+handles shallow ground.
+
+The same `0.65f` is also the ground filter in the wheel-ray query; see
+"Surface classification" below.
+
+For a contact normal Z at or below `0.65`, the horizontal correction is:
 
 ```text
 normalComponent = normal * dot(normal, velocity)
@@ -186,6 +196,41 @@ else:
 
 The kick is added to local angular velocity Z only when
 `yawKick * angularVelocity.z <= 1`.
+
+## Surface classification and the triangle store
+
+There is one triangle store and one broadphase for the whole scene; floor and
+wall are separated by the **face normal**, at the same `0.65f` threshold
+(`0x00571D48`) in both places.
+
+`0x004BC200` is the broadphase: a uniform X/Y grid, cell indices clamped to
+`[0, 2001)`, looked up in a hash map at `this+0xC`, walked along the query
+segment. Each triangle record is `0x40` bytes:
+
+| offset | contents |
+|---:|---|
+| `+0x04`, `+0x10`, `+0x1C` | the three vertices |
+| `+0x28`..`+0x30` | precomputed face normal |
+| `+0x34`, `+0x38` | Z extent, used to reject before the triangle test |
+| `+0x3C` | surface identifier, copied into the contact record |
+
+The wheel-ray query `0x00432FC0` then filters candidates by normal Z:
+
+```text
+00433060  MOVZX ECX, byte ptr [EBP + 0x24]   ; caller flag
+00433064  TEST ECX,ECX
+00433066  JNZ  0x00433086                    ; flag set: skip the filter
+0043306B  MOV  EAX, dword ptr [EDX + 0x30]   ; triangle normal.z
+0043306F  CALL 0x00431B70                    ; fabsf
+00433077  FCOMP float ptr [0x00571D48]       ; 0.65f
+00433084  JMP  0x0043303B                    ; below: reject this triangle
+```
+
+So a caller can pass a flag that bypasses the ground filter entirely and tests
+every triangle. Which callers pass it is not yet traced.
+
+The triangle test itself uses a two-sided epsilon (`-1e-4f` at `0x00571DB8`,
+`+1e-4` as a double at `0x00571DB0`), so back faces are not culled.
 
 ## Instant boost state machine
 

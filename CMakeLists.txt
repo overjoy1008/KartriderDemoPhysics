@@ -14,6 +14,7 @@ add_library(kart_dynamics STATIC
     src/kart_simulation.c
     src/kart_demo_data.c
     src/kart_inflate.c
+    src/kart_camera.c
 )
 target_include_directories(kart_dynamics PUBLIC include)
 target_compile_features(kart_dynamics PUBLIC c_std_11)
@@ -69,6 +70,10 @@ add_test(NAME kart_track_collision_tests COMMAND kart_track_collision_tests)
 add_executable(kart_inflate_tests tests/test_inflate.c src/kart_track_scene.c)
 target_link_libraries(kart_inflate_tests PRIVATE kart_dynamics)
 add_test(NAME kart_inflate_tests COMMAND kart_inflate_tests)
+
+add_executable(kart_camera_tests tests/test_camera_follow.c)
+target_link_libraries(kart_camera_tests PRIVATE kart_dynamics)
+add_test(NAME kart_camera_tests COMMAND kart_camera_tests)
 
 if(WIN32)
     set(KART_MINIMAP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/analysis/track-assets/extracted")

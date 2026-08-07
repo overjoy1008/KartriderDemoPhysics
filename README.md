@@ -83,10 +83,25 @@ distribution copies; the `.app` bundles are the files to run directly.
 - hard/late body-collision angular response;
 - an engine-independent world-query interface and complete fixed 5 ms
   simulation pipeline.
+- the complete `ChaseCameraman` mode-0 update: a persistent camera quaternion
+  interpolating toward the kart's orientation at `min(dt / 400 ms, 1)` — which
+  is what leaves the kart visibly turned across the view during a deep drift —
+  an asymmetric speed filter (10 s easing out, 100 ms pulling in), chase pitch
+  `speed/400 + 0.25`, rear distance `5.5 + speed*0.045`, height `speed/60 + 3`,
+  a booster-linked 75-to-110 degree field of view, and the Z-only smoothing of
+  the final camera position. See
+  [camera recovery notes](analysis/CAMERA_RECOVERY_NOTES.md).
 - the original HUD `|velocity| * 3.6` km/h conversion;
-- all 26 playable demo kart parameter/model-AABB presets and all 13 demo track
-  mesh-AABB sizes, every one of them re-derived from that track's decoded
-  `track.1s` mesh so the scene, walls, minimap and spawn share one source.
+- all 26 playable demo kart presets, checked against the demo's own
+  `Data/kart.rho`: 416/416 `Dynamics` values match each kart's `parameter.xml`,
+  and all 78 dimension constants are reproduced exactly from the body mesh of
+  its `model.1s`. See
+  [kart asset verification](docs/KART_ASSET_VERIFICATION.md); re-run it with
+  `python scripts/derive_kart_constants.py`. The kart's drawn **shape** is not
+  from the assets — it is a box built from those dimensions.
+- all 13 demo track mesh-AABB sizes, every one of them re-derived from that
+  track's decoded `track.1s` mesh so the scene, walls, minimap and spawn share
+  one source.
 
 The source addresses are recorded next to recovered formulas. Raw Ghidra output
 and ranking reports are kept under `analysis/reports`; reusable headless scripts
@@ -305,8 +320,10 @@ Controls match Windows except that the item-boost modifier is **Command**:
 ## Confidence boundary
 
 Parameter names/defaults and the core formulas are directly supported by the
-listed executable addresses in `analysis/RECOVERY_NOTES.md`. Kart dimensions
-come from the installed demo's model assets. All 13 track bounds and start
+listed executable addresses in `analysis/RECOVERY_NOTES.md`. Kart dynamics and
+dimensions are verified against the demo's own `kart.rho` by
+`scripts/derive_kart_constants.py`; the kart's drawn shape is not, and remains a
+box rather than the asset mesh. All 13 track bounds and start
 lines are derived from the decoded `track.1s` meshes by
 `scripts/derive_track_constants.py`, and all 13 use the selected yellow KTRK
 triangles for ground and wall contact on Windows. The exact proprietary

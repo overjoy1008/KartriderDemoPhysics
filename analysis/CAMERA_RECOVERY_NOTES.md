@@ -2,7 +2,22 @@
 
 ## Scope and provenance
 
-This note records code recovered from the original unpacked KartRider demo executable. It does not describe simulator code and no simulator behavior was changed during this investigation.
+This note records code recovered from the original unpacked KartRider demo
+executable.
+
+Implementation status: the whole mode-0 update below is carried into the
+simulator as `src/kart_camera.c` / `include/kart_camera.h`, covered by
+`tests/test_camera_follow.c` — orientation follow, asymmetric speed filter,
+chase pitch/distance/height, booster FOV, and the Z-only position smoothing.
+
+Two things are present but unexercised. Mode 1 (`Front Chase Cameraman`, 100 ms)
+is exposed as a constant but the demo only drives mode 0. The extra-pitch field
+at `+0x3C` is an input that stays zero, because which original code writes it
+has not been traced.
+
+One deliberate numerical departure: the original normalizes quaternions with a
+fast reciprocal-square-root approximation over runtime-initialized tables
+(`0x00482490`); the port uses an exact square root, a difference of about 1e-7.
 
 - Input: `input/KartRider.exe`
 - Size: 1,769,472 bytes
@@ -66,13 +81,54 @@ void ChaseCameraman_Update(
 }
 ```
 
-The mode-0 assembly directly pushes IEEE-754 `0x43C80000` (`400.0f`) before calling `0x00447510`. Mode 1 uses `0x42C80000` (`100.0f`). Function `0x00447510` computes:
+The two follow times are immediate operands at their call sites, not loads from
+`.rdata`; the `400.0f` in the constant table above is a different use of the
+same value.
+
+```text
+00444DAF  PUSH 0x43C80000      400.0f   Overhead Chase Cameraman
+00444DC2  CALL 0x00447510
+00444DD4  CALL 0x0042B840
+
+00445244  PUSH 0x42C80000      100.0f   Front Chase Cameraman
+00445257  CALL 0x00447510
+00445269  CALL 0x0042B840
+```
+
+Function `0x00447510` computes:
 
 ```c
 alpha = min((uint32_t)(now_ms - previous_ms) / denominator_ms, 1.0f);
 ```
 
 `0x0042B840` enters the interpolation implementation at `0x00481CD0`. That implementation obtains the quaternion dot product, computes an approximate spherical-interpolation weight, blends the two quaternions, and normalizes the result. It is therefore orientation interpolation, not a delayed Euler-yaw variable.
+
+### The interpolation weight
+
+`0x00481CD0` evaluates the weight on whichever half of the interval keeps the
+parameter small, then blends componentwise and renormalizes:
+
+```c
+float cosine = Dot(a, b);
+float w = t > 0.5f ? 1.0f - Weight(1.0f - t, cosine)   // 0x005710B8 = 0.5f
+                   : Weight(t, cosine);
+result = a + (b - a) * w;
+Normalize(result);                                      // 0x00482490
+```
+
+`Weight` is `0x00482590`, a polynomial rather than a real slerp:
+
+```c
+float base = 1.0f - 0.8227968811988831f * cosine;   // 0x005758F0
+float k    = 0.5854921936988831f * base * base;     // 0x005758F4
+return ((2.0f * t - 3.0f) * k * t + 1.0f + k) * t;  // 0x00571948, 0x005722C0
+```
+
+`t = 0.5` is a fixed point for every angle. Below it the weight runs ahead of
+`t`, and the wider the angle the further ahead, which is what lets a normalized
+linear blend approximate constant angular speed. `0x00482490` normalizes with a
+fast reciprocal-square-root approximation over runtime-initialized tables at
+`0x005B1954`/`0x005B1958`.
 
 ## What creates the visible drift angle
 
@@ -103,7 +159,7 @@ The chase-position portion of `0x00444C30` contains the following direct constan
 |---:|---:|---|
 | `0x00572678` | `60.0f` | speed-scaled offset divisor |
 | `0x0057267C` | `0.03f` | speed-dependent distance term |
-| `0x00572680` | `400.0f` | overhead orientation follow time |
+| `0x00572680` | `400.0f` | chase-pitch divisor (`00444FDA FDIV [0x00572680]`) |
 | `0x00572684` | `5.5f` | base/minimum chase distance |
 | `0x00572688` | `0.015f` | second speed-dependent distance term |
 | `0x005722C0` | `3.0f` | camera-axis offset term |

@@ -1,0 +1,342 @@
+KartRider.exe race-progress symbol and string report
+Checkpoint / lap / reverse-direction / respawn search.
+
+=== DEFINED STRINGS ===
+STRING 00570808 string "ChReturnLobbyRequestPacket"
+    ref 004057b3 in 004057a0 FUN_004057a0
+STRING 00570844 string "ChReturnLobbyReplyPacket"
+    ref 00405843 in 00405830 FUN_00405830
+STRING 00571540 unicode "track"
+    ref 0041f643 in 0041eb20 FUN_0041eb20
+    ref 0041fff9 in 0041eb20 FUN_0041eb20
+    ref 00420b18 in 00420810 FUN_00420810
+    ref 004240ff in 004240f0 FUN_004240f0
+    ref 0044d7f6 in 0044d460 FUN_0044d460
+    ref 0045dfff in 0045dca0 FUN_0045dca0
+    ref 0045e332 in 0045dca0 FUN_0045dca0
+STRING 00571678 unicode "track_"
+    ref 00420636 in 004205f0 FUN_004205f0
+STRING 005716a0 unicode "laps"
+    ref 00420d5d in 00420810 FUN_00420810
+STRING 005716ac unicode "Track"
+    ref 00420bc8 in 00420810 FUN_00420810
+STRING 00571760 unicode "[%d] - forward(%d), backward(%d)
+	"
+    ref 00424287 in 004240f0 FUN_004240f0
+STRING 005717a8 unicode "course"
+    ref 0042416a in 004240f0 FUN_004240f0
+STRING 005717d8 unicode "reverse"
+    ref 00425239 in 00424e00 FUN_00424e00
+STRING 00571810 string "GoCourse"
+    ref 004287c3 in 004287b0 FUN_004287b0
+STRING 00571c98 unicode "BackwardAccelForce"
+    ref 0042e2db in 0042e190 FUN_0042e190
+STRING 00571dbc string "GoTrack"
+    ref 004342b3 in 004342a0 FUN_004342a0
+STRING 00572388 unicode "lowrank"
+    ref 0044071c in 00440480 FUN_00440480
+STRING 00572398 unicode "midrank"
+    ref 004406ef in 00440480 FUN_00440480
+STRING 005723a8 unicode "highrank"
+    ref 004406c2 in 00440480 FUN_00440480
+STRING 00572b88 unicode "track.1s"
+    ref 0044c55e in 0044c320 FUN_0044c320
+STRING 00572f38 unicode "wrongway"
+    ref 00451801 in 004511b0 FUN_004511b0
+    ref 004562d4 in 00455c80 FUN_00455c80
+STRING 005731ec unicode "lapinfo"
+    ref 00454994 in 004545d0 FUN_004545d0
+    ref 00454a27 in 004545d0 FUN_004545d0
+STRING 00573218 unicode "wrongwayPanel"
+    ref 00455619 in 00455610 FUN_00455610
+STRING 0057328c unicode "1lap"
+    ref 00456604 in 00455c80 FUN_00455c80
+STRING 00573298 unicode "finallap"
+    ref 004565e5 in 00455c80 FUN_00455c80
+    ref 004575fc in 00456cd0 FUN_00456cd0
+STRING 005732ac unicode "finish"
+    ref 004565c6 in 00455c80 FUN_00455c80
+    ref 00457219 in 00456cd0 FUN_00456cd0
+STRING 00575b18 string "PathTontroller"
+    ref 00488f23 in 00488f10 FUN_00488f10
+STRING 0057623c unicode "return value : %d"
+    ref 004a4601 in 004a4290 FUN_004a4290
+STRING 005764d8 string "TrackObject"
+    ref 004b7143 in 004b7130 FUN_004b7130
+STRING 00576630 string "TrackContainer"
+    ref 004bb653 in 004bb640 FUN_004bb640
+STRING 00577a48 unicode "Section"
+    ref 004c9cf1 in 004c9cb0 FUN_004c9cb0
+    ref 004c9e91 in 004c9e50 FUN_004c9e50
+STRING 00579800 string "D3DX: (WARN) An allocation of zero bytes should return a unique non-null pointer to at
+"
+    ref 004e4ac3 in 004e4a58 FUN_004e4a58
+STRING 0057c850 string "Inconsistent progression sequence for component %d coefficient %d"
+    ref 0057c6b4 (no function)
+STRING 0057cb1c string "At marker 0x%02x, recovery action %d"
+    ref 0057c66c (no function)
+STRING 0057cd3c string "Define Restart Interval %u"
+    ref 0057c630 (no function)
+STRING 0057d6cc string "Invalid progressive parameters at scan script entry %d"
+    ref 0057c52c (no function)
+STRING 0057d704 string "Invalid progressive parameters Ss=%d Se=%d Ah=%d Al=%d"
+    ref 0057c528 (no function)
+STRING 0057da6c string "the same structure.  Resetting read_data_fn to NULL."
+    ref 005519f3 in 005519a0 FUN_005519a0
+STRING 0057dcf7 string "Apng_do_dither returned rowbytes=0"
+    (no references)
+STRING 0057dd38 string "same structure.  Resetting write_data_fn to NULL."
+    ref 00550859 in 00550820 FUN_00550820
+STRING 00593c04 TerminatedCString "InitializeCriticalSection"
+    (no references)
+STRING 00593c20 TerminatedCString "DeleteCriticalSection"
+    (no references)
+STRING 00593dbe TerminatedCString "SHGetSpecialFolderPathW"
+    (no references)
+STRING 00593e1e TerminatedCString "?deallocate@?$__node_alloc@$00$0A@@_STL@@SAXPAXI@Z"
+    (no references)
+STRING 00593e54 TerminatedCString "?allocate@?$__node_alloc@$00$0A@@_STL@@SAPAXI@Z"
+    (no references)
+STRING 00593e86 TerminatedCString "?_M_increment@?$_Rb_global@_N@_STL@@SAPAU_Rb_tree_node_base@2@PAU32@@Z"
+    (no references)
+STRING 00593ed0 TerminatedCString "?_M_decrement@?$_Rb_global@_N@_STL@@SAPAU_Rb_tree_node_base@2@PAU32@@Z"
+    (no references)
+STRING 00593f1a TerminatedCString "?_Rebalance@?$_Rb_global@_N@_STL@@SAXPAU_Rb_tree_node_base@2@AAPAU32@@Z"
+    (no references)
+STRING 00593fda TerminatedCString "?_Rebalance_for_erase@?$_Rb_global@_N@_STL@@SAPAU_Rb_tree_node_base@2@PAU32@AAPAU32@11@Z"
+    (no references)
+STRING 00594626 TerminatedCString "EnterCriticalSection"
+    (no references)
+STRING 0059463e TerminatedCString "LeaveCriticalSection"
+    (no references)
+STRING 00594664 TerminatedCString "QueryPerformanceCounter"
+    (no references)
+STRING 0059474e TerminatedCString "InitializeCriticalSectionAndSpinCount"
+    (no references)
+STRING 00594776 TerminatedCString "TryEnterCriticalSection"
+    (no references)
+STRING 00594eb0 TerminatedCString "WSAResetEvent"
+    (no references)
+STRING 00598efc char[36] ".?AUChReturnLobbyRequestPacket@@"
+    (no references)
+STRING 00598f28 char[32] ".?AUChReturnLobbyReplyPacket@@"
+    (no references)
+STRING 005994c0 char[20] ".?AUGoCourse@the@@"
+    (no references)
+STRING 005994dc char[24] ".?AUTrackObject@the@@"
+    (no references)
+STRING 0059955c char[20] ".?AUGoTrack@the@@"
+    (no references)
+STRING 00599b54 char[20] ".?AUTrackService@@"
+    (no references)
+STRING 0059a614 char[28] ".?AUPathTontroller@the@@"
+    (no references)
+STRING 0059abc8 char[28] ".?AUTrackContainer@the@@"
+    (no references)
+string matches: 59
+
+=== SYMBOLS ===
+SYMBOL EXTERNAL:0000000a KERNEL32.DLL::InitializeCriticalSection type=Function
+    ref 004779bb in 00477980 ATL::CComCriticalSection::Init
+    ref 0057004c (no function)
+SYMBOL EXTERNAL:0000000b KERNEL32.DLL::DeleteCriticalSection type=Function
+    ref 0047872a in 00478723 ATL::CAtlBaseModule::~CAtlBaseModule
+    ref 00484bfb in 00484bf0 FUN_00484bf0
+    ref 00570050 (no function)
+SYMBOL EXTERNAL:00000027 KERNEL32.DLL::TryEnterCriticalSection type=Function
+    ref 00484c3b in 00484c30 FUN_00484c30
+    ref 005700c0 (no function)
+SYMBOL EXTERNAL:00000028 KERNEL32.DLL::InitializeCriticalSectionAndSpinCount type=Function
+    ref 00484bbf in 00484bb0 CRect
+    ref 00484bdf in 00484bd0 FUN_00484bd0
+    ref 005700c4 (no function)
+SYMBOL EXTERNAL:00000035 KERNEL32.DLL::QueryPerformanceCounter type=Function
+    ref 00478f61 (no function)
+    ref 005700f8 (no function)
+SYMBOL EXTERNAL:00000037 KERNEL32.DLL::LeaveCriticalSection type=Function
+    ref 004786fd in 004786f2 ATL::CComCritSecLock<class_ATL::CComCriticalSection>::~CComCritSecLock<class_ATL::CComCriticalSection>
+    ref 00484c5b in 00484c50 FUN_00484c50
+    ref 00570100 (no function)
+SYMBOL EXTERNAL:00000038 KERNEL32.DLL::EnterCriticalSection type=Function
+    ref 00478748 in 00478739 ATL::CAtlBaseModule::GetHInstanceAt
+    ref 00484c1b in 00484c10 FUN_00484c10
+    ref 00570104 (no function)
+SYMBOL EXTERNAL:0000004e SHELL32.DLL::SHGetSpecialFolderPathW type=Function
+    ref 0041eb50 in 0041eb20 FUN_0041eb20
+    ref 00570280 (no function)
+SYMBOL EXTERNAL:00000054 STLPORT_VC7146.DLL::_STL::__node_alloc<1,0>::allocate type=Function
+    ref 0040ade6 in 0040add0 FUN_0040add0
+    ref 0041b826 in 0041b810 FUN_0041b810
+    ref 0041c7f6 in 0041c7e0 FUN_0041c7e0
+    ref 0041ea56 in 0041ea40 FUN_0041ea40
+    ref 004280c6 in 004280b0 FUN_004280b0
+    ref 00441496 in 00441480 FUN_00441480
+    ref 0045eb46 in 0045eb30 FUN_0045eb30
+    ref 0046d3a6 in 0046d390 FUN_0046d390
+    ref 004b8c16 in 004b8c00 FUN_004b8c00
+    ref 004b9336 in 004b9320 FUN_004b9320
+    ref 004c10b6 in 004c10a0 FUN_004c10a0
+    ref 004dbda6 in 004dbd90 FUN_004dbd90
+    ref 004dbde6 in 004dbdd0 FUN_004dbdd0
+    ref 004ddf96 in 004ddf80 FUN_004ddf80
+    ref 0057035c (no function)
+SYMBOL EXTERNAL:00000079 STLPORT_VC7146.DLL::_STL::__node_alloc<1,0>::deallocate type=Function
+    ref 00401378 in 00401360 FUN_00401360
+    ref 0040f2d8 in 0040f2c0 FUN_0040f2c0
+    ref 004128b8 in 004128a0 FUN_004128a0
+    ref 00412ca8 in 00412c90 FUN_00412c90
+    ref 00421608 in 004215f0 FUN_004215f0
+    ref 00428108 in 004280f0 FUN_004280f0
+    ref 0045eb88 in 0045eb70 FUN_0045eb70
+    ref 004b8458 in 004b8440 FUN_004b8440
+    ref 004b8b98 in 004b8b80 FUN_004b8b80
+    ref 004c55a8 in 004c5590 FUN_004c5590
+    ref 004c6398 in 004c6380 FUN_004c6380
+    ref 004dbcf8 in 004dbce0 FUN_004dbce0
+    ref 004dbd78 in 004dbd60 FUN_004dbd60
+    ref 004ddf58 in 004ddf40 FUN_004ddf40
+    ref 005703f0 (no function)
+SYMBOL EXTERNAL:00000086 WS2_32.DLL::WSAResetEvent type=Function
+    ref 004d63e0 in 004d6360 FUN_004d6360
+    ref 005702f0 (no function)
+SYMBOL 00402590 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 00402569 in 00402560 FUN_00402560
+SYMBOL 00403310 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 004032e9 in 004032e0 FUN_004032e0
+SYMBOL 00403400 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 004033d9 in 004033d0 FUN_004033d0
+SYMBOL 00403520 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 004034f9 in 004034f0 FUN_004034f0
+SYMBOL 00405860 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 00405839 in 00405830 FUN_00405830
+SYMBOL 004059b0 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 00405989 in 00405980 FUN_00405980
+SYMBOL 00407710 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 004076e9 in 004076e0 FUN_004076e0
+SYMBOL 00407fe0 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 00407fb9 in 00407fb0 FUN_00407fb0
+SYMBOL 00408170 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 00408149 in 00408140 FUN_00408140
+SYMBOL 00408570 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 00408549 in 00408540 FUN_00408540
+SYMBOL 00447920 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 004478f9 in 004478f0 FUN_004478f0
+SYMBOL 00477980 ATL::CComCriticalSection::Init type=Function
+    ref 00478812 in 00478787 FUN_00478787
+SYMBOL 00477980 ?Init@CComCriticalSection@ATL@@QAEJXZ type=Label
+    ref 00478812 in 00478787 FUN_00478787
+SYMBOL 00477f73 driveandpathC type=Function
+    ref 004780ca in 0047800e FUN_0047800e
+    ref 0047810d in 0047800e FUN_0047800e
+SYMBOL 00477f73 _driveandpathC@12 type=Label
+    ref 004780ca in 0047800e FUN_0047800e
+    ref 0047810d in 0047800e FUN_0047800e
+SYMBOL 004786f2 ATL::CComCritSecLock<class_ATL::CComCriticalSection>::~CComCritSecLock<class_ATL::CComCriticalSection> type=Function
+    ref 0047877b in 00478739 ATL::CAtlBaseModule::GetHInstanceAt
+SYMBOL 004786f2 ??1?$CComCritSecLock@VCComCriticalSection@ATL@@@ATL@@QAE@XZ type=Label
+    ref 0047877b in 00478739 ATL::CAtlBaseModule::GetHInstanceAt
+SYMBOL 0047e330 ReverseFind type=Function
+    ref 0047e1ab in 0047e1a0 FUN_0047e1a0
+SYMBOL 00488fc0 CControlRectTracker::CControlRectTracker type=Function
+    (no references)
+SYMBOL 00488fc0 ??0CControlRectTracker@@QAE@PBUtagRECT@@I@Z type=Label
+    (no references)
+SYMBOL 00497aa0 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 00497a79 in 00497a70 FUN_00497a70
+SYMBOL 004b7160 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 004b7139 in 004b7130 FUN_004b7130
+SYMBOL 004d3d10 ?CreateObject@?$CProcessLocal@V_AFX_SOCK_STATE@@@@SAPAVCNoTrackObject@@XZ type=Label
+    ref 004d3ce9 in 004d3ce0 FUN_004d3ce0
+SYMBOL 004d4a40 CPropertySection::GetFormatID type=Function
+    ref 004d2b45 in 004d2b30 FUN_004d2b30
+    ref 004d2b53 in 004d2b30 FUN_004d2b30
+    ref 004d3481 in 004d3470 FUN_004d3470
+    ref 004d348f in 004d3470 FUN_004d3470
+    ref 004d3a58 in 004d3a40 FUN_004d3a40
+    ref 004d3a66 in 004d3a40 FUN_004d3a40
+    ref 004d4965 in 004d4950 FUN_004d4950
+    ref 004d4973 in 004d4950 FUN_004d4950
+    ref 004d4d21 in 004d4d10 FUN_004d4d10
+    ref 004d4d2f in 004d4d10 FUN_004d4d10
+    ref 004d4ff8 in 004d4fe0 FUN_004d4fe0
+    ref 004d5006 in 004d4fe0 FUN_004d4fe0
+SYMBOL 004d4a40 ?GetFormatID@CPropertySection@@QAE?AU_GUID@@XZ type=Label
+    ref 004d2b45 in 004d2b30 FUN_004d2b30
+    ref 004d2b53 in 004d2b30 FUN_004d2b30
+    ref 004d3481 in 004d3470 FUN_004d3470
+    ref 004d348f in 004d3470 FUN_004d3470
+    ref 004d3a58 in 004d3a40 FUN_004d3a40
+    ref 004d3a66 in 004d3a40 FUN_004d3a40
+    ref 004d4965 in 004d4950 FUN_004d4950
+    ref 004d4973 in 004d4950 FUN_004d4950
+    ref 004d4d21 in 004d4d10 FUN_004d4d10
+    ref 004d4d2f in 004d4d10 FUN_004d4d10
+    ref 004d4ff8 in 004d4fe0 FUN_004d4fe0
+    ref 004d5006 in 004d4fe0 FUN_004d4fe0
+SYMBOL 00570028 PTR_GetACP_00570028 type=Label
+    ref 0040d6e1 in 0040d670 ATL::_AtlGetThreadACPFake
+SYMBOL 0057004c PTR_InitializeCriticalSection_0057004c type=Label
+    ref 004779bb in 00477980 ATL::CComCriticalSection::Init
+SYMBOL 00570050 PTR_DeleteCriticalSection_00570050 type=Label
+    ref 0047872a in 00478723 ATL::CAtlBaseModule::~CAtlBaseModule
+    ref 00484bfb in 00484bf0 FUN_00484bf0
+SYMBOL 005700c0 PTR_TryEnterCriticalSection_005700c0 type=Label
+    ref 00484c3b in 00484c30 FUN_00484c30
+SYMBOL 005700c4 PTR_InitializeCriticalSectionAndSpinCount_005700c4 type=Label
+    ref 00484bbf in 00484bb0 CRect
+    ref 00484bdf in 00484bd0 FUN_00484bd0
+SYMBOL 005700f8 PTR_QueryPerformanceCounter_005700f8 type=Label
+    ref 00478f61 (no function)
+SYMBOL 00570100 PTR_LeaveCriticalSection_00570100 type=Label
+    ref 004786fd in 004786f2 ATL::CComCritSecLock<class_ATL::CComCriticalSection>::~CComCritSecLock<class_ATL::CComCriticalSection>
+    ref 00484c5b in 00484c50 FUN_00484c50
+SYMBOL 00570104 PTR_EnterCriticalSection_00570104 type=Label
+    ref 00478748 in 00478739 ATL::CAtlBaseModule::GetHInstanceAt
+    ref 00484c1b in 00484c10 FUN_00484c10
+SYMBOL 00570280 PTR_SHGetSpecialFolderPathW_00570280 type=Label
+    ref 0041eb50 in 0041eb20 FUN_0041eb20
+SYMBOL 005702f0 PTR_WSAResetEvent_005702f0 type=Label
+    ref 004d63e0 in 004d6360 FUN_004d6360
+SYMBOL 00598ef4 ChReturnLobbyRequestPacket::RTTI_Type_Descriptor type=Label
+    ref 004057ae in 004057a0 FUN_004057a0
+    ref 0058e094 (no function)
+    ref 0058e0dc (no function)
+SYMBOL 00598f20 ChReturnLobbyReplyPacket::RTTI_Type_Descriptor type=Label
+    ref 0040583e in 00405830 FUN_00405830
+    ref 0058e0e4 (no function)
+    ref 0058e12c (no function)
+SYMBOL 005994b8 the::GoCourse::RTTI_Type_Descriptor type=Label
+    ref 004287be in 004287b0 FUN_004287b0
+    ref 0058eb44 (no function)
+    ref 0058eb8c (no function)
+SYMBOL 005994d4 the::TrackObject::RTTI_Type_Descriptor type=Label
+    ref 00427bfc in 00427bf0 FUN_00427bf0
+    ref 0044cd3c in 0044cd30 FUN_0044cd30
+    ref 0044e4c9 in 0044d460 FUN_0044d460
+    ref 00450f2c in 00450f20 FUN_00450f20
+    ref 004b713e in 004b7130 FUN_004b7130
+    ref 0059201c (no function)
+    ref 00592064 (no function)
+SYMBOL 00599554 the::GoTrack::RTTI_Type_Descriptor type=Label
+    ref 0042c9a7 in 0042c9a0 FUN_0042c9a0
+    ref 004342ae in 004342a0 FUN_004342a0
+    ref 0058ed58 (no function)
+    ref 0058eda0 (no function)
+SYMBOL 00599b4c TrackService::RTTI_Type_Descriptor type=Label
+    ref 0058f954 (no function)
+    ref 0058f9cc (no function)
+    ref 0058fa08 (no function)
+SYMBOL 0059a60c the::PathTontroller::RTTI_Type_Descriptor type=Label
+    ref 00488f1e in 00488f10 FUN_00488f10
+    ref 00591230 (no function)
+    ref 00591278 (no function)
+SYMBOL 0059abc0 the::TrackContainer::RTTI_Type_Descriptor type=Label
+    ref 004bb64e in 004bb640 FUN_004bb640
+    ref 005922bc (no function)
+SYMBOL ffdff038 CountOfOwnedCriticalSections type=Label
+    (no references)
+SYMBOL ffdffbe0 glSectionInfo type=Label
+    (no references)
+SYMBOL ffdffbe4 glSection type=Label
+    (no references)
+symbol matches: 57

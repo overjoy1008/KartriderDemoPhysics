@@ -1,0 +1,1053 @@
+FUNCTION 00432fc0 FUN_00432fc0
+  00432fc0  PUSH EBP
+  00432fc1  MOV EBP,ESP
+  00432fc3  SUB ESP,0xc8
+  00432fc9  MOV dword ptr [EBP + 0xffffff38],ECX
+  00432fcf  MOV byte ptr [EBP + -0x4d],0x0
+  00432fd3  LEA ECX,[EBP + -0x5c]
+  00432fd6  CALL 0x00431c90
+  00432fdb  LEA ECX,[EBP + -0x20]
+  00432fde  CALL 0x00431c90
+  00432fe3  LEA ECX,[EBP + -0x30]
+  00432fe6  CALL 0x00431c90
+  00432feb  LEA ECX,[EBP + -0xc]
+  00432fee  CALL 0x00431c90
+  00432ff3  LEA ECX,[EBP + -0x4c]
+  00432ff6  CALL 0x00431c90
+  00432ffb  LEA ECX,[EBP + -0x69]
+  00432ffe  CALL 0x00431c90
+  00433003  PUSH EAX
+  00433004  LEA ECX,[EBP + -0x40]
+  00433007  CALL 0x00401310
+  0043300c  LEA ECX,[EBP + -0x69]
+  0043300f  CALL 0x00493460
+  00433014  LEA EAX,[EBP + -0x40]
+  00433017  PUSH EAX
+  00433018  LEA ECX,[EBP + 0x18]
+  0043301b  PUSH ECX
+  0043301c  LEA EDX,[EBP + 0xc]
+  0043301f  PUSH EDX
+  00433020  MOV ECX,dword ptr [EBP + 0xffffff38]
+  00433026  ADD ECX,0x24
+  00433029  CALL 0x004bc200
+  0043302e  LEA ECX,[EBP + -0x40]
+  00433031  CALL 0x00427130
+  00433036  MOV dword ptr [EBP + -0x68],EAX
+  00433039  JMP 0x00433044
+  0043303b  MOV EAX,dword ptr [EBP + -0x68]
+  0043303e  ADD EAX,0x4
+  00433041  MOV dword ptr [EBP + -0x68],EAX
+  00433044  LEA ECX,[EBP + -0x40]
+  00433047  CALL 0x004b9c00
+  0043304c  CMP dword ptr [EBP + -0x68],EAX
+  0043304f  JZ 0x004332ea
+  00433055  MOV ECX,dword ptr [EBP + -0x68]
+  00433058  CALL 0x00427130
+  0043305d  MOV dword ptr [EBP + -0x60],EAX
+  00433060  MOVZX ECX,byte ptr [EBP + 0x24]
+  00433064  TEST ECX,ECX
+  00433066  JNZ 0x00433086
+  00433068  MOV EDX,dword ptr [EBP + -0x60]
+  0043306b  MOV EAX,dword ptr [EDX + 0x30]
+  0043306e  PUSH EAX
+  0043306f  CALL 0x00431b70
+  00433074  ADD ESP,0x4
+  00433077  FCOMP float ptr [0x00571d48]
+  0043307d  FNSTSW AX
+  0043307f  TEST AH,0x5
+  00433082  JP 0x00433086
+  00433084  JMP 0x0043303b
+  00433086  MOV ECX,dword ptr [EBP + -0x60]
+  00433089  ADD ECX,0x4
+  0043308c  PUSH ECX
+  0043308d  MOV EDX,dword ptr [EBP + -0x60]
+  00433090  ADD EDX,0x10
+  00433093  PUSH EDX
+  00433094  LEA EAX,[EBP + -0x78]
+  00433097  PUSH EAX
+  00433098  CALL 0x00418750
+  0043309d  ADD ESP,0xc
+  004330a0  MOV ECX,dword ptr [EAX]
+  004330a2  MOV dword ptr [EBP + -0x5c],ECX
+  004330a5  MOV EDX,dword ptr [EAX + 0x4]
+  004330a8  MOV dword ptr [EBP + -0x58],EDX
+  004330ab  MOV EAX,dword ptr [EAX + 0x8]
+  004330ae  MOV dword ptr [EBP + -0x54],EAX
+  004330b1  MOV ECX,dword ptr [EBP + -0x60]
+  004330b4  ADD ECX,0x4
+  004330b7  PUSH ECX
+  004330b8  MOV EDX,dword ptr [EBP + -0x60]
+  004330bb  ADD EDX,0x1c
+  004330be  PUSH EDX
+  004330bf  LEA EAX,[EBP + 0xffffff7c]
+  004330c5  PUSH EAX
+  004330c6  CALL 0x00418750
+  004330cb  ADD ESP,0xc
+  004330ce  MOV ECX,dword ptr [EAX]
+  004330d0  MOV dword ptr [EBP + -0x20],ECX
+  004330d3  MOV EDX,dword ptr [EAX + 0x4]
+  004330d6  MOV dword ptr [EBP + -0x1c],EDX
+  004330d9  MOV EAX,dword ptr [EAX + 0x8]
+  004330dc  MOV dword ptr [EBP + -0x18],EAX
+  004330df  LEA ECX,[EBP + -0x20]
+  004330e2  PUSH ECX
+  004330e3  LEA EDX,[EBP + 0x18]
+  004330e6  PUSH EDX
+  004330e7  LEA EAX,[EBP + 0xffffff70]
+  004330ed  PUSH EAX
+  004330ee  CALL 0x00428490
+  004330f3  ADD ESP,0xc
+  004330f6  MOV ECX,dword ptr [EAX]
+  004330f8  MOV dword ptr [EBP + -0xc],ECX
+  004330fb  MOV EDX,dword ptr [EAX + 0x4]
+  004330fe  MOV dword ptr [EBP + -0x8],EDX
+  00433101  MOV EAX,dword ptr [EAX + 0x8]
+  00433104  MOV dword ptr [EBP + -0x4],EAX
+  00433107  LEA ECX,[EBP + -0xc]
+  0043310a  PUSH ECX
+  0043310b  LEA EDX,[EBP + -0x5c]
+  0043310e  PUSH EDX
+  0043310f  CALL 0x00428460
+  00433114  ADD ESP,0x8
+  00433117  FSTP float ptr [EBP + -0x14]
+  0043311a  FLD float ptr [EBP + -0x14]
+  0043311d  FCOMP float ptr [0x00571db8]
+  00433123  FNSTSW AX
+  00433125  TEST AH,0x41
+  00433128  JNZ 0x0043313f
+  0043312a  FLD float ptr [EBP + -0x14]
+  0043312d  FCOMP double ptr [0x00571db0]
+  00433133  FNSTSW AX
+  00433135  TEST AH,0x5
+  00433138  JP 0x0043313f
+  0043313a  JMP 0x0043303b
+  0043313f  FLD float ptr [0x00571490]
+  00433145  FDIV float ptr [EBP + -0x14]
+  00433148  FSTP float ptr [EBP + -0x34]
+  0043314b  MOV EAX,dword ptr [EBP + -0x60]
+  0043314e  ADD EAX,0x4
+  00433151  PUSH EAX
+  00433152  LEA ECX,[EBP + 0xc]
+  00433155  PUSH ECX
+  00433156  LEA EDX,[EBP + 0xffffff64]
+  0043315c  PUSH EDX
+  0043315d  CALL 0x00418750
+  00433162  ADD ESP,0xc
+  00433165  MOV ECX,dword ptr [EAX]
+  00433167  MOV dword ptr [EBP + -0x30],ECX
+  0043316a  MOV EDX,dword ptr [EAX + 0x4]
+  0043316d  MOV dword ptr [EBP + -0x2c],EDX
+  00433170  MOV EAX,dword ptr [EAX + 0x8]
+  00433173  MOV dword ptr [EBP + -0x28],EAX
+  00433176  LEA ECX,[EBP + -0xc]
+  00433179  PUSH ECX
+  0043317a  LEA EDX,[EBP + -0x30]
+  0043317d  PUSH EDX
+  0043317e  CALL 0x00428460
+  00433183  ADD ESP,0x8
+  00433186  FMUL float ptr [EBP + -0x34]
+  00433189  FSTP float ptr [EBP + -0x24]
+  0043318c  FLD float ptr [EBP + -0x24]
+  0043318f  FCOMP float ptr [0x00571808]
+  00433195  FNSTSW AX
+  00433197  TEST AH,0x5
+  0043319a  JNP 0x004331ac
+  0043319c  FLD float ptr [EBP + -0x24]
+  0043319f  FCOMP float ptr [0x00571490]
+  004331a5  FNSTSW AX
+  004331a7  TEST AH,0x41
+  004331aa  JNZ 0x004331b1
+  004331ac  JMP 0x0043303b
+  004331b1  LEA EAX,[EBP + -0x5c]
+  004331b4  PUSH EAX
+  004331b5  LEA ECX,[EBP + -0x30]
+  004331b8  PUSH ECX
+  004331b9  LEA EDX,[EBP + 0xffffff58]
+  004331bf  PUSH EDX
+  004331c0  CALL 0x00428490
+  004331c5  ADD ESP,0xc
+  004331c8  MOV ECX,dword ptr [EAX]
+  004331ca  MOV dword ptr [EBP + -0x4c],ECX
+  004331cd  MOV EDX,dword ptr [EAX + 0x4]
+  004331d0  MOV dword ptr [EBP + -0x48],EDX
+  004331d3  MOV EAX,dword ptr [EAX + 0x8]
+  004331d6  MOV dword ptr [EBP + -0x44],EAX
+  004331d9  LEA ECX,[EBP + -0x4c]
+  004331dc  PUSH ECX
+  004331dd  LEA EDX,[EBP + 0x18]
+  004331e0  PUSH EDX
+  004331e1  CALL 0x00428460
+  004331e6  ADD ESP,0x8
+  004331e9  FMUL float ptr [EBP + -0x34]
+  004331ec  FSTP float ptr [EBP + -0x10]
+  004331ef  FLD float ptr [EBP + -0x10]
+  004331f2  FCOMP float ptr [0x00571808]
+  004331f8  FNSTSW AX
+  004331fa  TEST AH,0x5
+  004331fd  JNP 0x00433212
+  004331ff  FLD float ptr [EBP + -0x24]
+  00433202  FADD float ptr [EBP + -0x10]
+  00433205  FCOMP float ptr [0x00571490]
+  0043320b  FNSTSW AX
+  0043320d  TEST AH,0x41
+  00433210  JNZ 0x00433217
+  00433212  JMP 0x0043303b
+  00433217  LEA EAX,[EBP + -0x4c]
+  0043321a  PUSH EAX
+  0043321b  LEA ECX,[EBP + -0x20]
+  0043321e  PUSH ECX
+  0043321f  CALL 0x00428460
+  00433224  ADD ESP,0x8
+  00433227  FMUL float ptr [EBP + -0x34]
+  0043322a  FSTP float ptr [EBP + -0x64]
+  0043322d  FLD float ptr [EBP + -0x64]
+  00433230  FCOMP float ptr [0x00571808]
+  00433236  FNSTSW AX
+  00433238  TEST AH,0x1
+  0043323b  JNZ 0x004332e5
+  00433241  FLD float ptr [EBP + -0x64]
+  00433244  FCOMP float ptr [0x00571490]
+  0043324a  FNSTSW AX
+  0043324c  TEST AH,0x41
+  0043324f  JP 0x004332e5
+  00433255  MOVZX EDX,byte ptr [EBP + -0x4d]
+  00433259  TEST EDX,EDX
+  0043325b  JZ 0x00433272
+  0043325d  MOV EAX,dword ptr [EBP + 0x8]
+  00433260  FLD float ptr [EAX + 0x18]
+  00433263  FCOMP float ptr [EBP + -0x64]
+  00433266  FNSTSW AX
+  00433268  TEST AH,0x5
+  0043326b  JP 0x00433272
+  0043326d  JMP 0x0043303b
+  00433272  MOV byte ptr [EBP + -0x4d],0x1
+  00433276  MOV ECX,dword ptr [EBP + -0x60]
+  00433279  ADD ECX,0x28
+  0043327c  MOV EDX,dword ptr [EBP + 0x8]
+  0043327f  ADD EDX,0xc
+  00433282  MOV EAX,dword ptr [ECX]
+  00433284  MOV dword ptr [EDX],EAX
+  00433286  MOV EAX,dword ptr [ECX + 0x4]
+  00433289  MOV dword ptr [EDX + 0x4],EAX
+  0043328c  MOV ECX,dword ptr [ECX + 0x8]
+  0043328f  MOV dword ptr [EDX + 0x8],ECX
+  00433292  MOV EDX,dword ptr [EBP + -0x64]
+  00433295  PUSH EDX
+  00433296  LEA EAX,[EBP + 0x18]
+  00433299  PUSH EAX
+  0043329a  LEA ECX,[EBP + 0xffffff4c]
+  004332a0  PUSH ECX
+  004332a1  CALL 0x00418790
+  004332a6  ADD ESP,0xc
+  004332a9  PUSH EAX
+  004332aa  LEA EDX,[EBP + 0xc]
+  004332ad  PUSH EDX
+  004332ae  LEA EAX,[EBP + 0xffffff40]
+  004332b4  PUSH EAX
+  004332b5  CALL 0x00418710
+  004332ba  ADD ESP,0xc
+  004332bd  MOV ECX,dword ptr [EBP + 0x8]
+  004332c0  MOV EDX,dword ptr [EAX]
+  004332c2  MOV dword ptr [ECX],EDX
+  004332c4  MOV EDX,dword ptr [EAX + 0x4]
+  004332c7  MOV dword ptr [ECX + 0x4],EDX
+  004332ca  MOV EAX,dword ptr [EAX + 0x8]
+  004332cd  MOV dword ptr [ECX + 0x8],EAX
+  004332d0  MOV ECX,dword ptr [EBP + 0x8]
+  004332d3  MOV EDX,dword ptr [EBP + -0x64]
+  004332d6  MOV dword ptr [ECX + 0x18],EDX
+  004332d9  MOV EAX,dword ptr [EBP + 0x8]
+  004332dc  MOV ECX,dword ptr [EBP + -0x60]
+  004332df  MOV EDX,dword ptr [ECX + 0x3c]
+  004332e2  MOV dword ptr [EAX + 0x1c],EDX
+  004332e5  JMP 0x0043303b
+  004332ea  MOV AL,byte ptr [EBP + -0x4d]
+  004332ed  MOV byte ptr [EBP + 0xffffff3f],AL
+  004332f3  LEA ECX,[EBP + -0x40]
+  004332f6  CALL 0x00433920
+  004332fb  MOV AL,byte ptr [EBP + 0xffffff3f]
+  00433301  MOV ESP,EBP
+  00433303  POP EBP
+  00433304  RET 0x20
+
+FUNCTION 00434d40 FUN_00434d40
+  00434d40  PUSH EBP
+  00434d41  MOV EBP,ESP
+  00434d43  SUB ESP,0x64
+  00434d46  MOV EAX,dword ptr [EBP + 0xc]
+  00434d49  MOV dword ptr [EBP + -0x60],EAX
+  00434d4c  MOV ECX,dword ptr [EBP + 0x10]
+  00434d4f  MOV dword ptr [EBP + -0x24],ECX
+  00434d52  MOV EDX,dword ptr [EBP + 0x14]
+  00434d55  MOV dword ptr [EBP + -0x30],EDX
+  00434d58  MOV EAX,dword ptr [EBP + -0x24]
+  00434d5b  MOV ECX,dword ptr [EBP + -0x60]
+  00434d5e  FLD float ptr [EAX]
+  00434d60  FSUB float ptr [ECX]
+  00434d62  FSTP float ptr [EBP + -0x1c]
+  00434d65  MOV EDX,dword ptr [EBP + -0x24]
+  00434d68  MOV EAX,dword ptr [EBP + -0x60]
+  00434d6b  FLD float ptr [EDX + 0x4]
+  00434d6e  FSUB float ptr [EAX + 0x4]
+  00434d71  FSTP float ptr [EBP + -0x18]
+  00434d74  MOV ECX,dword ptr [EBP + -0x24]
+  00434d77  MOV EDX,dword ptr [EBP + -0x60]
+  00434d7a  FLD float ptr [ECX + 0x8]
+  00434d7d  FSUB float ptr [EDX + 0x8]
+  00434d80  FSTP float ptr [EBP + -0x14]
+  00434d83  MOV EAX,dword ptr [EBP + -0x30]
+  00434d86  MOV ECX,dword ptr [EBP + -0x24]
+  00434d89  FLD float ptr [EAX]
+  00434d8b  FSUB float ptr [ECX]
+  00434d8d  FSTP float ptr [EBP + -0x54]
+  00434d90  MOV EDX,dword ptr [EBP + -0x30]
+  00434d93  MOV EAX,dword ptr [EBP + -0x24]
+  00434d96  FLD float ptr [EDX + 0x4]
+  00434d99  FSUB float ptr [EAX + 0x4]
+  00434d9c  FSTP float ptr [EBP + -0x50]
+  00434d9f  MOV ECX,dword ptr [EBP + -0x30]
+  00434da2  MOV EDX,dword ptr [EBP + -0x24]
+  00434da5  FLD float ptr [ECX + 0x8]
+  00434da8  FSUB float ptr [EDX + 0x8]
+  00434dab  FSTP float ptr [EBP + -0x4c]
+  00434dae  MOV EAX,dword ptr [EBP + -0x60]
+  00434db1  MOV ECX,dword ptr [EBP + -0x30]
+  00434db4  FLD float ptr [EAX]
+  00434db6  FSUB float ptr [ECX]
+  00434db8  FSTP float ptr [EBP + -0x10]
+  00434dbb  MOV EDX,dword ptr [EBP + -0x60]
+  00434dbe  MOV EAX,dword ptr [EBP + -0x30]
+  00434dc1  FLD float ptr [EDX + 0x4]
+  00434dc4  FSUB float ptr [EAX + 0x4]
+  00434dc7  FSTP float ptr [EBP + -0xc]
+  00434dca  MOV ECX,dword ptr [EBP + -0x60]
+  00434dcd  MOV EDX,dword ptr [EBP + -0x30]
+  00434dd0  FLD float ptr [ECX + 0x8]
+  00434dd3  FSUB float ptr [EDX + 0x8]
+  00434dd6  FSTP float ptr [EBP + -0x8]
+  00434dd9  MOV EAX,dword ptr [EBP + -0x1c]
+  00434ddc  PUSH EAX
+  00434ddd  CALL 0x00431b70
+  00434de2  ADD ESP,0x4
+  00434de5  FSTP float ptr [EBP + -0x4]
+  00434de8  MOV ECX,dword ptr [EBP + -0x18]
+  00434deb  PUSH ECX
+  00434dec  CALL 0x00431b70
+  00434df1  ADD ESP,0x4
+  00434df4  FSTP float ptr [EBP + -0x34]
+  00434df7  MOV EDX,dword ptr [EBP + -0x14]
+  00434dfa  PUSH EDX
+  00434dfb  CALL 0x00431b70
+  00434e00  ADD ESP,0x4
+  00434e03  FSTP float ptr [EBP + -0x5c]
+  00434e06  MOV EAX,dword ptr [EBP + -0x60]
+  00434e09  FLD float ptr [EBP + -0x14]
+  00434e0c  FMUL float ptr [EAX + 0x4]
+  00434e0f  MOV ECX,dword ptr [EBP + -0x60]
+  00434e12  FLD float ptr [EBP + -0x18]
+  00434e15  FMUL float ptr [ECX + 0x8]
+  00434e18  FSUBP
+  00434e1a  FSTP float ptr [EBP + -0x28]
+  00434e1d  MOV EDX,dword ptr [EBP + -0x30]
+  00434e20  FLD float ptr [EBP + -0x14]
+  00434e23  FMUL float ptr [EDX + 0x4]
+  00434e26  MOV EAX,dword ptr [EBP + -0x30]
+  00434e29  FLD float ptr [EBP + -0x18]
+  00434e2c  FMUL float ptr [EAX + 0x8]
+  00434e2f  FSUBP
+  00434e31  FSTP float ptr [EBP + -0x2c]
+  00434e34  FLD float ptr [EBP + -0x28]
+  00434e37  FCOMP float ptr [EBP + -0x2c]
+  00434e3a  FNSTSW AX
+  00434e3c  TEST AH,0x5
+  00434e3f  JP 0x00434e4f
+  00434e41  MOV ECX,dword ptr [EBP + -0x28]
+  00434e44  MOV dword ptr [EBP + -0x20],ECX
+  00434e47  MOV EDX,dword ptr [EBP + -0x2c]
+  00434e4a  MOV dword ptr [EBP + -0x64],EDX
+  00434e4d  JMP 0x00434e5b
+  00434e4f  MOV EAX,dword ptr [EBP + -0x2c]
+  00434e52  MOV dword ptr [EBP + -0x20],EAX
+  00434e55  MOV ECX,dword ptr [EBP + -0x28]
+  00434e58  MOV dword ptr [EBP + -0x64],ECX
+  00434e5b  MOV EDX,dword ptr [EBP + 0x8]
+  00434e5e  FLD float ptr [EBP + -0x5c]
+  00434e61  FMUL float ptr [EDX + 0x4]
+  00434e64  MOV EAX,dword ptr [EBP + 0x8]
+  00434e67  FLD float ptr [EBP + -0x34]
+  00434e6a  FMUL float ptr [EAX + 0x8]
+  00434e6d  FADDP
+  00434e6f  FSTP float ptr [EBP + -0x48]
+  00434e72  FLD float ptr [EBP + -0x20]
+  00434e75  FCOMP float ptr [EBP + -0x48]
+  00434e78  FNSTSW AX
+  00434e7a  TEST AH,0x41
+  00434e7d  JZ 0x00434e8e
+  00434e7f  FLD float ptr [EBP + -0x48]
+  00434e82  FCHS
+  00434e84  FCOMP float ptr [EBP + -0x64]
+  00434e87  FNSTSW AX
+  00434e89  TEST AH,0x41
+  00434e8c  JNZ 0x00434e95
+  00434e8e  XOR EAX,EAX
+  00434e90  JMP 0x0043559e
+  00434e95  FLD float ptr [EBP + -0x14]
+  00434e98  FCHS
+  00434e9a  MOV ECX,dword ptr [EBP + -0x60]
+  00434e9d  FMUL float ptr [ECX]
+  00434e9f  MOV EDX,dword ptr [EBP + -0x60]
+  00434ea2  FLD float ptr [EBP + -0x1c]
+  00434ea5  FMUL float ptr [EDX + 0x8]
+  00434ea8  FADDP
+  00434eaa  FSTP float ptr [EBP + -0x28]
+  00434ead  FLD float ptr [EBP + -0x14]
+  00434eb0  FCHS
+  00434eb2  MOV EAX,dword ptr [EBP + -0x30]
+  00434eb5  FMUL float ptr [EAX]
+  00434eb7  MOV ECX,dword ptr [EBP + -0x30]
+  00434eba  FLD float ptr [EBP + -0x1c]
+  00434ebd  FMUL float ptr [ECX + 0x8]
+  00434ec0  FADDP
+  00434ec2  FSTP float ptr [EBP + -0x2c]
+  00434ec5  FLD float ptr [EBP + -0x28]
+  00434ec8  FCOMP float ptr [EBP + -0x2c]
+  00434ecb  FNSTSW AX
+  00434ecd  TEST AH,0x5
+  00434ed0  JP 0x00434ee0
+  00434ed2  MOV EDX,dword ptr [EBP + -0x28]
+  00434ed5  MOV dword ptr [EBP + -0x20],EDX
+  00434ed8  MOV EAX,dword ptr [EBP + -0x2c]
+  00434edb  MOV dword ptr [EBP + -0x64],EAX
+  00434ede  JMP 0x00434eec
+  00434ee0  MOV ECX,dword ptr [EBP + -0x2c]
+  00434ee3  MOV dword ptr [EBP + -0x20],ECX
+  00434ee6  MOV EDX,dword ptr [EBP + -0x28]
+  00434ee9  MOV dword ptr [EBP + -0x64],EDX
+  00434eec  MOV EAX,dword ptr [EBP + 0x8]
+  00434eef  FLD float ptr [EBP + -0x5c]
+  00434ef2  FMUL float ptr [EAX]
+  00434ef4  MOV ECX,dword ptr [EBP + 0x8]
+  00434ef7  FLD float ptr [EBP + -0x4]
+  00434efa  FMUL float ptr [ECX + 0x8]
+  00434efd  FADDP
+  00434eff  FSTP float ptr [EBP + -0x48]
+  00434f02  FLD float ptr [EBP + -0x20]
+  00434f05  FCOMP float ptr [EBP + -0x48]
+  00434f08  FNSTSW AX
+  00434f0a  TEST AH,0x41
+  00434f0d  JZ 0x00434f1e
+  00434f0f  FLD float ptr [EBP + -0x48]
+  00434f12  FCHS
+  00434f14  FCOMP float ptr [EBP + -0x64]
+  00434f17  FNSTSW AX
+  00434f19  TEST AH,0x41
+  00434f1c  JNZ 0x00434f25
+  00434f1e  XOR EAX,EAX
+  00434f20  JMP 0x0043559e
+  00434f25  MOV EDX,dword ptr [EBP + -0x24]
+  00434f28  FLD float ptr [EBP + -0x18]
+  00434f2b  FMUL float ptr [EDX]
+  00434f2d  MOV EAX,dword ptr [EBP + -0x24]
+  00434f30  FLD float ptr [EBP + -0x1c]
+  00434f33  FMUL float ptr [EAX + 0x4]
+  00434f36  FSUBP
+  00434f38  FSTP float ptr [EBP + -0x38]
+  00434f3b  MOV ECX,dword ptr [EBP + -0x30]
+  00434f3e  FLD float ptr [EBP + -0x18]
+  00434f41  FMUL float ptr [ECX]
+  00434f43  MOV EDX,dword ptr [EBP + -0x30]
+  00434f46  FLD float ptr [EBP + -0x1c]
+  00434f49  FMUL float ptr [EDX + 0x4]
+  00434f4c  FSUBP
+  00434f4e  FSTP float ptr [EBP + -0x2c]
+  00434f51  FLD float ptr [EBP + -0x2c]
+  00434f54  FCOMP float ptr [EBP + -0x38]
+  00434f57  FNSTSW AX
+  00434f59  TEST AH,0x5
+  00434f5c  JP 0x00434f6c
+  00434f5e  MOV EAX,dword ptr [EBP + -0x2c]
+  00434f61  MOV dword ptr [EBP + -0x20],EAX
+  00434f64  MOV ECX,dword ptr [EBP + -0x38]
+  00434f67  MOV dword ptr [EBP + -0x64],ECX
+  00434f6a  JMP 0x00434f78
+  00434f6c  MOV EDX,dword ptr [EBP + -0x38]
+  00434f6f  MOV dword ptr [EBP + -0x20],EDX
+  00434f72  MOV EAX,dword ptr [EBP + -0x2c]
+  00434f75  MOV dword ptr [EBP + -0x64],EAX
+  00434f78  MOV ECX,dword ptr [EBP + 0x8]
+  00434f7b  FLD float ptr [EBP + -0x34]
+  00434f7e  FMUL float ptr [ECX]
+  00434f80  MOV EDX,dword ptr [EBP + 0x8]
+  00434f83  FLD float ptr [EBP + -0x4]
+  00434f86  FMUL float ptr [EDX + 0x4]
+  00434f89  FADDP
+  00434f8b  FSTP float ptr [EBP + -0x48]
+  00434f8e  FLD float ptr [EBP + -0x20]
+  00434f91  FCOMP float ptr [EBP + -0x48]
+  00434f94  FNSTSW AX
+  00434f96  TEST AH,0x41
+  00434f99  JZ 0x00434faa
+  00434f9b  FLD float ptr [EBP + -0x48]
+  00434f9e  FCHS
+  00434fa0  FCOMP float ptr [EBP + -0x64]
+  00434fa3  FNSTSW AX
+  00434fa5  TEST AH,0x41
+  00434fa8  JNZ 0x00434fb1
+  00434faa  XOR EAX,EAX
+  00434fac  JMP 0x0043559e
+  00434fb1  MOV EAX,dword ptr [EBP + -0x54]
+  00434fb4  PUSH EAX
+  00434fb5  CALL 0x00431b70
+  00434fba  ADD ESP,0x4
+  00434fbd  FSTP float ptr [EBP + -0x4]
+  00434fc0  MOV ECX,dword ptr [EBP + -0x50]
+  00434fc3  PUSH ECX
+  00434fc4  CALL 0x00431b70
+  00434fc9  ADD ESP,0x4
+  00434fcc  FSTP float ptr [EBP + -0x34]
+  00434fcf  MOV EDX,dword ptr [EBP + -0x4c]
+  00434fd2  PUSH EDX
+  00434fd3  CALL 0x00431b70
+  00434fd8  ADD ESP,0x4
+  00434fdb  FSTP float ptr [EBP + -0x5c]
+  00434fde  MOV EAX,dword ptr [EBP + -0x60]
+  00434fe1  FLD float ptr [EBP + -0x4c]
+  00434fe4  FMUL float ptr [EAX + 0x4]
+  00434fe7  MOV ECX,dword ptr [EBP + -0x60]
+  00434fea  FLD float ptr [EBP + -0x50]
+  00434fed  FMUL float ptr [ECX + 0x8]
+  00434ff0  FSUBP
+  00434ff2  FSTP float ptr [EBP + -0x28]
+  00434ff5  MOV EDX,dword ptr [EBP + -0x30]
+  00434ff8  FLD float ptr [EBP + -0x4c]
+  00434ffb  FMUL float ptr [EDX + 0x4]
+  00434ffe  MOV EAX,dword ptr [EBP + -0x30]
+  00435001  FLD float ptr [EBP + -0x50]
+  00435004  FMUL float ptr [EAX + 0x8]
+  00435007  FSUBP
+  00435009  FSTP float ptr [EBP + -0x2c]
+  0043500c  FLD float ptr [EBP + -0x28]
+  0043500f  FCOMP float ptr [EBP + -0x2c]
+  00435012  FNSTSW AX
+  00435014  TEST AH,0x5
+  00435017  JP 0x00435027
+  00435019  MOV ECX,dword ptr [EBP + -0x28]
+  0043501c  MOV dword ptr [EBP + -0x20],ECX
+  0043501f  MOV EDX,dword ptr [EBP + -0x2c]
+  00435022  MOV dword ptr [EBP + -0x64],EDX
+  00435025  JMP 0x00435033
+  00435027  MOV EAX,dword ptr [EBP + -0x2c]
+  0043502a  MOV dword ptr [EBP + -0x20],EAX
+  0043502d  MOV ECX,dword ptr [EBP + -0x28]
+  00435030  MOV dword ptr [EBP + -0x64],ECX
+  00435033  MOV EDX,dword ptr [EBP + 0x8]
+  00435036  FLD float ptr [EBP + -0x5c]
+  00435039  FMUL float ptr [EDX + 0x4]
+  0043503c  MOV EAX,dword ptr [EBP + 0x8]
+  0043503f  FLD float ptr [EBP + -0x34]
+  00435042  FMUL float ptr [EAX + 0x8]
+  00435045  FADDP
+  00435047  FSTP float ptr [EBP + -0x48]
+  0043504a  FLD float ptr [EBP + -0x20]
+  0043504d  FCOMP float ptr [EBP + -0x48]
+  00435050  FNSTSW AX
+  00435052  TEST AH,0x41
+  00435055  JZ 0x00435066
+  00435057  FLD float ptr [EBP + -0x48]
+  0043505a  FCHS
+  0043505c  FCOMP float ptr [EBP + -0x64]
+  0043505f  FNSTSW AX
+  00435061  TEST AH,0x41
+  00435064  JNZ 0x0043506d
+  00435066  XOR EAX,EAX
+  00435068  JMP 0x0043559e
+  0043506d  FLD float ptr [EBP + -0x4c]
+  00435070  FCHS
+  00435072  MOV ECX,dword ptr [EBP + -0x60]
+  00435075  FMUL float ptr [ECX]
+  00435077  MOV EDX,dword ptr [EBP + -0x60]
+  0043507a  FLD float ptr [EBP + -0x54]
+  0043507d  FMUL float ptr [EDX + 0x8]
+  00435080  FADDP
+  00435082  FSTP float ptr [EBP + -0x28]
+  00435085  FLD float ptr [EBP + -0x4c]
+  00435088  FCHS
+  0043508a  MOV EAX,dword ptr [EBP + -0x30]
+  0043508d  FMUL float ptr [EAX]
+  0043508f  MOV ECX,dword ptr [EBP + -0x30]
+  00435092  FLD float ptr [EBP + -0x54]
+  00435095  FMUL float ptr [ECX + 0x8]
+  00435098  FADDP
+  0043509a  FSTP float ptr [EBP + -0x2c]
+  0043509d  FLD float ptr [EBP + -0x28]
+  004350a0  FCOMP float ptr [EBP + -0x2c]
+  004350a3  FNSTSW AX
+  004350a5  TEST AH,0x5
+  004350a8  JP 0x004350b8
+  004350aa  MOV EDX,dword ptr [EBP + -0x28]
+  004350ad  MOV dword ptr [EBP + -0x20],EDX
+  004350b0  MOV EAX,dword ptr [EBP + -0x2c]
+  004350b3  MOV dword ptr [EBP + -0x64],EAX
+  004350b6  JMP 0x004350c4
+  004350b8  MOV ECX,dword ptr [EBP + -0x2c]
+  004350bb  MOV dword ptr [EBP + -0x20],ECX
+  004350be  MOV EDX,dword ptr [EBP + -0x28]
+  004350c1  MOV dword ptr [EBP + -0x64],EDX
+  004350c4  MOV EAX,dword ptr [EBP + 0x8]
+  004350c7  FLD float ptr [EBP + -0x5c]
+  004350ca  FMUL float ptr [EAX]
+  004350cc  MOV ECX,dword ptr [EBP + 0x8]
+  004350cf  FLD float ptr [EBP + -0x4]
+  004350d2  FMUL float ptr [ECX + 0x8]
+  004350d5  FADDP
+  004350d7  FSTP float ptr [EBP + -0x48]
+  004350da  FLD float ptr [EBP + -0x20]
+  004350dd  FCOMP float ptr [EBP + -0x48]
+  004350e0  FNSTSW AX
+  004350e2  TEST AH,0x41
+  004350e5  JZ 0x004350f6
+  004350e7  FLD float ptr [EBP + -0x48]
+  004350ea  FCHS
+  004350ec  FCOMP float ptr [EBP + -0x64]
+  004350ef  FNSTSW AX
+  004350f1  TEST AH,0x41
+  004350f4  JNZ 0x004350fd
+  004350f6  XOR EAX,EAX
+  004350f8  JMP 0x0043559e
+  004350fd  MOV EDX,dword ptr [EBP + -0x60]
+  00435100  FLD float ptr [EBP + -0x50]
+  00435103  FMUL float ptr [EDX]
+  00435105  MOV EAX,dword ptr [EBP + -0x60]
+  00435108  FLD float ptr [EBP + -0x54]
+  0043510b  FMUL float ptr [EAX + 0x4]
+  0043510e  FSUBP
+  00435110  FSTP float ptr [EBP + -0x28]
+  00435113  MOV ECX,dword ptr [EBP + -0x24]
+  00435116  FLD float ptr [EBP + -0x50]
+  00435119  FMUL float ptr [ECX]
+  0043511b  MOV EDX,dword ptr [EBP + -0x24]
+  0043511e  FLD float ptr [EBP + -0x54]
+  00435121  FMUL float ptr [EDX + 0x4]
+  00435124  FSUBP
+  00435126  FSTP float ptr [EBP + -0x38]
+  00435129  FLD float ptr [EBP + -0x28]
+  0043512c  FCOMP float ptr [EBP + -0x38]
+  0043512f  FNSTSW AX
+  00435131  TEST AH,0x5
+  00435134  JP 0x00435144
+  00435136  MOV EAX,dword ptr [EBP + -0x28]
+  00435139  MOV dword ptr [EBP + -0x20],EAX
+  0043513c  MOV ECX,dword ptr [EBP + -0x38]
+  0043513f  MOV dword ptr [EBP + -0x64],ECX
+  00435142  JMP 0x00435150
+  00435144  MOV EDX,dword ptr [EBP + -0x38]
+  00435147  MOV dword ptr [EBP + -0x20],EDX
+  0043514a  MOV EAX,dword ptr [EBP + -0x28]
+  0043514d  MOV dword ptr [EBP + -0x64],EAX
+  00435150  MOV ECX,dword ptr [EBP + 0x8]
+  00435153  FLD float ptr [EBP + -0x34]
+  00435156  FMUL float ptr [ECX]
+  00435158  MOV EDX,dword ptr [EBP + 0x8]
+  0043515b  FLD float ptr [EBP + -0x4]
+  0043515e  FMUL float ptr [EDX + 0x4]
+  00435161  FADDP
+  00435163  FSTP float ptr [EBP + -0x48]
+  00435166  FLD float ptr [EBP + -0x20]
+  00435169  FCOMP float ptr [EBP + -0x48]
+  0043516c  FNSTSW AX
+  0043516e  TEST AH,0x41
+  00435171  JZ 0x00435182
+  00435173  FLD float ptr [EBP + -0x48]
+  00435176  FCHS
+  00435178  FCOMP float ptr [EBP + -0x64]
+  0043517b  FNSTSW AX
+  0043517d  TEST AH,0x41
+  00435180  JNZ 0x00435189
+  00435182  XOR EAX,EAX
+  00435184  JMP 0x0043559e
+  00435189  MOV EAX,dword ptr [EBP + -0x10]
+  0043518c  PUSH EAX
+  0043518d  CALL 0x00431b70
+  00435192  ADD ESP,0x4
+  00435195  FSTP float ptr [EBP + -0x4]
+  00435198  MOV ECX,dword ptr [EBP + -0xc]
+  0043519b  PUSH ECX
+  0043519c  CALL 0x00431b70
+  004351a1  ADD ESP,0x4
+  004351a4  FSTP float ptr [EBP + -0x34]
+  004351a7  MOV EDX,dword ptr [EBP + -0x8]
+  004351aa  PUSH EDX
+  004351ab  CALL 0x00431b70
+  004351b0  ADD ESP,0x4
+  004351b3  FSTP float ptr [EBP + -0x5c]
+  004351b6  MOV EAX,dword ptr [EBP + -0x60]
+  004351b9  FLD float ptr [EBP + -0x8]
+  004351bc  FMUL float ptr [EAX + 0x4]
+  004351bf  MOV ECX,dword ptr [EBP + -0x60]
+  004351c2  FLD float ptr [EBP + -0xc]
+  004351c5  FMUL float ptr [ECX + 0x8]
+  004351c8  FSUBP
+  004351ca  FSTP float ptr [EBP + -0x28]
+  004351cd  MOV EDX,dword ptr [EBP + -0x24]
+  004351d0  FLD float ptr [EBP + -0x8]
+  004351d3  FMUL float ptr [EDX + 0x4]
+  004351d6  MOV EAX,dword ptr [EBP + -0x24]
+  004351d9  FLD float ptr [EBP + -0xc]
+  004351dc  FMUL float ptr [EAX + 0x8]
+  004351df  FSUBP
+  004351e1  FSTP float ptr [EBP + -0x38]
+  004351e4  FLD float ptr [EBP + -0x28]
+  004351e7  FCOMP float ptr [EBP + -0x38]
+  004351ea  FNSTSW AX
+  004351ec  TEST AH,0x5
+  004351ef  JP 0x004351ff
+  004351f1  MOV ECX,dword ptr [EBP + -0x28]
+  004351f4  MOV dword ptr [EBP + -0x20],ECX
+  004351f7  MOV EDX,dword ptr [EBP + -0x38]
+  004351fa  MOV dword ptr [EBP + -0x64],EDX
+  004351fd  JMP 0x0043520b
+  004351ff  MOV EAX,dword ptr [EBP + -0x38]
+  00435202  MOV dword ptr [EBP + -0x20],EAX
+  00435205  MOV ECX,dword ptr [EBP + -0x28]
+  00435208  MOV dword ptr [EBP + -0x64],ECX
+  0043520b  MOV EDX,dword ptr [EBP + 0x8]
+  0043520e  FLD float ptr [EBP + -0x5c]
+  00435211  FMUL float ptr [EDX + 0x4]
+  00435214  MOV EAX,dword ptr [EBP + 0x8]
+  00435217  FLD float ptr [EBP + -0x34]
+  0043521a  FMUL float ptr [EAX + 0x8]
+  0043521d  FADDP
+  0043521f  FSTP float ptr [EBP + -0x48]
+  00435222  FLD float ptr [EBP + -0x20]
+  00435225  FCOMP float ptr [EBP + -0x48]
+  00435228  FNSTSW AX
+  0043522a  TEST AH,0x41
+  0043522d  JZ 0x0043523e
+  0043522f  FLD float ptr [EBP + -0x48]
+  00435232  FCHS
+  00435234  FCOMP float ptr [EBP + -0x64]
+  00435237  FNSTSW AX
+  00435239  TEST AH,0x41
+  0043523c  JNZ 0x00435245
+  0043523e  XOR EAX,EAX
+  00435240  JMP 0x0043559e
+  00435245  FLD float ptr [EBP + -0x8]
+  00435248  FCHS
+  0043524a  MOV ECX,dword ptr [EBP + -0x60]
+  0043524d  FMUL float ptr [ECX]
+  0043524f  MOV EDX,dword ptr [EBP + -0x60]
+  00435252  FLD float ptr [EBP + -0x10]
+  00435255  FMUL float ptr [EDX + 0x8]
+  00435258  FADDP
+  0043525a  FSTP float ptr [EBP + -0x28]
+  0043525d  FLD float ptr [EBP + -0x8]
+  00435260  FCHS
+  00435262  MOV EAX,dword ptr [EBP + -0x24]
+  00435265  FMUL float ptr [EAX]
+  00435267  MOV ECX,dword ptr [EBP + -0x24]
+  0043526a  FLD float ptr [EBP + -0x10]
+  0043526d  FMUL float ptr [ECX + 0x8]
+  00435270  FADDP
+  00435272  FSTP float ptr [EBP + -0x38]
+  00435275  FLD float ptr [EBP + -0x28]
+  00435278  FCOMP float ptr [EBP + -0x38]
+  0043527b  FNSTSW AX
+  0043527d  TEST AH,0x5
+  00435280  JP 0x00435290
+  00435282  MOV EDX,dword ptr [EBP + -0x28]
+  00435285  MOV dword ptr [EBP + -0x20],EDX
+  00435288  MOV EAX,dword ptr [EBP + -0x38]
+  0043528b  MOV dword ptr [EBP + -0x64],EAX
+  0043528e  JMP 0x0043529c
+  00435290  MOV ECX,dword ptr [EBP + -0x38]
+  00435293  MOV dword ptr [EBP + -0x20],ECX
+  00435296  MOV EDX,dword ptr [EBP + -0x28]
+  00435299  MOV dword ptr [EBP + -0x64],EDX
+  0043529c  MOV EAX,dword ptr [EBP + 0x8]
+  0043529f  FLD float ptr [EBP + -0x5c]
+  004352a2  FMUL float ptr [EAX]
+  004352a4  MOV ECX,dword ptr [EBP + 0x8]
+  004352a7  FLD float ptr [EBP + -0x4]
+  004352aa  FMUL float ptr [ECX + 0x8]
+  004352ad  FADDP
+  004352af  FSTP float ptr [EBP + -0x48]
+  004352b2  FLD float ptr [EBP + -0x20]
+  004352b5  FCOMP float ptr [EBP + -0x48]
+  004352b8  FNSTSW AX
+  004352ba  TEST AH,0x41
+  004352bd  JZ 0x004352ce
+  004352bf  FLD float ptr [EBP + -0x48]
+  004352c2  FCHS
+  004352c4  FCOMP float ptr [EBP + -0x64]
+  004352c7  FNSTSW AX
+  004352c9  TEST AH,0x41
+  004352cc  JNZ 0x004352d5
+  004352ce  XOR EAX,EAX
+  004352d0  JMP 0x0043559e
+  004352d5  MOV EDX,dword ptr [EBP + -0x24]
+  004352d8  FLD float ptr [EBP + -0xc]
+  004352db  FMUL float ptr [EDX]
+  004352dd  MOV EAX,dword ptr [EBP + -0x24]
+  004352e0  FLD float ptr [EBP + -0x10]
+  004352e3  FMUL float ptr [EAX + 0x4]
+  004352e6  FSUBP
+  004352e8  FSTP float ptr [EBP + -0x38]
+  004352eb  MOV ECX,dword ptr [EBP + -0x30]
+  004352ee  FLD float ptr [EBP + -0xc]
+  004352f1  FMUL float ptr [ECX]
+  004352f3  MOV EDX,dword ptr [EBP + -0x30]
+  004352f6  FLD float ptr [EBP + -0x10]
+  004352f9  FMUL float ptr [EDX + 0x4]
+  004352fc  FSUBP
+  004352fe  FSTP float ptr [EBP + -0x2c]
+  00435301  FLD float ptr [EBP + -0x2c]
+  00435304  FCOMP float ptr [EBP + -0x38]
+  00435307  FNSTSW AX
+  00435309  TEST AH,0x5
+  0043530c  JP 0x0043531c
+  0043530e  MOV EAX,dword ptr [EBP + -0x2c]
+  00435311  MOV dword ptr [EBP + -0x20],EAX
+  00435314  MOV ECX,dword ptr [EBP + -0x38]
+  00435317  MOV dword ptr [EBP + -0x64],ECX
+  0043531a  JMP 0x00435328
+  0043531c  MOV EDX,dword ptr [EBP + -0x38]
+  0043531f  MOV dword ptr [EBP + -0x20],EDX
+  00435322  MOV EAX,dword ptr [EBP + -0x2c]
+  00435325  MOV dword ptr [EBP + -0x64],EAX
+  00435328  MOV ECX,dword ptr [EBP + 0x8]
+  0043532b  FLD float ptr [EBP + -0x34]
+  0043532e  FMUL float ptr [ECX]
+  00435330  MOV EDX,dword ptr [EBP + 0x8]
+  00435333  FLD float ptr [EBP + -0x4]
+  00435336  FMUL float ptr [EDX + 0x4]
+  00435339  FADDP
+  0043533b  FSTP float ptr [EBP + -0x48]
+  0043533e  FLD float ptr [EBP + -0x20]
+  00435341  FCOMP float ptr [EBP + -0x48]
+  00435344  FNSTSW AX
+  00435346  TEST AH,0x41
+  00435349  JZ 0x0043535a
+  0043534b  FLD float ptr [EBP + -0x48]
+  0043534e  FCHS
+  00435350  FCOMP float ptr [EBP + -0x64]
+  00435353  FNSTSW AX
+  00435355  TEST AH,0x41
+  00435358  JNZ 0x00435361
+  0043535a  XOR EAX,EAX
+  0043535c  JMP 0x0043559e
+  00435361  MOV EAX,dword ptr [EBP + -0x60]
+  00435364  MOV ECX,dword ptr [EAX]
+  00435366  MOV dword ptr [EBP + -0x64],ECX
+  00435369  MOV EDX,dword ptr [EBP + -0x64]
+  0043536c  MOV dword ptr [EBP + -0x20],EDX
+  0043536f  MOV EAX,dword ptr [EBP + -0x24]
+  00435372  FLD float ptr [EAX]
+  00435374  FCOMP float ptr [EBP + -0x20]
+  00435377  FNSTSW AX
+  00435379  TEST AH,0x5
+  0043537c  JP 0x00435386
+  0043537e  MOV ECX,dword ptr [EBP + -0x24]
+  00435381  MOV EDX,dword ptr [ECX]
+  00435383  MOV dword ptr [EBP + -0x20],EDX
+  00435386  MOV EAX,dword ptr [EBP + -0x24]
+  00435389  FLD float ptr [EAX]
+  0043538b  FCOMP float ptr [EBP + -0x64]
+  0043538e  FNSTSW AX
+  00435390  TEST AH,0x41
+  00435393  JNZ 0x0043539d
+  00435395  MOV ECX,dword ptr [EBP + -0x24]
+  00435398  MOV EDX,dword ptr [ECX]
+  0043539a  MOV dword ptr [EBP + -0x64],EDX
+  0043539d  MOV EAX,dword ptr [EBP + -0x30]
+  004353a0  FLD float ptr [EAX]
+  004353a2  FCOMP float ptr [EBP + -0x20]
+  004353a5  FNSTSW AX
+  004353a7  TEST AH,0x5
+  004353aa  JP 0x004353b4
+  004353ac  MOV ECX,dword ptr [EBP + -0x30]
+  004353af  MOV EDX,dword ptr [ECX]
+  004353b1  MOV dword ptr [EBP + -0x20],EDX
+  004353b4  MOV EAX,dword ptr [EBP + -0x30]
+  004353b7  FLD float ptr [EAX]
+  004353b9  FCOMP float ptr [EBP + -0x64]
+  004353bc  FNSTSW AX
+  004353be  TEST AH,0x41
+  004353c1  JNZ 0x004353cb
+  004353c3  MOV ECX,dword ptr [EBP + -0x30]
+  004353c6  MOV EDX,dword ptr [ECX]
+  004353c8  MOV dword ptr [EBP + -0x64],EDX
+  004353cb  MOV EAX,dword ptr [EBP + 0x8]
+  004353ce  FLD float ptr [EBP + -0x20]
+  004353d1  FCOMP float ptr [EAX]
+  004353d3  FNSTSW AX
+  004353d5  TEST AH,0x41
+  004353d8  JZ 0x004353eb
+  004353da  MOV ECX,dword ptr [EBP + 0x8]
+  004353dd  FLD float ptr [ECX]
+  004353df  FCHS
+  004353e1  FCOMP float ptr [EBP + -0x64]
+  004353e4  FNSTSW AX
+  004353e6  TEST AH,0x41
+  004353e9  JNZ 0x004353f2
+  004353eb  XOR EAX,EAX
+  004353ed  JMP 0x0043559e
+  004353f2  MOV EDX,dword ptr [EBP + -0x60]
+  004353f5  MOV EAX,dword ptr [EDX + 0x4]
+  004353f8  MOV dword ptr [EBP + -0x64],EAX
+  004353fb  MOV ECX,dword ptr [EBP + -0x64]
+  004353fe  MOV dword ptr [EBP + -0x20],ECX
+  00435401  MOV EDX,dword ptr [EBP + -0x24]
+  00435404  FLD float ptr [EDX + 0x4]
+  00435407  FCOMP float ptr [EBP + -0x20]
+  0043540a  FNSTSW AX
+  0043540c  TEST AH,0x5
+  0043540f  JP 0x0043541a
+  00435411  MOV EAX,dword ptr [EBP + -0x24]
+  00435414  MOV ECX,dword ptr [EAX + 0x4]
+  00435417  MOV dword ptr [EBP + -0x20],ECX
+  0043541a  MOV EDX,dword ptr [EBP + -0x24]
+  0043541d  FLD float ptr [EDX + 0x4]
+  00435420  FCOMP float ptr [EBP + -0x64]
+  00435423  FNSTSW AX
+  00435425  TEST AH,0x41
+  00435428  JNZ 0x00435433
+  0043542a  MOV EAX,dword ptr [EBP + -0x24]
+  0043542d  MOV ECX,dword ptr [EAX + 0x4]
+  00435430  MOV dword ptr [EBP + -0x64],ECX
+  00435433  MOV EDX,dword ptr [EBP + -0x30]
+  00435436  FLD float ptr [EDX + 0x4]
+  00435439  FCOMP float ptr [EBP + -0x20]
+  0043543c  FNSTSW AX
+  0043543e  TEST AH,0x5
+  00435441  JP 0x0043544c
+  00435443  MOV EAX,dword ptr [EBP + -0x30]
+  00435446  MOV ECX,dword ptr [EAX + 0x4]
+  00435449  MOV dword ptr [EBP + -0x20],ECX
+  0043544c  MOV EDX,dword ptr [EBP + -0x30]
+  0043544f  FLD float ptr [EDX + 0x4]
+  00435452  FCOMP float ptr [EBP + -0x64]
+  00435455  FNSTSW AX
+  00435457  TEST AH,0x41
+  0043545a  JNZ 0x00435465
+  0043545c  MOV EAX,dword ptr [EBP + -0x30]
+  0043545f  MOV ECX,dword ptr [EAX + 0x4]
+  00435462  MOV dword ptr [EBP + -0x64],ECX
+  00435465  MOV EDX,dword ptr [EBP + 0x8]
+  00435468  FLD float ptr [EBP + -0x20]
+  0043546b  FCOMP float ptr [EDX + 0x4]
+  0043546e  FNSTSW AX
+  00435470  TEST AH,0x41
+  00435473  JZ 0x00435487
+  00435475  MOV EAX,dword ptr [EBP + 0x8]
+  00435478  FLD float ptr [EAX + 0x4]
+  0043547b  FCHS
+  0043547d  FCOMP float ptr [EBP + -0x64]
+  00435480  FNSTSW AX
+  00435482  TEST AH,0x41
+  00435485  JNZ 0x0043548e
+  00435487  XOR EAX,EAX
+  00435489  JMP 0x0043559e
+  0043548e  MOV ECX,dword ptr [EBP + -0x60]
+  00435491  MOV EDX,dword ptr [ECX + 0x8]
+  00435494  MOV dword ptr [EBP + -0x64],EDX
+  00435497  MOV EAX,dword ptr [EBP + -0x64]
+  0043549a  MOV dword ptr [EBP + -0x20],EAX
+  0043549d  MOV ECX,dword ptr [EBP + -0x24]
+  004354a0  FLD float ptr [ECX + 0x8]
+  004354a3  FCOMP float ptr [EBP + -0x20]
+  004354a6  FNSTSW AX
+  004354a8  TEST AH,0x5
+  004354ab  JP 0x004354b6
+  004354ad  MOV EDX,dword ptr [EBP + -0x24]
+  004354b0  MOV EAX,dword ptr [EDX + 0x8]
+  004354b3  MOV dword ptr [EBP + -0x20],EAX
+  004354b6  MOV ECX,dword ptr [EBP + -0x24]
+  004354b9  FLD float ptr [ECX + 0x8]
+  004354bc  FCOMP float ptr [EBP + -0x64]
+  004354bf  FNSTSW AX
+  004354c1  TEST AH,0x41
+  004354c4  JNZ 0x004354cf
+  004354c6  MOV EDX,dword ptr [EBP + -0x24]
+  004354c9  MOV EAX,dword ptr [EDX + 0x8]
+  004354cc  MOV dword ptr [EBP + -0x64],EAX
+  004354cf  MOV ECX,dword ptr [EBP + -0x30]
+  004354d2  FLD float ptr [ECX + 0x8]
+  004354d5  FCOMP float ptr [EBP + -0x20]
+  004354d8  FNSTSW AX
+  004354da  TEST AH,0x5
+  004354dd  JP 0x004354e8
+  004354df  MOV EDX,dword ptr [EBP + -0x30]
+  004354e2  MOV EAX,dword ptr [EDX + 0x8]
+  004354e5  MOV dword ptr [EBP + -0x20],EAX
+  004354e8  MOV ECX,dword ptr [EBP + -0x30]
+  004354eb  FLD float ptr [ECX + 0x8]
+  004354ee  FCOMP float ptr [EBP + -0x64]
+  004354f1  FNSTSW AX
+  004354f3  TEST AH,0x41
+  004354f6  JNZ 0x00435501
+  004354f8  MOV EDX,dword ptr [EBP + -0x30]
+  004354fb  MOV EAX,dword ptr [EDX + 0x8]
+  004354fe  MOV dword ptr [EBP + -0x64],EAX
+  00435501  MOV ECX,dword ptr [EBP + 0x8]
+  00435504  FLD float ptr [EBP + -0x20]
+  00435507  FCOMP float ptr [ECX + 0x8]
+  0043550a  FNSTSW AX
+  0043550c  TEST AH,0x41
+  0043550f  JZ 0x00435523
+  00435511  MOV EDX,dword ptr [EBP + 0x8]
+  00435514  FLD float ptr [EDX + 0x8]
+  00435517  FCHS
+  00435519  FCOMP float ptr [EBP + -0x64]
+  0043551c  FNSTSW AX
+  0043551e  TEST AH,0x41
+  00435521  JNZ 0x00435527
+  00435523  XOR EAX,EAX
+  00435525  JMP 0x0043559e
+  00435527  FLD float ptr [EBP + -0x18]
+  0043552a  FMUL float ptr [EBP + -0x4c]
+  0043552d  FLD float ptr [EBP + -0x14]
+  00435530  FMUL float ptr [EBP + -0x50]
+  00435533  FSUBP
+  00435535  FSTP float ptr [EBP + -0x44]
+  00435538  FLD float ptr [EBP + -0x14]
+  0043553b  FMUL float ptr [EBP + -0x54]
+  0043553e  FLD float ptr [EBP + -0x1c]
+  00435541  FMUL float ptr [EBP + -0x4c]
+  00435544  FSUBP
+  00435546  FSTP float ptr [EBP + -0x40]
+  00435549  FLD float ptr [EBP + -0x1c]
+  0043554c  FMUL float ptr [EBP + -0x50]
+  0043554f  FLD float ptr [EBP + -0x18]
+  00435552  FMUL float ptr [EBP + -0x54]
+  00435555  FSUBP
+  00435557  FSTP float ptr [EBP + -0x3c]
+  0043555a  MOV EAX,dword ptr [EBP + -0x60]
+  0043555d  FLD float ptr [EBP + -0x44]
+  00435560  FMUL float ptr [EAX]
+  00435562  MOV ECX,dword ptr [EBP + -0x60]
+  00435565  FLD float ptr [EBP + -0x40]
+  00435568  FMUL float ptr [ECX + 0x4]
+  0043556b  FADDP
+  0043556d  MOV EDX,dword ptr [EBP + -0x60]
+  00435570  FLD float ptr [EBP + -0x3c]
+  00435573  FMUL float ptr [EDX + 0x8]
+  00435576  FADDP
+  00435578  FCHS
+  0043557a  FSTP float ptr [EBP + -0x58]
+  0043557d  MOV EAX,dword ptr [EBP + 0x8]
+  00435580  PUSH EAX
+  00435581  MOV ECX,dword ptr [EBP + -0x58]
+  00435584  PUSH ECX
+  00435585  LEA EDX,[EBP + -0x44]
+  00435588  PUSH EDX
+  00435589  CALL 0x00435b10
+  0043558e  ADD ESP,0xc
+  00435591  TEST EAX,EAX
+  00435593  JNZ 0x00435599
+  00435595  XOR EAX,EAX
+  00435597  JMP 0x0043559e
+  00435599  MOV EAX,0x1
+  0043559e  MOV ESP,EBP
+  004355a0  POP EBP
+  004355a1  RET
+

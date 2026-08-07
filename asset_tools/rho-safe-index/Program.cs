@@ -126,6 +126,9 @@ static string Classify(string path)
     if (lower.Contains("trackcard") || lower.Contains("trackthumb")) return "track-ui-image";
     if (extension is ".dds" or ".tga" or ".png" or ".jpg" or ".jpeg" or ".bmp" or ".bml") return "texture";
     if (extension is ".1s" or ".arb") return "model";
+    /* Plain-text descriptors such as kart parameter.xml, which carry the model
+       dimensions the simulator's presets are checked against. */
+    if (extension is ".xml" or ".txt" or ".ini") return "config";
     return "other";
 }
 

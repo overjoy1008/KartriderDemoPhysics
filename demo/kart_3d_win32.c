@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include "kart_axis_gizmo_win32.h"
+#include "kart_camera.h"
 #include "kart_demo_data.h"
 #include "kart_demo_win32_ui.h"
 #include "kart_input.h"
@@ -53,6 +54,10 @@ typedef struct Demo3DState {
     /* Counts down after an out-of-world respawn so the HUD can say why the
        kart moved. */
     DWORD respawn_notice_ms;
+    /* Recovered chase camera; advanced with the same elapsed time as the
+       simulation. */
+    KartChaseCameraFollow camera_follow;
+    KartChaseCameraPose camera_pose;
     KartTrackScene scenes[KART_TRACK_SCENE_CAPACITY];
     KartDemoMinimapSet minimaps;
 } Demo3DState;
@@ -303,6 +308,12 @@ static void reset_kart(Demo3DState *demo)
     demo->previous_skid_active = false;
     demo->boost_active = false;
     demo->drag_trigger_active = false;
+    /* The original snaps the camera after a reset rather than swinging to the
+       new pose over 400 ms. */
+    kart_chase_camera_follow_reset(&demo->camera_follow);
+    demo->camera_pose = kart_chase_camera_update(
+        &demo->camera_follow, demo->kart.position, demo->kart.orientation,
+        0.0f, false, 0, KART_CHASE_FOLLOW_OVERHEAD_MS);
 }
 
 static bool drift_visual_active(const KartSimulationState *kart)
@@ -369,36 +380,18 @@ static void update_skid_marks(Demo3DState *demo)
     demo->previous_skid_active = active;
 }
 
-static Camera3D make_chase_camera(const KartSimulationState *kart, RECT client)
+/* The chase pose comes from the recovered ChaseCameraman update; this only
+   turns its field of view into the projection's focal length. */
+static Camera3D make_chase_camera(const KartChaseCameraPose *pose, RECT client)
 {
-    const KartVec3 world_up = {0.0f, 0.0f, 1.0f};
-    KartVec3 body_right;
-    KartVec3 body_forward;
-    KartVec3 body_up;
-    KartVec3 flat_forward;
-    KartVec3 target;
     Camera3D camera;
-    const float width = (float)(client.right - client.left);
     const float height = (float)(client.bottom - client.top);
-
-    orientation_axes(kart->orientation, &body_right, &body_forward, &body_up);
-    (void)body_right;
-    (void)body_up;
-    flat_forward = vec_normalize((KartVec3){body_forward.x, body_forward.y, 0.0f});
-    if (vec_dot(flat_forward, flat_forward) == 0.0f) {
-        flat_forward = (KartVec3){0.0f, -1.0f, 0.0f};
-    }
-    target = vec_add(kart->position, vec_add(vec_scale(flat_forward, 4.0f), (KartVec3){0, 0, 0.8f}));
-    camera.position = vec_add(
-        kart->position,
-        vec_add(vec_scale(flat_forward, -11.0f), (KartVec3){0, 0, 7.0f}));
-    camera.forward = vec_normalize(vec_sub(target, camera.position));
-    /* Keep the chase view in the same screen handedness as the top-down view.
-       The former forward x up construction mirrored world X and forced a
-       compensating (and error-prone) steering-key reversal. */
-    camera.right = vec_normalize(vec_cross(world_up, camera.forward));
-    camera.up = vec_cross(camera.forward, camera.right);
-    camera.focal_length = (width < height ? width : height) * 0.85f;
+    camera.position = pose->position;
+    camera.right = pose->right;
+    camera.up = pose->up;
+    camera.forward = pose->forward;
+    camera.focal_length =
+        kart_chase_camera_focal_length(pose->field_of_view_degrees, height);
     return camera;
 }
 
@@ -1152,7 +1145,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     FillRect(buffer, &client, sky);
     DeleteObject(sky);
 
-    camera = make_chase_camera(&demo->kart, client);
+    camera = make_chase_camera(&demo->camera_pose, client);
     draw_track(buffer, client, camera, demo->track_spec);
     draw_track_scene(
         buffer, client, camera, demo->track_spec, active_track_scene(demo));
@@ -1356,6 +1349,16 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         }
         demo->boost_active = kart_any_boost_active(
             &demo->kart.timed_boost, &demo->kart.instant_boost);
+        {
+            /* The original reads the kart's velocity magnitude and its
+               booster-like flag, then advances the whole camera together. */
+            const KartVec3 v = demo->kart.linear_velocity;
+            const float speed = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+            demo->camera_pose = kart_chase_camera_update(
+                &demo->camera_follow, demo->kart.position,
+                demo->kart.orientation, speed, demo->boost_active, elapsed,
+                KART_CHASE_FOLLOW_OVERHEAD_MS);
+        }
         demo->simulation_time_ms += elapsed;
         update_skid_marks(demo);
         InvalidateRect(window, NULL, FALSE);
