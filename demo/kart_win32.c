@@ -8,6 +8,7 @@
 #include "kart_demo_win32_ui.h"
 #include "kart_input.h"
 #include "kart_minimap_win32.h"
+#include "kart_params_win32.h"
 #include "kart_screenshot_win32.h"
 #include "kart_simulation.h"
 #include "kart_sound_win32.h"
@@ -21,6 +22,17 @@
 
 #define MAX_SKID_SEGMENTS 2048
 #define SKID_LIFETIME_MS 15000
+
+/* Half-extents of the top-down view's window onto the world, in metres. */
+static const float VIEW_HALF_WIDTH = 55.0f;
+static const float VIEW_HALF_HEIGHT = 38.0f;
+
+/* The two demos were the same simulation behind two renderers, so they are one
+   executable now and V switches between them. */
+typedef enum DemoViewMode {
+    DEMO_VIEW_CHASE = 0,
+    DEMO_VIEW_TOPDOWN = 1
+} DemoViewMode;
 
 typedef struct SkidSegment3D {
     float left_x0;
@@ -47,6 +59,16 @@ typedef struct Demo3DState {
     float previous_skid_left_y;
     float previous_skid_right_x;
     float previous_skid_right_y;
+    DemoViewMode view_mode;
+    bool view_key_was_down;
+    bool vector_key_was_down;
+    bool param_key_was_down;
+    bool show_vectors;
+    /* Last step's telemetry, kept so the panel can show what the simulation
+       actually did rather than only what its state ended up as. */
+    KartSimulationStepResult last_step;
+    KartVec3 previous_velocity;
+    KartVec3 acceleration;
     bool kart_key_was_down;
     bool track_key_was_down;
     bool drag_key_was_down;
@@ -333,6 +355,8 @@ static void reset_kart(Demo3DState *demo)
     demo->skid_count = 0;
     demo->previous_skid_active = false;
     demo->boost_active = false;
+    demo->previous_velocity = demo->kart.linear_velocity;
+    demo->acceleration = (KartVec3){0.0f, 0.0f, 0.0f};
     demo->drag_trigger_active = false;
     /* The original spends the first 4 s of the 7 s countdown on the intro
        camera sweep. The demo has no intro, so the arming time is backdated to
@@ -1026,7 +1050,8 @@ static void draw_motion_vectors(
     HDC dc,
     RECT client,
     Camera3D camera,
-    const KartSimulationState *kart)
+    const KartSimulationState *kart,
+    KartVec3 acceleration)
 {
     KartVec3 right;
     KartVec3 forward;
@@ -1064,6 +1089,43 @@ static void draw_motion_vectors(
         vec_add(origin, vec_scale(velocity_direction, arrow_length)));
     SelectObject(dc, old_pen);
     DeleteObject(velocity_pen);
+
+    /* Velocity split along the body axes, so the lateral leg is the drift, and
+       the acceleration the last step actually produced. */
+    {
+        const float forward_speed = vec_dot(kart->linear_velocity, forward);
+        const float lateral_speed = vec_dot(kart->linear_velocity, right);
+        const float scale = arrow_length / speed;
+        HPEN forward_pen = CreatePen(PS_SOLID, 2, RGB(150, 205, 165));
+        HPEN lateral_pen = CreatePen(PS_SOLID, 2, RGB(255, 120, 170));
+        const KartVec3 forward_leg =
+            vec_add(origin, vec_scale(forward, forward_speed * scale));
+        old_pen = SelectObject(dc, forward_pen);
+        draw_line_3d(dc, client, camera, origin, forward_leg);
+        SelectObject(dc, lateral_pen);
+        draw_line_3d(
+            dc, client, camera, forward_leg,
+            vec_add(forward_leg, vec_scale(right, lateral_speed * scale)));
+        SelectObject(dc, old_pen);
+        DeleteObject(forward_pen);
+        DeleteObject(lateral_pen);
+    }
+    {
+        const float magnitude = sqrtf(
+            acceleration.x * acceleration.x +
+            acceleration.y * acceleration.y +
+            acceleration.z * acceleration.z);
+        if (magnitude > 0.05f) {
+            HPEN accel_pen = CreatePen(PS_SOLID, 2, RGB(255, 175, 110));
+            const float length = fminf(magnitude * 0.12f, 6.0f) / magnitude;
+            old_pen = SelectObject(dc, accel_pen);
+            draw_line_3d(
+                dc, client, camera, origin,
+                vec_add(origin, vec_scale(acceleration, length)));
+            SelectObject(dc, old_pen);
+            DeleteObject(accel_pen);
+        }
+    }
 }
 
 static KartVec3 kart_vertex(
@@ -1155,8 +1217,487 @@ static void draw_kart(
     DeleteObject(body_pen);
 }
 
+/* World to screen for the top-down view. World +Y points up the screen and
+   world +X points left, matching the original minimap artwork's orientation.
+   Both axes are negated together, which is a rotation rather than a mirror, so
+   steering handedness and the Track Map panel stay consistent. */
+static POINT world_to_screen(
+    RECT client,
+    float camera_x,
+    float camera_y,
+    float x,
+    float y)
+{
+    const float margin = 45.0f;
+    const float width = (float)(client.right - client.left) - margin * 2.0f;
+    const float height = (float)(client.bottom - client.top) - margin * 2.0f;
+    const float sx = width / (VIEW_HALF_WIDTH * 2.0f);
+    const float sy = height / (VIEW_HALF_HEIGHT * 2.0f);
+    const float scale = sx < sy ? sx : sy;
+    const POINT point = {
+        (LONG)((client.right + client.left) * 0.5f - (x - camera_x) * scale),
+        (LONG)((client.bottom + client.top) * 0.5f - (y - camera_y) * scale),
+    };
+    return point;
+}
+
+/* The flat forward vector the top-down view draws with. */
+static KartVec3 kart_forward(KartQuat q)
+{
+    return (KartVec3){
+        -2.0f * (q.x * q.y - q.w * q.z),
+        -(1.0f - 2.0f * (q.x * q.x + q.z * q.z)),
+        -2.0f * (q.y * q.z + q.w * q.x),
+    };
+}
+
+static void draw_scene_topdown(HDC buffer, RECT client, const Demo3DState *demo)
+{
+    HBRUSH track_brush;
+    HPEN wall_pen;
+    HPEN grid_pen;
+    HPEN heading_pen;
+    HPEN velocity_pen;
+    HPEN skid_fresh_pen;
+    HPEN skid_middle_pen;
+    HPEN skid_old_pen;
+    HBRUSH kart_brush;
+    HGDIOBJ old_brush;
+    HGDIOBJ old_pen;
+    POINT track_min;
+    POINT track_max;
+    POINT center;
+    POINT nose;
+    POINT kart_points[4];
+    POINT boost_points[3];
+    const KartVec3 forward = kart_forward(demo->kart.orientation);
+    const float side_x = -forward.y;
+    const float side_y = forward.x;
+    const float camera_x = demo->kart.position.x;
+    const float camera_y = demo->kart.position.y;
+    const float track_half_width =
+        kart_demo_track_width(demo->track_spec) * 0.5f;
+    const float track_half_height =
+        kart_demo_track_length(demo->track_spec) * 0.5f;
+    float speed;
+
+    track_min = world_to_screen(
+        client, camera_x, camera_y, -track_half_width, -track_half_height);
+    track_max = world_to_screen(
+        client, camera_x, camera_y, track_half_width, track_half_height);
+    {
+        RECT track = {track_min.x, track_min.y, track_max.x, track_max.y};
+        track_brush = CreateSolidBrush(RGB(50, 58, 65));
+        wall_pen = CreatePen(PS_SOLID, 4, RGB(100, 210, 255));
+        old_brush = SelectObject(buffer, track_brush);
+        old_pen = SelectObject(buffer, wall_pen);
+        Rectangle(buffer, track.left, track.top, track.right, track.bottom);
+        SelectObject(buffer, old_brush);
+        SelectObject(buffer, old_pen);
+        DeleteObject(track_brush);
+        DeleteObject(wall_pen);
+    }
+
+    grid_pen = CreatePen(PS_SOLID, 1, RGB(66, 75, 82));
+    old_pen = SelectObject(buffer, grid_pen);
+    {
+        float grid_x;
+        float grid_y;
+        const float grid_size = 10.0f;
+        const float min_x = camera_x - VIEW_HALF_WIDTH - grid_size;
+        const float max_x = camera_x + VIEW_HALF_WIDTH + grid_size;
+        const float min_y = camera_y - VIEW_HALF_HEIGHT - grid_size;
+        const float max_y = camera_y + VIEW_HALF_HEIGHT + grid_size;
+        for (grid_x = floorf(min_x / grid_size) * grid_size;
+             grid_x <= max_x;
+             grid_x += grid_size) {
+            POINT a = world_to_screen(client, camera_x, camera_y, grid_x, min_y);
+            POINT b = world_to_screen(client, camera_x, camera_y, grid_x, max_y);
+            MoveToEx(buffer, a.x, a.y, NULL);
+            LineTo(buffer, b.x, b.y);
+        }
+        for (grid_y = floorf(min_y / grid_size) * grid_size;
+             grid_y <= max_y;
+             grid_y += grid_size) {
+            POINT a = world_to_screen(client, camera_x, camera_y, min_x, grid_y);
+            POINT b = world_to_screen(client, camera_x, camera_y, max_x, grid_y);
+            MoveToEx(buffer, a.x, a.y, NULL);
+            LineTo(buffer, b.x, b.y);
+        }
+    }
+    SelectObject(buffer, old_pen);
+    DeleteObject(grid_pen);
+
+    skid_fresh_pen = CreatePen(PS_SOLID, 3, RGB(12, 14, 16));
+    skid_middle_pen = CreatePen(PS_SOLID, 3, RGB(25, 28, 31));
+    skid_old_pen = CreatePen(PS_SOLID, 2, RGB(39, 44, 48));
+    {
+        unsigned int i;
+        HPEN selected_pen = NULL;
+        for (i = 0; i < demo->skid_count; ++i) {
+            const unsigned int oldest =
+                (demo->skid_head + MAX_SKID_SEGMENTS - demo->skid_count) %
+                MAX_SKID_SEGMENTS;
+            const SkidSegment3D *segment =
+                &demo->skid_segments[(oldest + i) % MAX_SKID_SEGMENTS];
+            const unsigned int age =
+                demo->simulation_time_ms - segment->created_ms;
+            HPEN wanted_pen;
+            POINT a;
+            POINT b;
+            if (age > SKID_LIFETIME_MS) {
+                continue;
+            }
+            wanted_pen = age < 4000
+                ? skid_fresh_pen
+                : (age < 9000 ? skid_middle_pen : skid_old_pen);
+            if (wanted_pen != selected_pen) {
+                if (selected_pen == NULL) {
+                    old_pen = SelectObject(buffer, wanted_pen);
+                } else {
+                    SelectObject(buffer, wanted_pen);
+                }
+                selected_pen = wanted_pen;
+            }
+            a = world_to_screen(
+                client, camera_x, camera_y, segment->left_x0, segment->left_y0);
+            b = world_to_screen(
+                client, camera_x, camera_y, segment->left_x1, segment->left_y1);
+            MoveToEx(buffer, a.x, a.y, NULL);
+            LineTo(buffer, b.x, b.y);
+            a = world_to_screen(
+                client, camera_x, camera_y, segment->right_x0, segment->right_y0);
+            b = world_to_screen(
+                client, camera_x, camera_y, segment->right_x1, segment->right_y1);
+            MoveToEx(buffer, a.x, a.y, NULL);
+            LineTo(buffer, b.x, b.y);
+        }
+        if (selected_pen != NULL) {
+            SelectObject(buffer, old_pen);
+        }
+    }
+    DeleteObject(skid_fresh_pen);
+    DeleteObject(skid_middle_pen);
+    DeleteObject(skid_old_pen);
+
+    center = world_to_screen(
+        client, camera_x, camera_y,
+        demo->kart.position.x, demo->kart.position.y);
+    nose = world_to_screen(
+        client,
+        camera_x,
+        camera_y,
+        demo->kart.position.x + forward.x * demo->kart.geometry.half_length,
+        demo->kart.position.y + forward.y * demo->kart.geometry.half_length);
+    kart_points[0] = world_to_screen(
+        client,
+        camera_x,
+        camera_y,
+        demo->kart.position.x + forward.x * demo->kart.geometry.half_length +
+            side_x * demo->kart.geometry.half_width,
+        demo->kart.position.y + forward.y * demo->kart.geometry.half_length +
+            side_y * demo->kart.geometry.half_width);
+    kart_points[1] = world_to_screen(
+        client,
+        camera_x,
+        camera_y,
+        demo->kart.position.x + forward.x * demo->kart.geometry.half_length -
+            side_x * demo->kart.geometry.half_width,
+        demo->kart.position.y + forward.y * demo->kart.geometry.half_length -
+            side_y * demo->kart.geometry.half_width);
+    kart_points[2] = world_to_screen(
+        client,
+        camera_x,
+        camera_y,
+        demo->kart.position.x - forward.x * demo->kart.geometry.half_length -
+            side_x * demo->kart.geometry.half_width,
+        demo->kart.position.y - forward.y * demo->kart.geometry.half_length -
+            side_y * demo->kart.geometry.half_width);
+    kart_points[3] = world_to_screen(
+        client,
+        camera_x,
+        camera_y,
+        demo->kart.position.x - forward.x * demo->kart.geometry.half_length +
+            side_x * demo->kart.geometry.half_width,
+        demo->kart.position.y - forward.y * demo->kart.geometry.half_length +
+            side_y * demo->kart.geometry.half_width);
+
+    if (demo->boost_active) {
+        HBRUSH flame_brush = CreateSolidBrush(RGB(255, 205, 45));
+        boost_points[0] = world_to_screen(
+            client,
+            camera_x,
+            camera_y,
+            demo->kart.position.x - forward.x * 3.2f,
+            demo->kart.position.y - forward.y * 3.2f);
+        boost_points[1] = world_to_screen(
+            client,
+            camera_x,
+            camera_y,
+            demo->kart.position.x - forward.x * 0.7f + side_x * 0.48f,
+            demo->kart.position.y - forward.y * 0.7f + side_y * 0.48f);
+        boost_points[2] = world_to_screen(
+            client,
+            camera_x,
+            camera_y,
+            demo->kart.position.x - forward.x * 0.7f - side_x * 0.48f,
+            demo->kart.position.y - forward.y * 0.7f - side_y * 0.48f);
+        old_brush = SelectObject(buffer, flame_brush);
+        Polygon(buffer, boost_points, 3);
+        SelectObject(buffer, old_brush);
+        DeleteObject(flame_brush);
+    }
+
+    kart_brush = CreateSolidBrush(
+        demo->boost_active
+            ? RGB(65, 205, 255)
+            : (drift_visual_active(&demo->kart)
+                ? RGB(255, 170, 45)
+                : RGB(255, 80, 95)));
+    old_brush = SelectObject(buffer, kart_brush);
+    Polygon(buffer, kart_points, 4);
+    SelectObject(buffer, old_brush);
+    DeleteObject(kart_brush);
+
+    heading_pen = CreatePen(PS_SOLID, 2, RGB(255, 245, 180));
+    old_pen = SelectObject(buffer, heading_pen);
+    MoveToEx(buffer, center.x, center.y, NULL);
+    LineTo(buffer, nose.x, nose.y);
+    SelectObject(buffer, old_pen);
+    DeleteObject(heading_pen);
+
+    speed = sqrtf(
+        demo->kart.linear_velocity.x * demo->kart.linear_velocity.x +
+        demo->kart.linear_velocity.y * demo->kart.linear_velocity.y);
+    if (!demo->show_vectors) {
+        return;
+    }
+    if (speed > 0.01f) {
+        const float arrow_length = fminf(speed * 0.18f, 9.0f);
+        POINT velocity_end = world_to_screen(
+            client,
+            camera_x,
+            camera_y,
+            demo->kart.position.x +
+                demo->kart.linear_velocity.x / speed * arrow_length,
+            demo->kart.position.y +
+                demo->kart.linear_velocity.y / speed * arrow_length);
+        velocity_pen = CreatePen(PS_SOLID, 3, RGB(80, 230, 255));
+        old_pen = SelectObject(buffer, velocity_pen);
+        MoveToEx(buffer, center.x, center.y, NULL);
+        LineTo(buffer, velocity_end.x, velocity_end.y);
+        SelectObject(buffer, old_pen);
+        DeleteObject(velocity_pen);
+
+        /* The same arrow split along the body axes: the lateral leg is what
+           the kart is sliding sideways. */
+        {
+            const float forward_speed =
+                demo->kart.linear_velocity.x * forward.x +
+                demo->kart.linear_velocity.y * forward.y;
+            const float lateral_speed =
+                demo->kart.linear_velocity.x * side_x +
+                demo->kart.linear_velocity.y * side_y;
+            const float scale = arrow_length / speed;
+            HPEN forward_pen = CreatePen(PS_SOLID, 2, RGB(150, 205, 165));
+            HPEN lateral_pen = CreatePen(PS_SOLID, 2, RGB(255, 120, 170));
+            const POINT forward_leg = world_to_screen(
+                client, camera_x, camera_y,
+                demo->kart.position.x + forward.x * forward_speed * scale,
+                demo->kart.position.y + forward.y * forward_speed * scale);
+            const POINT lateral_leg = world_to_screen(
+                client, camera_x, camera_y,
+                demo->kart.position.x + forward.x * forward_speed * scale +
+                    side_x * lateral_speed * scale,
+                demo->kart.position.y + forward.y * forward_speed * scale +
+                    side_y * lateral_speed * scale);
+            old_pen = SelectObject(buffer, forward_pen);
+            MoveToEx(buffer, center.x, center.y, NULL);
+            LineTo(buffer, forward_leg.x, forward_leg.y);
+            SelectObject(buffer, lateral_pen);
+            MoveToEx(buffer, forward_leg.x, forward_leg.y, NULL);
+            LineTo(buffer, lateral_leg.x, lateral_leg.y);
+            SelectObject(buffer, old_pen);
+            DeleteObject(forward_pen);
+            DeleteObject(lateral_pen);
+        }
+    }
+    {
+        /* The acceleration the last step produced. */
+        const float magnitude = sqrtf(
+            demo->acceleration.x * demo->acceleration.x +
+            demo->acceleration.y * demo->acceleration.y);
+        if (magnitude > 0.05f) {
+            const float length = fminf(magnitude * 0.12f, 6.0f) / magnitude;
+            HPEN accel_pen = CreatePen(PS_SOLID, 2, RGB(255, 175, 110));
+            const POINT accel_end = world_to_screen(
+                client, camera_x, camera_y,
+                demo->kart.position.x + demo->acceleration.x * length,
+                demo->kart.position.y + demo->acceleration.y * length);
+            old_pen = SelectObject(buffer, accel_pen);
+            MoveToEx(buffer, center.x, center.y, NULL);
+            LineTo(buffer, accel_end.x, accel_end.y);
+            SelectObject(buffer, old_pen);
+            DeleteObject(accel_pen);
+        }
+    }
+}
+
+static const char *drift_phase_name(const KartSimulationState *kart)
+{
+    if (kart->drift.trigger_active) return "TRIGGER";
+    if (kart->drift.slip_detected) return "SLIP";
+    if (kart->drift.input_active) return "DRIFT";
+    return "GRIP";
+}
+
+/* The values the HUD lines have no room for: the whole rigid body state, the
+   drift and boost timers, the suspension contacts and what the last step
+   resolved. Fixed pitch so the columns line up as the numbers move. */
+static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
+{
+    const KartSimulationState *kart = &demo->kart;
+    const int line_height = 15;
+    const int rows = 13;
+    const int panel_width = 396;
+    const int margin = 16;
+    RECT panel = {
+        client.left + margin,
+        client.bottom - margin - (rows * line_height + 14),
+        client.left + margin + panel_width,
+        client.bottom - margin,
+    };
+    HBRUSH panel_brush = CreateSolidBrush(RGB(15, 19, 26));
+    HPEN panel_pen = CreatePen(PS_SOLID, 1, RGB(54, 64, 73));
+    HFONT font = CreateFontA(
+        -12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        ANTIALIASED_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas");
+    HGDIOBJ old_brush = SelectObject(dc, panel_brush);
+    HGDIOBJ old_pen = SelectObject(dc, panel_pen);
+    HGDIOBJ old_font;
+    KartVec3 right;
+    KartVec3 forward;
+    KartVec3 up;
+    float speed;
+    float acceleration;
+    float forward_speed;
+    float lateral_speed;
+    float slip_angle;
+    int y = panel.top + 7;
+    int line = 0;
+    char text[160];
+
+    Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
+    old_font = SelectObject(dc, font);
+    SetBkMode(dc, TRANSPARENT);
+
+    orientation_axes(kart->orientation, &right, &forward, &up);
+    speed = sqrtf(
+        kart->linear_velocity.x * kart->linear_velocity.x +
+        kart->linear_velocity.y * kart->linear_velocity.y +
+        kart->linear_velocity.z * kart->linear_velocity.z);
+    acceleration = sqrtf(
+        demo->acceleration.x * demo->acceleration.x +
+        demo->acceleration.y * demo->acceleration.y +
+        demo->acceleration.z * demo->acceleration.z);
+    forward_speed = vec_dot(kart->linear_velocity, forward);
+    lateral_speed = vec_dot(kart->linear_velocity, right);
+    slip_angle = atan2f(fabsf(lateral_speed), fabsf(forward_speed)) *
+                 (180.0f / 3.14159265358979323846f);
+
+#define TELEMETRY_LINE(colour, ...)                                           \
+    do {                                                                      \
+        snprintf(text, sizeof(text), __VA_ARGS__);                            \
+        SetTextColor(dc, colour);                                             \
+        TextOutA(dc, panel.left + 9, y + line * line_height, text,            \
+                 (int)strlen(text));                                          \
+        line += 1;                                                            \
+    } while (0)
+
+    TELEMETRY_LINE(
+        kart->drift.trigger_active ? RGB(255, 210, 90) :
+        (kart->drift.slip_detected ? RGB(255, 140, 120) :
+         (kart->drift.input_active ? RGB(255, 185, 55) : RGB(150, 205, 165))),
+        "PHASE   %-8s beta %5.1f deg  (auto slip at 50)",
+        drift_phase_name(kart), slip_angle);
+    TELEMETRY_LINE(
+        RGB(200, 212, 220),
+        "POS     %8.2f %8.2f %8.2f", kart->position.x, kart->position.y,
+        kart->position.z);
+    TELEMETRY_LINE(
+        RGB(120, 215, 245),
+        "VEL     %8.2f %8.2f %8.2f  |v| %6.2f",
+        kart->linear_velocity.x, kart->linear_velocity.y,
+        kart->linear_velocity.z, speed);
+    TELEMETRY_LINE(
+        RGB(255, 175, 110),
+        "ACC     %8.2f %8.2f %8.2f  |a| %6.2f",
+        demo->acceleration.x, demo->acceleration.y, demo->acceleration.z,
+        acceleration);
+    TELEMETRY_LINE(
+        RGB(200, 212, 220),
+        "OMEGA   %8.3f %8.3f %8.3f  yaw %6.1f d/s",
+        kart->angular_velocity.x, kart->angular_velocity.y,
+        kart->angular_velocity.z,
+        kart->angular_velocity.z * (180.0f / 3.14159265358979323846f));
+    TELEMETRY_LINE(
+        RGB(200, 212, 220),
+        "AXIS    vf %6.2f  vs %6.2f  up_z %5.3f", forward_speed, lateral_speed,
+        up.z);
+    TELEMETRY_LINE(
+        kart->grounded ? RGB(150, 205, 165) : RGB(255, 140, 120),
+        "GROUND  %-3s contacts %u  (loads in the wheel panel)",
+        kart->grounded ? "yes" : "AIR", demo->last_step.wheel_contacts);
+    TELEMETRY_LINE(
+        RGB(200, 212, 220),
+        "STEER   in %5.2f  applied %6.2f deg  hyst %6.2f",
+        demo->steering.value,
+        kart->previous_steer_angle_rad * (180.0f / 3.14159265358979323846f),
+        kart->config.max_steer_angle_deg);
+    TELEMETRY_LINE(
+        RGB(200, 212, 220),
+        "DRIFT   linger %5.2f  trigger %5.2f  entry %s",
+        kart->drift.linger_timer, kart->drift.trigger_timer,
+        kart->drift.entry_was_forward ? "fwd" : "-");
+    TELEMETRY_LINE(
+        demo->boost_active ? RGB(75, 225, 255) : RGB(200, 212, 220),
+        "BOOST   item %5.2fs  inst %-3s %5.2fs  opp %5.2fs",
+        (float)kart->timed_boost.remaining_ms * 0.001f,
+        kart->instant_boost.active ? "ON" : "off",
+        kart->instant_boost.active_timer,
+        kart->instant_boost.opportunity_timer);
+    TELEMETRY_LINE(
+        RGB(200, 212, 220),
+        "FORCES  fwd %6.0f  brake %6.0f  Gf %4.2f  Gr %4.2f",
+        kart->config.forward_accel_force, kart->config.grip_brake_force,
+        kart->config.front_grip_factor, kart->config.rear_grip_factor);
+    TELEMETRY_LINE(
+        RGB(200, 212, 220),
+        "DRAG    scale x%4.2f  air %5.2f  ground %5.3f  m %5.1f",
+        kart->grounded_drag_scale, kart->config.air_friction,
+        kart->config.drag_factor, kart->config.mass);
+    TELEMETRY_LINE(
+        demo->last_step.body_contacts != 0 ? RGB(255, 140, 120)
+                                           : RGB(150, 165, 180),
+        "STEP    sub %2u  wheels %u  body %u  wall %4.1f  gnd %4.1f",
+        demo->last_step.substeps, demo->last_step.wheel_contacts,
+        demo->last_step.body_contacts, demo->last_step.wall_impact_speed,
+        demo->last_step.ground_impact_speed);
+
+#undef TELEMETRY_LINE
+
+    SelectObject(dc, old_font);
+    SelectObject(dc, old_brush);
+    SelectObject(dc, old_pen);
+    DeleteObject(panel_brush);
+    DeleteObject(panel_pen);
+    DeleteObject(font);
+}
+
 static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
 {
+    const bool topdown = demo->view_mode == DEMO_VIEW_TOPDOWN;
     RECT client;
     HDC buffer;
     HBITMAP bitmap;
@@ -1172,27 +1713,33 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     float slip_angle;
     int speedometer_kmh;
     char status[384];
-    const char *help =
-        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  K: kart list  T: track list  G: drag trigger  A: screenshot  R: reset  Esc: close menu";
+    char help[256];
 
     GetClientRect(window, &client);
     buffer = CreateCompatibleDC(target);
     bitmap = CreateCompatibleBitmap(target, client.right, client.bottom);
     old_bitmap = SelectObject(buffer, bitmap);
-    sky = CreateSolidBrush(RGB(19, 24, 33));
+    sky = CreateSolidBrush(topdown ? RGB(22, 25, 31) : RGB(19, 24, 33));
     FillRect(buffer, &client, sky);
     DeleteObject(sky);
 
     camera = make_chase_camera(&demo->camera_pose, client);
-    draw_track(buffer, client, camera, demo->track_spec);
-    draw_track_scene(
-        buffer, client, camera, demo->track_spec, active_track_scene(demo));
-    draw_skid_marks(buffer, client, camera, demo);
-    draw_boost_effect(buffer, client, camera, demo);
-    draw_kart(
-        buffer, client, camera, &demo->kart, demo->kart_spec,
-        demo->boost_active);
-    draw_motion_vectors(buffer, client, camera, &demo->kart);
+    if (topdown) {
+        draw_scene_topdown(buffer, client, demo);
+    } else {
+        draw_track(buffer, client, camera, demo->track_spec);
+        draw_track_scene(
+            buffer, client, camera, demo->track_spec, active_track_scene(demo));
+        draw_skid_marks(buffer, client, camera, demo);
+        draw_boost_effect(buffer, client, camera, demo);
+        draw_kart(
+            buffer, client, camera, &demo->kart, demo->kart_spec,
+            demo->boost_active);
+        if (demo->show_vectors) {
+            draw_motion_vectors(
+                buffer, client, camera, &demo->kart, demo->acceleration);
+        }
+    }
     draw_track_minimap(buffer, client, demo);
 
     orientation_axes(
@@ -1219,11 +1766,17 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         lateral_speed,
         demo->kart.drift.slip_detected ? "ON" : "off");
     TextOutA(buffer, 16, 12, status, (int)strlen(status));
+    snprintf(
+        help,
+        sizeof(help),
+        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  V: %s vectors  P: parameters  K: kart list  T: track list  G: drag trigger  S: screenshot  R: reset",
+        demo->show_vectors ? "hide" : "show");
     TextOutA(buffer, 16, 32, help, (int)strlen(help));
     snprintf(
         status,
         sizeof(status),
-        "%s (%s) %.1f x %.1f | scene %s | kart %s %.3f x %.3f | h %.2f",
+        "%s | %s (%s) %.1f x %.1f | scene %s | kart %s %.3f x %.3f | h %.2f",
+        topdown ? "TOP-DOWN" : "CHASE",
         demo->track_spec->display_name,
         demo->track_spec->asset_name,
         kart_demo_track_width(demo->track_spec),
@@ -1269,9 +1822,19 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         SetTextColor(buffer, RGB(140, 235, 255));
         TextOutA(buffer, 16, 112, notice, (int)strlen(notice));
     }
+    draw_telemetry(buffer, client, demo);
+    kart_demo_draw_wheel_load(
+        buffer, client, demo->kart.wheels.compression, demo->kart.grounded);
     kart_demo_draw_speedometer(
         buffer, client, speedometer_kmh, demo->boost_active);
-    {
+    if (topdown) {
+        /* world_to_screen maps +X to screen left and +Y to screen up, and the
+           view looks straight down, so +Z points at the viewer. */
+        static const float axis_x[3] = {-1.0f, 0.0f, 0.0f};
+        static const float axis_y[3] = {0.0f, -1.0f, 0.0f};
+        static const float axis_toward[3] = {0.0f, 0.0f, 1.0f};
+        kart_demo_draw_axis_gizmo(buffer, client, axis_x, axis_y, axis_toward);
+    } else {
         /* Project each world axis onto the chase camera's basis. Screen Y grows
            downward and camera.forward points into the screen, so both are
            negated to get screen-space directions. */
@@ -1356,7 +1919,26 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             const bool kart_key_down = key_down('K') != 0;
             const bool track_key_down = key_down('T') != 0;
             const bool drag_key_down = key_down('G') != 0;
-            const bool shot_key_down = key_down('A') != 0;
+            const bool shot_key_down = key_down('S') != 0;
+            const bool view_key_down = key_down('C') != 0;
+            const bool vector_key_down = key_down('V') != 0;
+            const bool param_key_down = key_down('P') != 0;
+            if (vector_key_down && !demo->vector_key_was_down) {
+                demo->show_vectors = !demo->show_vectors;
+            }
+            demo->vector_key_was_down = vector_key_down;
+            if (param_key_down && !demo->param_key_was_down) {
+                kart_demo_params_open(
+                    (HINSTANCE)GetWindowLongPtr(window, GWLP_HINSTANCE),
+                    window, &demo->kart.config, &demo->kart_spec->dynamics);
+            }
+            demo->param_key_was_down = param_key_down;
+            if (view_key_down && !demo->view_key_was_down) {
+                demo->view_mode = demo->view_mode == DEMO_VIEW_CHASE
+                    ? DEMO_VIEW_TOPDOWN
+                    : DEMO_VIEW_CHASE;
+            }
+            demo->view_key_was_down = view_key_down;
             if (kart_key_down && !demo->kart_key_was_down) {
                 const KartDemoKartSpec *selected =
                     kart_demo_popup_select_kart(window, demo->kart_spec);
@@ -1451,6 +2033,13 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             reset_kart(demo);
         } else if (elapsed != 0) {
             step = kart_simulate_milliseconds(&demo->kart, &controls, &world, elapsed);
+            /* Telemetry: the step's own report, and the acceleration it came
+               out with, differenced over the same clock the step used. */
+            demo->last_step = step;
+            demo->acceleration = vec_scale(
+                vec_sub(demo->kart.linear_velocity, demo->previous_velocity),
+                1000.0f / (float)elapsed);
+            demo->previous_velocity = demo->kart.linear_velocity;
         }
         if (demo->kart.position.z <
             kart_demo_track_fall_limit(demo->track_spec)) {
@@ -1521,7 +2110,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE previous, LPSTR command_line, int show)
 {
-    static const char CLASS_NAME[] = "KartPhysics3DWindow";
+    static const char CLASS_NAME[] = "KartPhysicsWindow";
     WNDCLASSA window_class = {0};
     Demo3DState demo = {0};
     HWND window;
@@ -1541,7 +2130,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE previous, LPSTR command_line, i
     window = CreateWindowExA(
         0,
         CLASS_NAME,
-        "KartRider Demo Physics - 3D chase camera",
+        "KartRider Demo Physics",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,

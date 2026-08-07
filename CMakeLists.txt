@@ -160,25 +160,6 @@ if(WIN32)
         message(STATUS "Original minimap PNGs not found; bounds panels will use grid fallback")
     endif()
 
-    # Both demos call the scene and collision queries unconditionally; only the
-    # resource loading is compiled out when there are no embedded scenes.
-    add_executable(kart_topdown WIN32
-        demo/kart_topdown_win32.c
-        src/kart_track_scene.c
-        src/kart_track_collision.c
-        ${KART_MINIMAP_SOURCES}
-        ${KART_AUDIO_SOURCES})
-    target_include_directories(kart_topdown PRIVATE include demo)
-    if(KART_HAVE_ALL_MINIMAPS)
-        target_compile_definitions(kart_topdown PRIVATE KART_EMBED_MINIMAPS=1)
-    endif()
-    if(KART_HAVE_ALL_SOUNDS)
-        target_compile_definitions(kart_topdown PRIVATE KART_EMBED_SOUNDS=1)
-    endif()
-    # winmm provides waveOut.
-    target_link_libraries(kart_topdown PRIVATE
-        kart_dynamics user32 gdi32 winmm windowscodecs ole32)
-
     # Track codes in TRACKS[] order; the RCDATA ids in
     # demo/kart_track_scene_resources.h follow the same order.
     set(KART_TRACK_CODES
@@ -217,8 +198,11 @@ if(WIN32)
         endforeach()
     endif()
 
-    set(KART_3D_SOURCES
-        demo/kart_3d_win32.c
+    # One executable with both renderers behind the V key; it calls the scene
+    # and collision queries unconditionally and only the resource loading is
+    # compiled out when there are no embedded scenes.
+    set(KART_DEMO_SOURCES
+        demo/kart_win32.c
         src/kart_track_scene.c
         src/kart_track_collision.c
         ${KART_MINIMAP_SOURCES}
@@ -234,26 +218,24 @@ if(WIN32)
             demo/kart_track_scenes.rc.in
             ${CMAKE_CURRENT_BINARY_DIR}/kart_track_scenes.rc
             @ONLY)
-        list(APPEND KART_3D_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/kart_track_scenes.rc)
-        target_sources(kart_topdown PRIVATE
+        list(APPEND KART_DEMO_SOURCES
             ${CMAKE_CURRENT_BINARY_DIR}/kart_track_scenes.rc)
-        target_compile_definitions(kart_topdown PRIVATE KART_EMBED_TRACK_SCENES=1)
     else()
-        message(STATUS "KTRK scene files not found; the demos will use bounds/grid fallback")
+        message(STATUS "KTRK scene files not found; the demo will use bounds/grid fallback")
     endif()
-    add_executable(kart_3d WIN32 ${KART_3D_SOURCES})
-    target_include_directories(kart_3d PRIVATE include demo)
+    add_executable(kart WIN32 ${KART_DEMO_SOURCES})
+    target_include_directories(kart PRIVATE include demo)
     if(KART_HAVE_ALL_SCENES)
-        target_compile_definitions(kart_3d PRIVATE KART_EMBED_TRACK_SCENES=1)
+        target_compile_definitions(kart PRIVATE KART_EMBED_TRACK_SCENES=1)
     endif()
     if(KART_HAVE_ALL_MINIMAPS)
-        target_compile_definitions(kart_3d PRIVATE KART_EMBED_MINIMAPS=1)
+        target_compile_definitions(kart PRIVATE KART_EMBED_MINIMAPS=1)
     endif()
     if(KART_HAVE_ALL_SOUNDS)
-        target_compile_definitions(kart_3d PRIVATE KART_EMBED_SOUNDS=1)
+        target_compile_definitions(kart PRIVATE KART_EMBED_SOUNDS=1)
     endif()
     # msimg32 provides AlphaBlend for the translucent faces; winmm provides waveOut.
-    target_link_libraries(kart_3d PRIVATE
+    target_link_libraries(kart PRIVATE
         kart_dynamics user32 gdi32 msimg32 winmm windowscodecs ole32)
 
     # The mixer is Win32-only, so its cursor test lives here rather than with

@@ -222,6 +222,109 @@ static void kart_demo_draw_speedometer(
     DeleteObject(unit_font);
 }
 
+/* Suspension load, drawn as the kart seen from above with each wheel's
+   compression over it. Sits directly above the speedometer. Wheel order is the
+   simulation's: 0 front-right, 1 front-left, 2 rear-right, 3 rear-left, with
+   the nose of the figure pointing up. */
+static void kart_demo_draw_wheel_load(
+    HDC dc,
+    RECT client,
+    const float compression[4],
+    bool grounded)
+{
+    const int panel_width = 238;
+    const int panel_height = 118;
+    const int margin = 18;
+    /* The speedometer panel is 94 tall on the same margin. */
+    const int bottom = client.bottom - margin - 94 - 8;
+    RECT panel = {
+        client.right - panel_width - margin,
+        bottom - panel_height,
+        client.right - margin,
+        bottom,
+    };
+    const int center_x = (panel.left + panel.right) / 2;
+    const int body_half_width = 26;
+    const int body_top = panel.top + 30;
+    const int body_bottom = panel.bottom - 12;
+    const int wheel_width = 11;
+    const int wheel_height = 20;
+    /* Screen offsets per wheel, in the order above. */
+    static const int WHEEL_SIDE[4] = {1, -1, 1, -1};
+    static const int WHEEL_END[4] = {0, 0, 1, 1};
+    HBRUSH panel_brush = CreateSolidBrush(RGB(12, 16, 22));
+    HBRUSH body_brush = CreateSolidBrush(RGB(38, 46, 55));
+    HPEN panel_pen = CreatePen(PS_SOLID, 1, RGB(54, 64, 73));
+    HPEN body_pen = CreatePen(PS_SOLID, 1, RGB(96, 110, 122));
+    HFONT font = CreateFontA(
+        -12, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        ANTIALIASED_QUALITY, FF_DONTCARE, "Segoe UI");
+    HGDIOBJ old_brush = SelectObject(dc, panel_brush);
+    HGDIOBJ old_pen = SelectObject(dc, panel_pen);
+    HGDIOBJ old_font;
+    static const char label[] = "WHEEL LOAD";
+    int i;
+
+    Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
+    old_font = SelectObject(dc, font);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, grounded ? RGB(180, 205, 215) : RGB(255, 140, 120));
+    TextOutA(dc, panel.left + 9, panel.top + 6, label, (int)strlen(label));
+
+    SelectObject(dc, body_brush);
+    SelectObject(dc, body_pen);
+    Rectangle(
+        dc, center_x - body_half_width, body_top,
+        center_x + body_half_width, body_bottom);
+    /* A nose mark so the figure reads front-up. */
+    MoveToEx(dc, center_x - 8, body_top + 7, NULL);
+    LineTo(dc, center_x, body_top + 1);
+    LineTo(dc, center_x + 8, body_top + 7);
+
+    for (i = 0; i < 4; ++i) {
+        const float value = compression[i];
+        /* Uncompressed is 0 and fully compressed is 1; the original rests near
+           0.5 on level ground. */
+        const int shade = (int)(60.0f + 170.0f *
+            (value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value)));
+        const int x = center_x + WHEEL_SIDE[i] * (body_half_width + 3) -
+                      (WHEEL_SIDE[i] < 0 ? wheel_width : 0);
+        const int y = WHEEL_END[i] == 0
+            ? body_top + 6
+            : body_bottom - 6 - wheel_height;
+        HBRUSH wheel_brush = CreateSolidBrush(
+            value > 0.001f ? RGB(shade / 3, shade, shade / 2)
+                           : RGB(70, 46, 50));
+        char text[16];
+        RECT text_rect;
+        SelectObject(dc, wheel_brush);
+        Rectangle(dc, x, y, x + wheel_width, y + wheel_height);
+        snprintf(text, sizeof(text), "%.2f", value);
+        text_rect.left = WHEEL_SIDE[i] < 0 ? panel.left + 6 : center_x + 30;
+        text_rect.right = WHEEL_SIDE[i] < 0 ? center_x - 30 : panel.right - 6;
+        text_rect.top = y - 1;
+        text_rect.bottom = y + wheel_height;
+        SetTextColor(
+            dc, value > 0.001f ? RGB(235, 245, 240) : RGB(190, 130, 135));
+        DrawTextA(
+            dc, text, -1, &text_rect,
+            (WHEEL_SIDE[i] < 0 ? DT_RIGHT : DT_LEFT) | DT_VCENTER |
+            DT_SINGLELINE);
+        SelectObject(dc, body_brush);
+        DeleteObject(wheel_brush);
+    }
+
+    SelectObject(dc, old_font);
+    SelectObject(dc, old_brush);
+    SelectObject(dc, old_pen);
+    DeleteObject(panel_brush);
+    DeleteObject(body_brush);
+    DeleteObject(panel_pen);
+    DeleteObject(body_pen);
+    DeleteObject(font);
+}
+
 /* Race-start overlay: the 3-2-1 digits while the countdown runs, then the START
    flash once it releases. Drawn at the middle of the client area in the same
    heavy face as the speedometer, with a drop shadow so it stays readable over a

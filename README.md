@@ -14,21 +14,22 @@ not the original source code.
 
 ![3D simulator using the fixed chase camera with boost flame, speedometer, ground grid, and track bounds](docs/assets/simulator-3d.png)
 
-Both programs run the same 3D physics state and 5 ms substep pipeline. The
-top-down program projects that state onto X-Y; the 3D program renders it with
-the existing fixed chase camera. These screenshots were captured from the
-current Windows build while drifting and using the item boost.
+Both views run the same 3D physics state and 5 ms substep pipeline, and they are
+one program: the top-down renderer projects that state onto X-Y, the 3D renderer
+draws it with the existing fixed chase camera, and `C` switches between them.
+These screenshots were captured from the current Windows build while drifting
+and using the item boost.
 
 ## Run the included simulators
 
 No build is required to try the checked-in applications.
 
-On **Windows**, open one of these files:
+On **Windows**, open this file:
 
-- `build-win/kart_topdown.exe` — top-down view
-- `build-win/kart_3d.exe` — 3D chase-camera view
+- `build-win/kart.exe` — both views in one program; `C` switches between the
+  3D chase camera and the top-down projection
 
-Each Windows executable is self-contained and can be copied by itself to
+The Windows executable is self-contained and can be copied by itself to
 another 64-bit Windows 10/11 computer. No asset directory or separate MinGW
 runtime DLL is required.
 
@@ -144,8 +145,7 @@ keeps the recovered dynamics independent of the demo's proprietary scene and
 triangle-query implementation while preserving the original query geometry
 and update order.
 
-After a Windows build, launch `build/kart_topdown.exe` or
-`build/kart_3d.exe`. Both simulators use the following controls:
+After a Windows build, launch `build/kart.exe`. It uses the following controls:
 
 | Action | Windows | macOS |
 |---|---|---|
@@ -153,11 +153,14 @@ After a Windows build, launch `build/kart_topdown.exe` or
 | Steer | Left / Right | Left / Right |
 | Drift | Shift or `W` | Shift or `W` |
 | 3-second item boost | Ctrl or `D` | Command or `D` |
+| Switch camera (chase / top-down) | `C` | — |
+| Show or hide the motion vectors | `V` | — |
+| Open the kart parameter editor | `P` | — |
 | Choose kart / track | `K` / `T` | `K` / `T` |
 | Toggle grounded-drag trigger | `G` | `G` |
-| Save a screenshot | `A` | — |
+| Save a screenshot | `S` | — |
 | Dismiss the `K` / `T` menu | `Esc` | `Esc` |
-| Reset and restart the countdown | `R` | `R` |
+| Reset (the countdown only reruns on a track change) | `R` | `R` |
 
 `Esc` only closes the kart and track menus. The window is closed the usual way,
 with Alt+F4 or the title bar. Keys are ignored unless the demo window is the
@@ -172,12 +175,27 @@ panel uses each archive's original `xt_minimap.png`, and every track resets at
 the centre of its decoded start-line road quad. Only Forest Log and Village
 Overpass have their start *direction* checked against the original game; see
 the confidence boundary below.
-There is no mode-switch key: top-down and 3D are separate executables that
-share the same physics implementation.
+Both views live in the same executable and share one simulation, so `C` switches
+between them without disturbing the kart.
+
+### Telemetry panels
+
+Beyond the HUD's debug lines, the window shows three read-outs. The bottom-left
+panel lists the whole rigid body state: drift phase and slip angle, position,
+velocity, acceleration, angular velocity, body-axis speeds and `up_z`, the
+steering and drift timers, boost timers, the active force and drag constants,
+and what the last step resolved. Above the speedometer, a wheel figure shows
+each suspension contact's compression over its tire. `V` overlays the kart's
+motion vectors: velocity, its forward and lateral split, and the acceleration
+the last step produced.
+
+`P` opens a parameter editor over the running kart's `KartDynamicsConfig`.
+Edited values apply on the next step without a reset; **Kart defaults** restores
+the selected kart's own `parameter.xml` values.
 
 ### `flat_test` reference track
 
-Both demos open on `flat_test`, a synthetic track with **no mesh**: just the
+The demo opens on `flat_test`, a synthetic track with **no mesh**: just the
 flat ground plane and the cyan AABB walls. It exists to isolate the recovered
 physics from the decoded scene geometry, so anything odd on screen is the
 dynamics rather than a triangle query. Its footprint matches Forest Log
@@ -186,7 +204,8 @@ to any of the 13 real tracks.
 
 ### World axis gizmo
 
-Both demos draw a **world** X/Y/Z triad in the bottom-left corner: X red, Y
+Both views draw a **world** X/Y/Z triad below the HUD's debug lines in the
+top-left corner: X red, Y
 green, Z blue, in the usual convention. The arrows always show the world frame,
 never the kart's body axes, so the widget shows how the world is oriented from
 the current viewpoint — in the 3D demo it turns as the chase camera yaws. An
@@ -194,9 +213,9 @@ axis pointing nearly straight at or away from the camera has no useful screen
 direction, so it is drawn with the "out of / into the page" ring symbol instead
 of an arrow; in the top-down view that is always Z.
 
-## Top-down demo
+## Top-down view
 
-On Windows the build also produces `kart_topdown.exe`. It runs the full 3D
+The `C` key's top-down renderer runs the full 3D
 physics state and renders only the X-Y projection using the
 Win32 API, so no graphics package is required. It starts on `cotten5` on the
 `flat_test` reference track — the kart is a simulator-side choice, since the
@@ -215,12 +234,16 @@ than a mirror, so steering handedness is unchanged.
 - Left, Right: steer
 - Shift or `W`: drift
 - Ctrl or `D`: start the original 3-second item boost
+- `C`: switch between the chase camera and the top-down projection
+- `V`: show or hide the motion vectors
+- `P`: open the kart parameter editor
 - `K`: open the 26-entry kart selection list
 - `T`: open the 14-entry track selection list
 - `G`: emulate the original ground-drag trigger enter/leave (`x4` / `x0.25`)
+- `S`: save a screenshot
 - `R`: reset
 
-Both simulators show a large lower-right km/h gauge. The `K` and `T` popup
+Both views show a large lower-right km/h gauge. The `K` and `T` popup
 lists support mouse selection or the arrow keys and Enter, and check the
 currently active preset.
 
@@ -240,9 +263,9 @@ direction owns steering instead of the two keys cancelling to zero, so the
 existing opposite yaw torque can straighten the kart without a guessed extra
 force.
 
-## 3D demo
+## 3D view
 
-The Windows build also produces `kart_3d.exe`. It uses the same recovered
+The startup view uses the same recovered
 physics and world callbacks, with a software-rendered perspective chase camera.
 All 13 real tracks embed and draw the decoded original `track.1s` KTRK scene
 mesh; `flat_test` deliberately has none.
@@ -269,7 +292,7 @@ opacity, so the wireframe and the ground grid stay readable through it.
 
 ### Sound
 
-Both Windows demos play the demo's own effect samples — `motor.wav`,
+The Windows build plays the demo's own effect samples — `motor.wav`,
 `drift.wav`, `crash.wav` and `shock.wav` from `kart.rho`, and
 `booster/booster.wav` from `sound_fx_item.rho`. All five are 16-bit mono
 22050 Hz PCM and are embedded in the executables byte for byte.
@@ -289,7 +312,7 @@ item boost and the instant boost alike.
 
 ### Race start countdown
 
-Both demos open on a countdown recovered from `FUN_00451EB0` / `FUN_00456CD0`,
+The demo opens on a countdown recovered from `FUN_00451EB0` / `FUN_00456CD0`,
 which are the same state machine at two different field offsets. Entering the
 ready state sets `deadline = now + 7000 ms`; the cues then fire as the deadline
 approaches, each tested as `deadline <= now + offset`:
@@ -306,7 +329,11 @@ deadline grants a **1000 ms** boost — the start boost, from the accelerate
 action of the input handler `FUN_004529D0`. It runs through
 `GoKart_StartTimedBoost` at `0x00431AB0`, which raises the same flag vftable
 slot 26 reports, so it drives the booster sound and the camera's wide field of
-view exactly like an item boost. `R` restarts the countdown.
+view exactly like an item boost. The lights run once per race: `R` and the
+out-of-world respawn put the kart back on the line without them, and a track
+change starts a new race and reruns them. Holding drift with the throttle before
+GO revs the booster — the idle loop plays and the kart takes on the boost look,
+but no other booster works until the line drops.
 
 One simulator-side rule: releasing the accelerator ends a boost immediately
 rather than letting its timer run out. The original only expires the timer.
@@ -315,7 +342,7 @@ rather than letting its timer run out. The original only expires the timer.
 
 The scenes only carry road triangles where the original track had road, so
 leaving the road — off an edge, or through a gap at speed — drops the kart into
-a void it can never land in. Both simulators detect this and respawn
+a void it can never land in. The simulator detects this and respawns
 automatically, showing `FELL THROUGH THE TRACK - RESPAWNED` for a moment. The
 threshold is `kart_demo_track_fall_limit()`: 40 units below the lowest geometry
 in that scene, far enough that landing hard on the lowest road never trips it.

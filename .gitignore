@@ -4,8 +4,7 @@
 /analysis/tools/rho-reader-upstream/
 /build-win/*
 !/build-win/README.md
-!/build-win/kart_topdown.exe
-!/build-win/kart_3d.exe
+!/build-win/kart.exe
 /.build-win/
 /input/
 /tools/
