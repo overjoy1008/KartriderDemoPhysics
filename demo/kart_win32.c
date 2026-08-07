@@ -6,6 +6,7 @@
 #include "kart_countdown.h"
 #include "kart_demo_data.h"
 #include "kart_demo_win32_ui.h"
+#include "kart_gauge.h"
 #include "kart_input.h"
 #include "kart_minimap_win32.h"
 #include "kart_params_win32.h"
@@ -63,7 +64,11 @@ typedef struct Demo3DState {
     bool view_key_was_down;
     bool vector_key_was_down;
     bool param_key_was_down;
+    bool gauge_key_was_down;
+    bool boost_press_allowed;
     bool show_vectors;
+    KartGaugeConfig gauge_config;
+    KartGaugeState gauge;
     /* Last step's telemetry, kept so the panel can show what the simulation
        actually did rather than only what its state ended up as. */
     KartSimulationStepResult last_step;
@@ -1189,9 +1194,9 @@ static void draw_kart(
 
     body_brush = CreateSolidBrush(
         boost_active
-            ? RGB(65, 205, 255)
+            ? RGB(255, 165, 35)
             : (drift_visual_active(kart)
-                ? RGB(255, 165, 35)
+                ? RGB(65, 205, 255)
                 : RGB(235, 65, 80)));
     body_pen = CreatePen(PS_SOLID, 2, RGB(255, 230, 220));
     old_brush = SelectObject(dc, body_brush);
@@ -1450,9 +1455,9 @@ static void draw_scene_topdown(HDC buffer, RECT client, const Demo3DState *demo)
 
     kart_brush = CreateSolidBrush(
         demo->boost_active
-            ? RGB(65, 205, 255)
+            ? RGB(255, 170, 45)
             : (drift_visual_active(&demo->kart)
-                ? RGB(255, 170, 45)
+                ? RGB(65, 205, 255)
                 : RGB(255, 80, 95)));
     old_brush = SelectObject(buffer, kart_brush);
     Polygon(buffer, kart_points, 4);
@@ -1558,7 +1563,7 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
 {
     const KartSimulationState *kart = &demo->kart;
     const int line_height = 15;
-    const int rows = 13;
+    const int rows = 14;
     const int panel_width = 396;
     const int margin = 16;
     RECT panel = {
@@ -1678,6 +1683,13 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
         kart->grounded_drag_scale, kart->config.air_friction,
         kart->config.drag_factor, kart->config.mass);
     TELEMETRY_LINE(
+        demo->gauge.rate > 0.0f ? RGB(255, 210, 90) : RGB(200, 212, 220),
+        "GAUGE   %-17s %5.1f%%  rate %6.2f  W %4.2f",
+        kart_gauge_model_name(demo->gauge.model),
+        demo->gauge_config.full_value > 0.0f
+            ? demo->gauge.value / demo->gauge_config.full_value * 100.0f : 0.0f,
+        demo->gauge.rate, demo->gauge.contact_weight);
+    TELEMETRY_LINE(
         demo->last_step.body_contacts != 0 ? RGB(255, 140, 120)
                                            : RGB(150, 165, 180),
         "STEP    sub %2u  wheels %u  body %u  wall %4.1f  gnd %4.1f",
@@ -1769,7 +1781,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     snprintf(
         help,
         sizeof(help),
-        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  V: %s vectors  P: parameters  K: kart list  T: track list  G: drag trigger  S: screenshot  R: reset",
+        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  V: %s vectors  G: gauge model  P: parameters  K: kart  T: track  F: drag trigger  S: screenshot  R: reset",
         demo->show_vectors ? "hide" : "show");
     TextOutA(buffer, 16, 32, help, (int)strlen(help));
     snprintf(
@@ -1823,6 +1835,12 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         TextOutA(buffer, 16, 112, notice, (int)strlen(notice));
     }
     draw_telemetry(buffer, client, demo);
+    kart_demo_draw_gauge(
+        buffer, client,
+        demo->gauge_config.full_value > 0.0f
+            ? demo->gauge.value / demo->gauge_config.full_value : 0.0f,
+        demo->gauge.boosters, demo->gauge.rate > 0.0f,
+        kart_gauge_model_name(demo->gauge.model));
     kart_demo_draw_wheel_load(
         buffer, client, demo->kart.wheels.compression, demo->kart.grounded);
     kart_demo_draw_speedometer(
@@ -1914,11 +1932,36 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         controls.steering_input = demo->steering.value;
         controls.reverse_steering = false;
         controls.drift_input = key_down(VK_SHIFT) || key_down('W');
-        controls.boost_active = key_down(VK_CONTROL) || key_down('D');
+        {
+            /* The gauge models spend a charge on the press that starts a
+               booster; the infinite model lets every press through. */
+            const bool boost_down = key_down(VK_CONTROL) || key_down('D');
+            if (!boost_down) {
+                demo->boost_press_allowed = false;
+            } else if (!demo->boost_press_allowed &&
+                       !demo->kart.timed_boost.active &&
+                       controls.forward_input != 0.0f) {
+                /* The engine only starts an item boost while accelerating, so
+                   the charge is spent at that moment rather than on a press
+                   that cannot fire. */
+                demo->boost_press_allowed = kart_gauge_take_booster(&demo->gauge);
+            }
+            controls.boost_active = boost_down && demo->boost_press_allowed;
+        }
         {
             const bool kart_key_down = key_down('K') != 0;
             const bool track_key_down = key_down('T') != 0;
-            const bool drag_key_down = key_down('G') != 0;
+            const bool drag_key_down = key_down('F') != 0;
+            const bool gauge_key_down = key_down('G') != 0;
+            if (gauge_key_down && !demo->gauge_key_was_down) {
+                /* Cycles infinite booster -> slip integral -> slip x
+                   suspension, so the three can be compared back to back. */
+                demo->gauge.model = (KartGaugeModel)
+                    ((demo->gauge.model + 1) % KART_GAUGE_MODEL_COUNT);
+                demo->gauge.value = 0.0f;
+                demo->gauge.boosters = 0;
+            }
+            demo->gauge_key_was_down = gauge_key_down;
             const bool shot_key_down = key_down('S') != 0;
             const bool view_key_down = key_down('C') != 0;
             const bool vector_key_down = key_down('V') != 0;
@@ -1930,7 +1973,8 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             if (param_key_down && !demo->param_key_was_down) {
                 kart_demo_params_open(
                     (HINSTANCE)GetWindowLongPtr(window, GWLP_HINSTANCE),
-                    window, &demo->kart.config, &demo->kart_spec->dynamics);
+                    window, &demo->kart.config, &demo->kart_spec->dynamics,
+                    &demo->gauge_config);
             }
             demo->param_key_was_down = param_key_down;
             if (view_key_down && !demo->view_key_was_down) {
@@ -2040,6 +2084,22 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                 vec_sub(demo->kart.linear_velocity, demo->previous_velocity),
                 1000.0f / (float)elapsed);
             demo->previous_velocity = demo->kart.linear_velocity;
+            {
+                /* The gauge integrates the same rear-axle slip the tire model
+                   uses, so it needs the body-axis split of the velocity. */
+                KartVec3 body_right;
+                KartVec3 body_forward;
+                KartVec3 body_up;
+                orientation_axes(
+                    demo->kart.orientation, &body_right, &body_forward,
+                    &body_up);
+                kart_gauge_update(
+                    &demo->gauge, &demo->gauge_config, &demo->kart,
+                    vec_dot(demo->kart.linear_velocity, body_forward),
+                    vec_dot(demo->kart.linear_velocity, body_right),
+                    drift_visual_active(&demo->kart),
+                    (float)elapsed * 0.001f);
+            }
         }
         if (demo->kart.position.z <
             kart_demo_track_fall_limit(demo->track_spec)) {
@@ -2119,6 +2179,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE previous, LPSTR command_line, i
     (void)command_line;
     (void)show;
 
+    demo.gauge_config = kart_gauge_default_config();
     window_class.lpfnWndProc = window_proc;
     window_class.hInstance = instance;
     window_class.lpszClassName = CLASS_NAME;

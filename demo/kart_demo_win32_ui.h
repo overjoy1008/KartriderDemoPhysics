@@ -222,6 +222,83 @@ static void kart_demo_draw_speedometer(
     DeleteObject(unit_font);
 }
 
+/* Drift gauge: a long bar across the bottom centre, with the booster it
+   converts into at its right end. */
+static void kart_demo_draw_gauge(
+    HDC dc,
+    RECT client,
+    float ratio,
+    unsigned int boosters,
+    bool charging,
+    const char *model_name)
+{
+    const int bar_width = 420;
+    const int bar_height = 20;
+    const int margin = 20;
+    const int center_x = (client.left + client.right) / 2;
+    RECT bar = {
+        center_x - bar_width / 2,
+        client.bottom - margin - bar_height,
+        center_x + bar_width / 2,
+        client.bottom - margin,
+    };
+    const int slot_width = 26;
+    HBRUSH back_brush = CreateSolidBrush(RGB(14, 18, 24));
+    HBRUSH fill_brush = CreateSolidBrush(RGB(255, 210, 90));
+    HBRUSH slot_full_brush = CreateSolidBrush(RGB(255, 140, 40));
+    HBRUSH slot_empty_brush = CreateSolidBrush(RGB(30, 38, 46));
+    HPEN edge_pen = CreatePen(PS_SOLID, 1, RGB(86, 98, 108));
+    HFONT font = CreateFontA(
+        -12, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        ANTIALIASED_QUALITY, FF_DONTCARE, "Segoe UI");
+    HGDIOBJ old_brush = SelectObject(dc, back_brush);
+    HGDIOBJ old_pen = SelectObject(dc, edge_pen);
+    HGDIOBJ old_font = SelectObject(dc, font);
+    int fill_width;
+    int slot;
+
+    (void)charging;
+    if (ratio < 0.0f) ratio = 0.0f;
+    if (ratio > 1.0f) ratio = 1.0f;
+    fill_width = (int)((float)(bar_width - 4) * ratio);
+
+    Rectangle(dc, bar.left, bar.top, bar.right, bar.bottom);
+    if (fill_width > 0) {
+        RECT fill = {
+            bar.left + 2, bar.top + 2, bar.left + 2 + fill_width,
+            bar.bottom - 2,
+        };
+        FillRect(dc, &fill, fill_brush);
+    }
+    for (slot = 0; slot < 2; ++slot) {
+        const int left = bar.right + 10 + slot * (slot_width + 6);
+        SelectObject(
+            dc, (unsigned int)slot < boosters ? slot_full_brush
+                                              : slot_empty_brush);
+        Rectangle(dc, left, bar.top, left + slot_width, bar.bottom);
+    }
+
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, RGB(200, 212, 220));
+    {
+        RECT label = {bar.left, bar.top, bar.right, bar.bottom};
+        DrawTextA(
+            dc, model_name, -1, &label,
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    }
+
+    SelectObject(dc, old_font);
+    SelectObject(dc, old_brush);
+    SelectObject(dc, old_pen);
+    DeleteObject(back_brush);
+    DeleteObject(fill_brush);
+    DeleteObject(slot_full_brush);
+    DeleteObject(slot_empty_brush);
+    DeleteObject(edge_pen);
+    DeleteObject(font);
+}
+
 /* Suspension load, drawn as the kart seen from above with each wheel's
    compression over it. Sits directly above the speedometer. Wheel order is the
    simulation's: 0 front-right, 1 front-left, 2 rear-right, 3 rear-left, with

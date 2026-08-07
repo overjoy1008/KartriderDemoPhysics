@@ -26,6 +26,9 @@ typedef struct KartDemoSound {
     int motor_voice;
     int drift_voice;
     int booster_idle_voice;
+    /* Kept so a boost that is cut short takes its sample with it. */
+    int booster_voice;
+    int instant_boost_voice;
 } KartDemoSound;
 
 static int kart_demo_load_sound_resource(
@@ -68,6 +71,8 @@ static void kart_demo_sound_start(HINSTANCE instance, KartDemoSound *sound)
     sound->motor_voice = -1;
     sound->drift_voice = -1;
     sound->booster_idle_voice = -1;
+    sound->booster_voice = -1;
+    sound->instant_boost_voice = -1;
     kart_sound_driver_reset(&sound->driver);
     /* A machine with no output device simply runs silent. */
     if (!kart_audio_start(&sound->audio)) return;
@@ -147,11 +152,21 @@ static void kart_demo_sound_update(
     /* Both boosters layer: firing again before the previous one finishes adds
        a voice rather than being dropped. */
     if (state.start_booster && sound->booster_sound >= 0) {
-        kart_audio_play_overlapping(sound->audio, sound->booster_sound, 1.0f);
+        sound->booster_voice = kart_audio_play_overlapping(
+            sound->audio, sound->booster_sound, 1.0f);
+    } else if (!kart->timed_boost.active && sound->booster_voice >= 0) {
+        /* Same rule as the drift loop: the sample belongs to the state, so a
+           boost that ends early takes it with it. */
+        kart_audio_stop_voice(sound->audio, sound->booster_voice);
+        sound->booster_voice = -1;
     }
     if (state.start_instant_boost && sound->instant_boost_sound >= 0) {
-        kart_audio_play_overlapping(
+        sound->instant_boost_voice = kart_audio_play_overlapping(
             sound->audio, sound->instant_boost_sound, 1.0f);
+    } else if (!kart->instant_boost.active &&
+               sound->instant_boost_voice >= 0) {
+        kart_audio_stop_voice(sound->audio, sound->instant_boost_voice);
+        sound->instant_boost_voice = -1;
     }
     if (state.start_crash && sound->crash_sound >= 0) {
         kart_audio_play_once(sound->audio, sound->crash_sound, state.crash_volume);

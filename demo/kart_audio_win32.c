@@ -286,7 +286,7 @@ int kart_audio_play_loop(KartAudio *audio, int sound, float volume, float pitch)
     return index;
 }
 
-static void start_one_shot(KartAudio *audio, int sound, float volume)
+static int start_one_shot(KartAudio *audio, int sound, float volume)
 {
     const int index = allocate_voice(audio);
     if (index >= 0) {
@@ -298,6 +298,7 @@ static void start_one_shot(KartAudio *audio, int sound, float volume)
         voice->volume = volume;
         voice->active = true;
     }
+    return index;
 }
 
 void kart_audio_play_once(KartAudio *audio, int sound, float volume)
@@ -318,12 +319,14 @@ void kart_audio_play_once(KartAudio *audio, int sound, float volume)
     LeaveCriticalSection(&audio->lock);
 }
 
-void kart_audio_play_overlapping(KartAudio *audio, int sound, float volume)
+int kart_audio_play_overlapping(KartAudio *audio, int sound, float volume)
 {
-    if (audio == NULL || sound < 0 || sound >= audio->sound_count) return;
+    int index;
+    if (audio == NULL || sound < 0 || sound >= audio->sound_count) return -1;
     EnterCriticalSection(&audio->lock);
-    start_one_shot(audio, sound, volume);
+    index = start_one_shot(audio, sound, volume);
     LeaveCriticalSection(&audio->lock);
+    return index;
 }
 
 void kart_audio_stop_voice(KartAudio *audio, int voice)
