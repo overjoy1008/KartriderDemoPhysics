@@ -346,13 +346,20 @@ static unsigned int query_track_walls(
     const float track_half_width = kart_demo_track_width(demo->track_spec) * 0.5f;
     const float track_half_height = kart_demo_track_length(demo->track_spec) * 0.5f;
     const KartTrackScene *scene = active_track_scene(demo);
-    unsigned int count = scene != NULL
-        ? kart_track_scene_query_body_collisions(
-            scene, demo->track_spec, state, contacts, capacity)
-        : 0;
+    if (scene != NULL) {
+        /* A decoded track collides against its own geometry and nothing else.
+           The original has no invisible box round the level; driving off the
+           edge is caught by the fall limit, not by a wall. */
+        return kart_track_scene_query_body_collisions(
+            scene, demo->track_spec, state, contacts, capacity);
+    }
+    /* Only the synthetic flat track reaches here. It has no mesh at all, so its
+       AABB is the only thing that can contain the kart. */
+    unsigned int count = 0;
 #define ADD_CONTACT(nx, ny) do { \
     if (count < capacity) { \
         contacts[count].normal = (KartVec3){(nx), (ny), 0.0f}; \
+        contacts[count].point = state->position; \
         contacts[count].sweep_fraction = 0.5f; \
         contacts[count].surface_id = 2; \
         count += 1; \
@@ -584,7 +591,8 @@ static void draw_track_scene_pass(
 
     for (mesh_index = 0; mesh_index < scene->mesh_count; ++mesh_index) {
         const KartTrackSceneMesh *mesh = &scene->meshes[mesh_index];
-        const bool candidate = (mesh->flags & 3u) != 0;
+        const bool candidate =
+            (mesh->flags & KART_TRACK_SCENE_MESH_COLLIDABLE) != 0;
         const uint32_t triangle_count = mesh->index_count / 3u;
         const uint32_t stride = candidate ? 1u : 5u;
         uint32_t triangle;

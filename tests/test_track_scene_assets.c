@@ -17,6 +17,35 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Binds one loaded scene to the simulation's world callbacks so a track can be
+   driven headlessly. */
+typedef struct DriveWorld {
+    const KartTrackScene *scene;
+    const KartDemoTrackSpec *track;
+} DriveWorld;
+
+static bool drive_query_ground(
+    void *user_data,
+    KartVec3 start,
+    KartVec3 delta,
+    KartGroundHit *hit)
+{
+    const DriveWorld *world = (const DriveWorld *)user_data;
+    return kart_track_scene_query_ground(
+        world->scene, world->track, start, delta, hit);
+}
+
+static unsigned int drive_query_body(
+    void *user_data,
+    const KartSimulationState *state,
+    KartBodyContact *contacts,
+    unsigned int capacity)
+{
+    const DriveWorld *world = (const DriveWorld *)user_data;
+    return kart_track_scene_query_body_collisions(
+        world->scene, world->track, state, contacts, capacity);
+}
+
 static unsigned char *read_file(const char *path, size_t *size)
 {
     FILE *file = fopen(path, "rb");
@@ -107,7 +136,12 @@ int main(int argc, char **argv)
             const KartVec3 delta = {0.0f, 0.0f, -1.0f};
             if (kart_track_scene_query_ground(&scene, track, origin, delta, &hit)) {
                 ++grounded;
-                assert(hit.normal.z > 0.0f);
+                /* Positive, not merely non-zero. The query reports the face
+                   normal as the original does, without turning it upward, so a
+                   negative z here would mean the export's winding is inverted
+                   and the suspension would be pulling the kart into the road.
+                   At or past 0.65 because that is the filter the ray applies. */
+                assert(hit.normal.z >= 0.649f);
                 assert(hit.point.z <= 0.4f && hit.point.z >= -0.6f);
             } else {
                 printf("note %-12s: no road hit at the recorded start line\n",
@@ -115,10 +149,46 @@ int main(int argc, char **argv)
             }
         }
 
-        printf("ok   %-12s meshes=%4u road=%3u tris=%6u %s\n",
-               track->asset_name, scene.mesh_count, road_meshes,
-               scene.total_triangle_count,
-               kart_demo_track_start_kind_label(track));
+        /* Drive it. Grounding once at the spawn says the ray works; holding the
+           throttle for two seconds says the suspension, the body box and the
+           collision response all agree well enough to keep the kart on the
+           road. A sign error in any of them ends with the kart under the
+           track, which the fall limit catches. */
+        {
+            DriveWorld bound = {&scene, track};
+            const KartSimulationWorld world = {
+                drive_query_ground, drive_query_body, &bound};
+            KartSimulationControls controls = {0};
+            KartSimulationState kart;
+            const float fall_limit = kart_demo_track_fall_limit(track);
+            unsigned int grounded_steps = 0;
+            unsigned int step;
+
+            kart_simulation_init(&kart, NULL, NULL);
+            if (kart_demo_track_start_position(track, &kart.position)) {
+                kart_demo_track_start_orientation(track, &kart.orientation);
+            }
+            kart.position.z += 0.5f;
+            controls.forward_input = 1.0f;
+            for (step = 0; step < 100; ++step) {
+                kart_simulate_milliseconds(&kart, &controls, &world, 20);
+                if (kart.grounded) ++grounded_steps;
+                if (kart.position.z < fall_limit) {
+                    printf("FAIL %s: fell through at step %u (z %.2f < %.2f)\n",
+                           track->asset_name, step, kart.position.z, fall_limit);
+                    return 1;
+                }
+            }
+            if (grounded_steps * 2u < 100u) {
+                printf("FAIL %s: grounded for only %u of 100 steps\n",
+                       track->asset_name, grounded_steps);
+                return 1;
+            }
+            printf("ok   %-12s meshes=%4u road=%3u tris=%6u grounded %3u/100 %s\n",
+                   track->asset_name, scene.mesh_count, road_meshes,
+                   scene.total_triangle_count, grounded_steps,
+                   kart_demo_track_start_kind_label(track));
+        }
         kart_track_scene_free(&scene);
     }
 

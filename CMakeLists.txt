@@ -261,6 +261,18 @@ if(WIN32)
             demo/kart_track_scenes.rc.in
             ${CMAKE_CURRENT_BINARY_DIR}/kart_track_scenes.rc
             @ONLY)
+        # The .rc only names the packed files, so repacking leaves it untouched
+        # and the resource object goes stale: the executable keeps whatever
+        # scenes it was last linked with. Depending on the payloads makes a
+        # repack rebuild the resource.
+        set(KART_SCENE_PACK_FILES "")
+        foreach(KART_TRACK_CODE IN LISTS KART_TRACK_CODES)
+            list(APPEND KART_SCENE_PACK_FILES
+                "${KART_SCENE_PACK_DIR}/track_${KART_TRACK_CODE}.ktkz")
+        endforeach()
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_track_scenes.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_SCENE_PACK_FILES}")
         list(APPEND KART_DEMO_SOURCES
             ${CMAKE_CURRENT_BINARY_DIR}/kart_track_scenes.rc)
     else()
@@ -277,6 +289,14 @@ if(WIN32)
             demo/kart_models.rc.in
             ${CMAKE_CURRENT_BINARY_DIR}/kart_models.rc
             @ONLY)
+        set(KART_MODEL_PACK_FILES "")
+        foreach(KART_MODEL_NAME IN LISTS KART_MODEL_NAMES)
+            list(APPEND KART_MODEL_PACK_FILES
+                "${KART_MODEL_PACK_DIR}/${KART_MODEL_NAME}.ktkz")
+        endforeach()
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_models.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_MODEL_PACK_FILES}")
         list(APPEND KART_DEMO_SOURCES
             ${CMAKE_CURRENT_BINARY_DIR}/kart_models.rc)
     else()

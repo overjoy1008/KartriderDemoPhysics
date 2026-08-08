@@ -83,7 +83,7 @@ bool kart_track_scene_load_memory(
     reader.remaining = size;
     if (!read_bytes(&reader, magic, sizeof(magic)) ||
         memcmp(magic, "KTRK", sizeof(magic)) != 0 ||
-        !read_u32(&reader, &version) || version != 1 ||
+        !read_u32(&reader, &version) || version != KART_TRACK_SCENE_VERSION ||
         !read_u32(&reader, &scene->mesh_count) ||
         !read_u32(&reader, &scene->total_vertex_count) ||
         !read_u32(&reader, &scene->total_triangle_count) ||

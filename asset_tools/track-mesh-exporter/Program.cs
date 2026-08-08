@@ -4,6 +4,7 @@ using System.Text.Json;
 using KartLibrary.Game.Engine.Relements;
 using KartLibrary.Game.Engine.Track;
 using KartLibrary.IO;
+using KartLibrary.Xml;
 
 // "export" reads a track.1s, whose root is a TrackContainer.
 // "export-kart" reads a kart model.1s, whose root is the Relement scene itself.
@@ -13,6 +14,14 @@ if (args.Length != 3 || (args[0] != "export" && args[0] != "export-kart"))
     Console.Error.WriteLine("       track-mesh-exporter export-kart <model.1s> <output-prefix-below-workspace>");
     return 2;
 }
+
+// Mesh flag bit 0: this geometry is in the original's collision set. It used to
+// be a guess from the node name and is now read from the asset.
+const uint MeshFlagCollidable = 1u;
+// KTRK 2 differs from 1 only in what the flags field means. The bump is here so
+// a stale version-1 export fails to load instead of quietly reporting that
+// nothing in the track is solid.
+const uint KtrkVersion = 2u;
 
 bool kartModel = args[0] == "export-kart";
 string input = Path.GetFullPath(args[1]);
@@ -39,7 +48,7 @@ List<MeshData> meshes = new();
 // KartRider track coordinates already use X/Y as the ground plane and Z as height.
 // Keeping identity also reproduces the AABBs previously measured from demo track.1s.
 Matrix4x4 axis = Matrix4x4.Identity;
-Collect(scene, axis, meshes);
+Collect(scene, axis, false, meshes);
 
 Vector3 min = new(float.PositiveInfinity);
 Vector3 max = new(float.NegativeInfinity);
@@ -56,7 +65,7 @@ using (FileStream stream = new(binaryPath, FileMode.CreateNew, FileAccess.Write,
 using (BinaryWriter writer = new(stream, Encoding.UTF8))
 {
     writer.Write(Encoding.ASCII.GetBytes("KTRK"));
-    writer.Write(1u);
+    writer.Write(KtrkVersion);
     writer.Write((uint)meshes.Count);
     writer.Write((uint)meshes.Sum(m => m.Vertices.Count));
     writer.Write((uint)meshes.Sum(m => m.Indices.Count / 3));
@@ -88,7 +97,9 @@ var report = new
     TriangleCount = meshes.Sum(m => m.Indices.Count / 3),
     Bounds = new { Min = new[] { min.X, min.Y, min.Z }, Max = new[] { max.X, max.Y, max.Z } },
     Textures = meshes.Select(m => m.Texture).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().Order().ToArray(),
-    CollisionCandidates = meshes.Where(m => m.Flags != 0).Select(m => new { m.Name, m.Flags, Triangles = m.Indices.Count / 3 }).ToArray(),
+    CollidableMeshCount = meshes.Count(m => (m.Flags & MeshFlagCollidable) != 0),
+    CollidableTriangleCount = meshes.Where(m => (m.Flags & MeshFlagCollidable) != 0).Sum(m => m.Indices.Count / 3),
+    Collidable = meshes.Where(m => (m.Flags & MeshFlagCollidable) != 0).Select(m => new { m.Name, Triangles = m.Indices.Count / 3 }).ToArray(),
     Meshes = meshes.Select(m => new { m.Name, m.Texture, m.Flags, Vertices = m.Vertices.Count, Triangles = m.Indices.Count / 3 }).ToArray()
 };
 string reportPath = outputPrefix + ".mesh.json";
@@ -98,10 +109,28 @@ Console.WriteLine($"Exported {meshes.Count} meshes, {report.VertexCount} vertice
 Console.WriteLine($"Bounds: ({min.X}, {min.Y}, {min.Z}) .. ({max.X}, {max.Y}, {max.Z})");
 return 0;
 
-static void Collect(Relement node, Matrix4x4 parent, List<MeshData> meshes)
+// Whether this node's geometry belongs in the collision set, following the rule
+// at 0x00432390: a node whose property block carries a `road` child is
+// collidable, a node without one inherits its parent's answer, and the answer
+// propagates to children.
+//
+// The demo builds its collision grid from nothing else. Geometry that never
+// sees a `road` tag is scenery the original drives straight through.
+//
+// Two places are checked because the asset reader splits the node's serialized
+// property block between Relement.Additional and the node's TexProperty; in
+// these tracks it lands on the latter. Either one carrying `road` means the
+// same thing.
+static bool HasRoadTag(BinaryXmlTag? tag) => tag is not null && tag["road"].Any();
+
+static bool IsCollidable(Relement node, bool inherited) =>
+    inherited || HasRoadTag(node.Additional) || HasRoadTag(node.Tex?.Additional);
+
+static void Collect(Relement node, Matrix4x4 parent, bool collidable, List<MeshData> meshes)
 {
     Matrix4x4 transform = Matrix4x4.CreateScale(node.Scale) * node.Transform *
                           Matrix4x4.CreateTranslation(node.Position) * parent;
+    collidable = IsCollidable(node, collidable);
     // Kart models store geometry as ReToonRigid: separate vertex, normal and
     // texcoord arrays indexed per face corner. Only the vertex indices matter
     // for the mesh itself.
@@ -121,10 +150,10 @@ static void Collect(Relement node, Matrix4x4 parent, List<MeshData> meshes)
             for (int i = 0; i < toon.Vertices.Length; i++)
                 uv[i, 0] = new Vector2(toon.TexCoords[i].X, toon.TexCoords[i].Y);
         }
-        AddIndexed(node, toon.Vertices, uv, indices, transform, meshes);
+        AddIndexed(node, toon.Vertices, uv, indices, transform, collidable, meshes);
     }
     else if (node is ReTriList triList && triList.Vertex?.Vertices is not null && triList.Vertex.Indexes is not null)
-        AddIndexed(node, triList.Vertex.Vertices, triList.Vertex.TextureUVs, triList.Vertex.Indexes.Select(i => (uint)(ushort)i), transform, meshes);
+        AddIndexed(node, triList.Vertex.Vertices, triList.Vertex.TextureUVs, triList.Vertex.Indexes.Select(i => (uint)(ushort)i), transform, collidable, meshes);
     else if (node is ReTriStrip triStrip && triStrip.Vertex?.Vertices is not null && triStrip.Vertex.Indexes is not null)
     {
         List<uint> indices = new();
@@ -136,13 +165,14 @@ static void Collect(Relement node, Matrix4x4 parent, List<MeshData> meshes)
             if ((i & 1) != 0) (a, b) = (b, a);
             if (a != b && b != c && a != c) indices.AddRange(new[] { a, b, c });
         }
-        AddIndexed(node, triStrip.Vertex.Vertices, triStrip.Vertex.TextureUVs, indices, transform, meshes);
+        AddIndexed(node, triStrip.Vertex.Vertices, triStrip.Vertex.TextureUVs, indices, transform, collidable, meshes);
     }
-    foreach (Relement child in node) Collect(child, transform, meshes);
+    foreach (Relement child in node) Collect(child, transform, collidable, meshes);
 }
 
 static void AddIndexed(Relement node, Vector3[] positions, Vector2[,]? textureUvs,
-                       IEnumerable<uint> sourceIndices, Matrix4x4 transform, List<MeshData> meshes)
+                       IEnumerable<uint> sourceIndices, Matrix4x4 transform, bool collidable,
+                       List<MeshData> meshes)
 {
     List<Vertex> vertices = new(positions.Length);
     for (int i = 0; i < positions.Length; i++)
@@ -153,16 +183,7 @@ static void AddIndexed(Relement node, Vector3[] positions, Vector2[,]? textureUv
     List<uint> indices = sourceIndices.ToList();
     if (indices.Count < 3 || indices.Any(i => i >= vertices.Count)) return;
     string? texture = node.Tex?.u3;
-    meshes.Add(new MeshData(node.Name ?? "", texture, ClassifyNode(node.Name ?? ""), vertices, indices));
-}
-
-static uint ClassifyNode(string name)
-{
-    string lower = name.ToLowerInvariant();
-    uint flags = 0;
-    if (lower.Contains("road") || lower.Contains("drive")) flags |= 1u; // drive-surface candidate
-    if (lower.Contains("wall") || lower.Contains("fence") || lower.Contains("bound")) flags |= 2u; // barrier candidate
-    return flags;
+    meshes.Add(new MeshData(node.Name ?? "", texture, collidable ? MeshFlagCollidable : 0u, vertices, indices));
 }
 
 static void WriteVector(BinaryWriter writer, Vector3 value)

@@ -60,12 +60,14 @@ distribution copies; the `.app` bundles are the files to run directly.
   per-wheel ray versus the oriented body box, and the single `0.65` face-normal
   test that separates floor from wall. It records what could not be established
   as well as what could.
-- **[Collision divergence](docs/COLLISION_DIVERGENCE.md)** puts that account
-  next to what this simulator actually does. The response is a faithful port;
-  the query layer is not. It lists every difference, largest first — every mesh
-  colliding instead of only the `road`-tagged ones, a 0.20 ground threshold
-  against the original's 0.65, and a flattened 2D body test in place of the
-  oriented box.
+- **[Collision divergence](docs/COLLISION_DIVERGENCE.md)** put that account next
+  to what this simulator used to do, and **[collision port](docs/COLLISION_PORT.md)**
+  records closing the gap: the body is now the original's oriented box and
+  13-axis separating-axis test, the ground ray uses the original's 0.65 normal
+  threshold, face normals are reported unflipped, the scene mirror no longer
+  silently inverts them, and only the subtrees the asset tags `property/road`
+  are solid — roughly a quarter of each track's triangles, the rest being
+  scenery the original drives through.
 - **[Kart parameter tables](docs/KART_PARAMETERS.md)** lists every value the 26
   karts hand to the physics: the five `parameter.xml` dynamics sets side by
   side, which karts use each, and each kart's own body dimensions. All of it is

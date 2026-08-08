@@ -28,7 +28,7 @@ static size_t build_scene_ktrk(unsigned char *out)
     size_t offset;
     memset(out, 0, SCENE_KTRK_SIZE);
     memcpy(out, "KTRK", 4);
-    write_u32(out + 4, 1);  /* version */
+    write_u32(out + 4, KART_TRACK_SCENE_VERSION);  /* version */
     write_u32(out + 8, 1);  /* mesh_count */
     write_u32(out + 12, 0); /* total_vertex_count */
     write_u32(out + 16, 0); /* total_triangle_count */
