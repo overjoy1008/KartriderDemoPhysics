@@ -7,6 +7,7 @@
 #include "kart_demo_data.h"
 #include "kart_demo_win32_ui.h"
 #include "kart_gauge.h"
+#include "kart_gearbox.h"
 #include "kart_input.h"
 #include "kart_minimap_win32.h"
 #include "kart_params_win32.h"
@@ -69,6 +70,8 @@ typedef struct Demo3DState {
     bool show_vectors;
     KartGaugeConfig gauge_config;
     KartGaugeState gauge;
+    KartGearbox gearbox;
+    bool gear_key_was_down;
     /* Last step's telemetry, kept so the panel can show what the simulation
        actually did rather than only what its state ended up as. */
     KartSimulationStepResult last_step;
@@ -1781,9 +1784,20 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     snprintf(
         help,
         sizeof(help),
-        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  V: %s vectors  G: gauge model  P: parameters  K: kart  T: track  F: drag trigger  S: screenshot  R: reset",
+        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  V: %s vectors  P: parameters  K: kart  T: track  F: drag trigger  S: screenshot  R: reset",
         demo->show_vectors ? "hide" : "show");
     TextOutA(buffer, 16, 32, help, (int)strlen(help));
+    /* The inferred layers, kept on their own line so they read as what they
+       are rather than as part of the recovered demo. */
+    snprintf(
+        help,
+        sizeof(help),
+        "(experimental)  E: gear model [%s]  G: gauge model [%s]",
+        demo->gearbox.mode == KART_GEAR_MULTI ? "multi" : "single",
+        kart_gauge_model_name(demo->gauge.model));
+    SetTextColor(buffer, RGB(150, 165, 180));
+    TextOutA(buffer, 16, 52, help, (int)strlen(help));
+    SetTextColor(buffer, RGB(235, 240, 245));
     snprintf(
         status,
         sizeof(status),
@@ -1801,7 +1815,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     SetTextColor(
         buffer,
         demo->kart.drift.slip_detected ? RGB(255, 185, 55) : RGB(180, 195, 205));
-    kart_demo_text_out_utf8(buffer, 16, 52, status);
+    kart_demo_text_out_utf8(buffer, 16, 72, status);
     snprintf(
         status,
         sizeof(status),
@@ -1817,11 +1831,11 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         buffer,
         demo->boost_active ? RGB(75, 225, 255) :
         (drift_visual_active(&demo->kart) ? RGB(255, 185, 55) : RGB(180, 195, 205)));
-    TextOutA(buffer, 16, 72, status, (int)strlen(status));
+    TextOutA(buffer, 16, 92, status, (int)strlen(status));
     if (demo->respawn_notice_ms != 0) {
         static const char notice[] = "FELL THROUGH THE TRACK - RESPAWNED";
         SetTextColor(buffer, RGB(255, 120, 120));
-        TextOutA(buffer, 16, 92, notice, (int)strlen(notice));
+        TextOutA(buffer, 16, 112, notice, (int)strlen(notice));
     }
     /* 3, 2, 1 as the deadline approaches, then START; the recovered cues fire at
        the same thresholds. */
@@ -1832,7 +1846,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         char notice[96];
         snprintf(notice, sizeof(notice), "SAVED %s", demo->shot_name);
         SetTextColor(buffer, RGB(140, 235, 255));
-        TextOutA(buffer, 16, 112, notice, (int)strlen(notice));
+        TextOutA(buffer, 16, 132, notice, (int)strlen(notice));
     }
     draw_telemetry(buffer, client, demo);
     kart_demo_draw_gauge(
@@ -1843,6 +1857,15 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         kart_gauge_model_name(demo->gauge.model));
     kart_demo_draw_wheel_load(
         buffer, client, demo->kart.wheels.compression, demo->kart.grounded);
+    kart_demo_draw_tachometer(
+        buffer, client,
+        demo->gearbox.mode == KART_GEAR_MULTI
+            ? demo->gearbox.pitch : demo->sound.driver.motor_pitch,
+        demo->sound.driver.motor_volume,
+        /* The uncapped recovered ramp is only a reference for SINGLE. */
+        demo->gearbox.mode == KART_GEAR_MULTI
+            ? 0.0f : speed * KART_SOUND_MOTOR_SLOPE + KART_SOUND_MOTOR_BASE,
+        demo->gearbox.mode == KART_GEAR_MULTI ? demo->gearbox.gear : 0);
     kart_demo_draw_speedometer(
         buffer, client, speedometer_kmh, demo->boost_active);
     if (topdown) {
@@ -1952,7 +1975,15 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             const bool kart_key_down = key_down('K') != 0;
             const bool track_key_down = key_down('T') != 0;
             const bool drag_key_down = key_down('F') != 0;
+            const bool gear_key_down = key_down('E') != 0;
             const bool gauge_key_down = key_down('G') != 0;
+            if (gear_key_down && !demo->gear_key_was_down) {
+                demo->gearbox.mode =
+                    demo->gearbox.mode == KART_GEAR_SINGLE
+                        ? KART_GEAR_MULTI : KART_GEAR_SINGLE;
+                demo->gearbox.gear = 1;
+            }
+            demo->gear_key_was_down = gear_key_down;
             if (gauge_key_down && !demo->gauge_key_was_down) {
                 /* Cycles infinite booster -> slip integral -> slip x
                    suspension, so the three can be compared back to back. */
@@ -2141,6 +2172,21 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         kart_demo_sound_update(
             &demo->sound, &demo->kart,
             step.wall_impact_speed, step.ground_impact_speed, now);
+        {
+            /* The gearbox only re-pitches the engine loop the sound driver
+               already opened, so SINGLE leaves the recovered note untouched and
+               MULTI replaces it with its own sawtooth. */
+            const KartVec3 v = demo->kart.linear_velocity;
+            kart_gearbox_update(
+                &demo->gearbox, sqrtf(v.x * v.x + v.y * v.y + v.z * v.z),
+                (float)elapsed * 0.001f);
+            if (demo->gearbox.mode == KART_GEAR_MULTI &&
+                demo->sound.audio != NULL && demo->sound.motor_voice >= 0) {
+                kart_audio_set_voice(
+                    demo->sound.audio, demo->sound.motor_voice,
+                    demo->sound.driver.motor_volume, demo->gearbox.pitch);
+            }
+        }
         update_skid_marks(demo);
         InvalidateRect(window, NULL, FALSE);
         return 0;

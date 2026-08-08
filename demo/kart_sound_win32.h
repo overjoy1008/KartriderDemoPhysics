@@ -122,9 +122,14 @@ static void kart_demo_sound_update(
 {
     const KartVec3 v = kart->linear_velocity;
     const float speed = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+    /* The linger timer is part of the drift as far as the demo is concerned:
+       the skid marks and the HUD both treat it as still drifting, and without
+       it here the loop cut out in the grip phase between the trigger and the
+       slip and then restarted. */
     const bool drift_active = kart->drift.input_active ||
                               kart->drift.trigger_active ||
-                              kart->drift.slip_detected;
+                              kart->drift.slip_detected ||
+                              kart->drift.linger_timer > 0.0f;
     KartSoundState state;
 
     if (sound->audio == NULL) return;

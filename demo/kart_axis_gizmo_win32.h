@@ -19,7 +19,7 @@
 #define KART_AXIS_GIZMO_RADIUS 34
 #define KART_AXIS_GIZMO_MARGIN 14
 /* Clears the HUD's debug lines, which the triad now sits directly under. */
-#define KART_AXIS_GIZMO_TOP 134
+#define KART_AXIS_GIZMO_TOP 154
 
 typedef struct KartAxisGizmoAxis {
     float screen_x; /* screen right, in units of the gizmo radius */

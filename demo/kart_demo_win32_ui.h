@@ -4,7 +4,9 @@
 #include <windows.h>
 
 #include "kart_demo_data.h"
+#include "kart_gearbox.h"
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -220,6 +222,165 @@ static void kart_demo_draw_speedometer(
     DeleteObject(panel_pen);
     DeleteObject(digits_font);
     DeleteObject(unit_font);
+}
+
+/* The engine note, drawn as a needle dial. There is no gear or crankshaft in
+   the recovered engine, so this is not an RPM reading: it is the motor pitch
+   the original's sound driver computes, plotted directly.
+
+     ramp  = speed * 0.01171875 + 0.25
+     pitch = speed >= 128 ? 1.5 : ramp
+
+   Every number here is recovered (FUN_00452E60, see kart_engine_sound.h), which
+   is why it is shown as a multiplier rather than dressed up as RPM. The ramp
+   reaches about 1.75 just under speed 128 and then steps down to the 1.5 cap,
+   so the needle jumps backwards out of the red band at that point. The dim
+   marker is the uncapped ramp, and the driver only refreshes every 64 ms, so
+   the needle holds between refreshes exactly as the sound does. */
+static void kart_demo_draw_tachometer(
+    HDC dc,
+    RECT client,
+    float pitch,
+    float volume,
+    float ramp,
+    int gear)
+{
+    const float dial_min = 0.25f;
+    const float dial_max = 1.75f;
+    const float sweep_start = 210.0f;
+    const float sweep_degrees = 240.0f;
+    const float to_radians = 3.14159265358979323846f / 180.0f;
+    const int panel_width = 238;
+    const int panel_height = 132;
+    const int margin = 18;
+    /* Above the wheel-load panel, which sits above the speedometer. */
+    const int bottom = client.bottom - margin - 94 - 8 - 118 - 8;
+    RECT panel = {
+        client.right - panel_width - margin,
+        bottom - panel_height,
+        client.right - margin,
+        bottom,
+    };
+    const int center_x = (panel.left + panel.right) / 2;
+    const int center_y = panel.top + 96;
+    const int radius = 52;
+    HBRUSH panel_brush = CreateSolidBrush(RGB(12, 16, 22));
+    HPEN panel_pen = CreatePen(PS_SOLID, 1, RGB(54, 64, 73));
+    HPEN dial_pen = CreatePen(PS_SOLID, 2, RGB(96, 110, 122));
+    HPEN tick_pen = CreatePen(PS_SOLID, 1, RGB(150, 165, 180));
+    HPEN band_pen = CreatePen(PS_SOLID, 4, RGB(215, 70, 70));
+    HPEN needle_pen = CreatePen(PS_SOLID, 3, RGB(255, 210, 90));
+    HPEN ramp_pen = CreatePen(PS_SOLID, 1, RGB(130, 145, 158));
+    HFONT font = CreateFontA(
+        -12, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        ANTIALIASED_QUALITY, FF_DONTCARE, "Segoe UI");
+    HGDIOBJ old_brush = SelectObject(dc, panel_brush);
+    HGDIOBJ old_pen = SelectObject(dc, panel_pen);
+    HGDIOBJ old_font;
+    static const char label[] = "RPM (motor pitch)";
+    char text[48];
+    int tick;
+
+#define KART_TACH_ANGLE(value)                                                \
+    ((sweep_start -                                                           \
+      sweep_degrees * (((value) - dial_min) / (dial_max - dial_min))) *        \
+     to_radians)
+#define KART_TACH_X(angle, r) (center_x + (int)(cosf(angle) * (float)(r)))
+#define KART_TACH_Y(angle, r) (center_y - (int)(sinf(angle) * (float)(r)))
+
+    Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
+    old_font = SelectObject(dc, font);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, RGB(180, 205, 215));
+    TextOutA(dc, panel.left + 9, panel.top + 6, label, (int)strlen(label));
+
+    /* The dial face, then the band the ramp climbs into before the cap drops
+       it back to 1.5. */
+    SelectObject(dc, dial_pen);
+    {
+        const float start = KART_TACH_ANGLE(dial_min);
+        const float end = KART_TACH_ANGLE(dial_max);
+        Arc(dc,
+            center_x - radius, center_y - radius,
+            center_x + radius, center_y + radius,
+            KART_TACH_X(end, radius), KART_TACH_Y(end, radius),
+            KART_TACH_X(start, radius), KART_TACH_Y(start, radius));
+    }
+    SelectObject(dc, band_pen);
+    {
+        const float start = KART_TACH_ANGLE(1.5f);
+        const float end = KART_TACH_ANGLE(dial_max);
+        Arc(dc,
+            center_x - radius, center_y - radius,
+            center_x + radius, center_y + radius,
+            KART_TACH_X(end, radius), KART_TACH_Y(end, radius),
+            KART_TACH_X(start, radius), KART_TACH_Y(start, radius));
+    }
+    SelectObject(dc, tick_pen);
+    for (tick = 0; tick <= 6; ++tick) {
+        const float value = dial_min + (dial_max - dial_min) * tick / 6.0f;
+        const float angle = KART_TACH_ANGLE(value);
+        MoveToEx(
+            dc, KART_TACH_X(angle, radius - 9), KART_TACH_Y(angle, radius - 9),
+            NULL);
+        LineTo(dc, KART_TACH_X(angle, radius - 2), KART_TACH_Y(angle, radius - 2));
+    }
+
+    /* The uncapped ramp, so the backwards jump at the cap is visible. */
+    if (ramp > pitch + 0.001f) {
+        const float angle =
+            KART_TACH_ANGLE(ramp > dial_max ? dial_max : ramp);
+        SelectObject(dc, ramp_pen);
+        MoveToEx(dc, KART_TACH_X(angle, radius - 16), KART_TACH_Y(angle, radius - 16), NULL);
+        LineTo(dc, KART_TACH_X(angle, radius - 2), KART_TACH_Y(angle, radius - 2));
+    }
+    {
+        const float clamped = pitch < dial_min
+            ? dial_min : (pitch > dial_max ? dial_max : pitch);
+        const float angle = KART_TACH_ANGLE(clamped);
+        SelectObject(dc, needle_pen);
+        MoveToEx(dc, center_x, center_y, NULL);
+        LineTo(dc, KART_TACH_X(angle, radius - 6), KART_TACH_Y(angle, radius - 6));
+    }
+
+    SetTextColor(dc, RGB(255, 210, 90));
+    snprintf(text, sizeof(text), "%.3fx", pitch);
+    TextOutA(dc, panel.left + 12, panel.top + 26, text, (int)strlen(text));
+    SetTextColor(dc, RGB(150, 165, 180));
+    snprintf(text, sizeof(text), "vol %.2f", volume);
+    TextOutA(dc, panel.left + 12, panel.top + 44, text, (int)strlen(text));
+    if (gear > 0) {
+        SetTextColor(dc, RGB(120, 215, 245));
+        snprintf(text, sizeof(text), "GEAR %d/%d", gear, KART_GEAR_COUNT);
+        TextOutA(dc, panel.right - 74, panel.top + 26, text, (int)strlen(text));
+        SetTextColor(dc, RGB(150, 165, 180));
+        snprintf(
+            text, sizeof(text), "top %.2f",
+            KART_GEAR_BANDS[KART_GEAR_COUNT - 1].high_pitch);
+        TextOutA(dc, panel.right - 84, panel.top + 44, text, (int)strlen(text));
+    } else {
+        snprintf(text, sizeof(text), "1 gear");
+        TextOutA(dc, panel.right - 62, panel.top + 26, text, (int)strlen(text));
+        snprintf(text, sizeof(text), "cap 1.5");
+        TextOutA(dc, panel.right - 62, panel.top + 44, text, (int)strlen(text));
+    }
+
+#undef KART_TACH_ANGLE
+#undef KART_TACH_X
+#undef KART_TACH_Y
+
+    SelectObject(dc, old_font);
+    SelectObject(dc, old_brush);
+    SelectObject(dc, old_pen);
+    DeleteObject(panel_brush);
+    DeleteObject(panel_pen);
+    DeleteObject(dial_pen);
+    DeleteObject(tick_pen);
+    DeleteObject(band_pen);
+    DeleteObject(needle_pen);
+    DeleteObject(ramp_pen);
+    DeleteObject(font);
 }
 
 /* Drift gauge: a long bar across the bottom centre, with the booster it
