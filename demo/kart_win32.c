@@ -10,6 +10,8 @@
 #include "kart_gearbox.h"
 #include "kart_input.h"
 #include "kart_minimap_win32.h"
+#include "kart_model_resources.h"
+#include "kart_model_win32.h"
 #include "kart_params_win32.h"
 #include "kart_screenshot_win32.h"
 #include "kart_simulation.h"
@@ -20,6 +22,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MAX_SKID_SEGMENTS 2048
@@ -104,6 +107,15 @@ typedef struct Demo3DState {
     bool countdown_rev_active;
     bool forward_key_was_down;
     KartTrackScene scenes[KART_TRACK_SCENE_CAPACITY];
+    /* The recovered kart models, in KARTS[] order. Loaded once up front: all 26
+       together are about 340 KB of geometry, so there is nothing to gain from
+       loading them on demand when the driver presses K. */
+    KartTrackScene models[KART_MODEL_CAPACITY];
+    KartModelParts model_parts[KART_MODEL_CAPACITY];
+    bool show_model;
+    bool show_model_bounds;
+    bool model_key_was_down;
+    bool bounds_key_was_down;
     KartDemoMinimapSet minimaps;
 } Demo3DState;
 
@@ -121,12 +133,11 @@ typedef struct ProjectedPoint {
     bool visible;
 } ProjectedPoint;
 
-static bool load_track_scene_resource(
+static bool load_scene_resource(
     HINSTANCE instance,
     int resource_id,
     KartTrackScene *scene)
 {
-#if defined(KART_EMBED_TRACK_SCENES)
     HRSRC resource = FindResourceA(
         instance, MAKEINTRESOURCEA(resource_id), RT_RCDATA);
     HGLOBAL loaded;
@@ -140,24 +151,43 @@ static bool load_track_scene_resource(
     data = loaded != NULL ? LockResource(loaded) : NULL;
     return data != NULL && size != 0 &&
            kart_track_scene_load_compressed(scene, data, (size_t)size);
-#else
-    (void)instance;
-    (void)resource_id;
-    (void)scene;
-    return false;
-#endif
 }
 
 static void load_track_scenes(HINSTANCE instance, Demo3DState *demo)
 {
+#if defined(KART_EMBED_TRACK_SCENES)
     unsigned int i;
     const unsigned int count = kart_demo_track_count();
     for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
         /* Id 0 marks a track with no mesh, such as the flat test track. */
         if (KART_TRACK_SCENE_RESOURCE_IDS[i] == 0) continue;
-        load_track_scene_resource(
+        load_scene_resource(
             instance, KART_TRACK_SCENE_RESOURCE_IDS[i], &demo->scenes[i]);
     }
+#else
+    (void)instance;
+    (void)demo;
+#endif
+}
+
+/* The kart models ride in the same KTKZ containers as the track scenes, so the
+   same loader reads them; only what the parts mean differs. */
+static void load_kart_models(HINSTANCE instance, Demo3DState *demo)
+{
+#if defined(KART_EMBED_KART_MODELS)
+    unsigned int i;
+    const unsigned int count = kart_demo_kart_count();
+    for (i = 0; i < count && i < KART_MODEL_CAPACITY; ++i) {
+        if (!load_scene_resource(
+                instance, KART_MODEL_RESOURCE_IDS[i], &demo->models[i])) {
+            continue;
+        }
+        kart_model_parts_build(&demo->models[i], &demo->model_parts[i]);
+    }
+#else
+    (void)instance;
+    (void)demo;
+#endif
 }
 
 static void free_track_scenes(Demo3DState *demo)
@@ -166,6 +196,27 @@ static void free_track_scenes(Demo3DState *demo)
     for (i = 0; i < KART_TRACK_SCENE_CAPACITY; ++i) {
         kart_track_scene_free(&demo->scenes[i]);
     }
+    for (i = 0; i < KART_MODEL_CAPACITY; ++i) {
+        kart_track_scene_free(&demo->models[i]);
+    }
+}
+
+/* The model for the kart currently under the driver, or NULL when the models
+   were not embedded. */
+static const KartTrackScene *active_kart_model(
+    const Demo3DState *demo,
+    const KartModelParts **parts)
+{
+    unsigned int i;
+    const unsigned int count = kart_demo_kart_count();
+    for (i = 0; i < count && i < KART_MODEL_CAPACITY; ++i) {
+        if (kart_demo_kart_at(i) != demo->kart_spec) continue;
+        if (demo->models[i].mesh_count == 0) break;
+        if (parts != NULL) *parts = &demo->model_parts[i];
+        return &demo->models[i];
+    }
+    if (parts != NULL) *parts = NULL;
+    return NULL;
 }
 
 static const KartTrackScene *active_track_scene(const Demo3DState *demo)
@@ -1152,7 +1203,260 @@ static KartVec3 kart_vertex(
     return result;
 }
 
-static void draw_kart(
+/* Model space to world.
+
+   The model's own axes are not the simulation's, and nothing in the assets
+   labels them. Three independent details agree that the model's -y is the
+   front, so that is the end put along the simulation's +forward:
+
+     - the 9-vertex 8-triangle disc at y -0.36 is a steering wheel, and its
+       mean normal is (0, +0.65, +0.76): it faces up and toward +y, which is
+       where the driver has to be sitting
+     - the wheels at +y are the larger pair, and a kart carries its bigger
+       wheels at the back
+     - the body is 0.69 tall at the +y end against 0.50 at the -y end, the
+       usual low-nose, high-tail profile
+
+   Turning it round is a rotation, not a mirror, so x is negated with y. Getting
+   that wrong would be invisible on these near-symmetric hulls right up until
+   the moment it made a left-hand detail come out on the right. */
+static KartVec3 kart_model_vertex(
+    const KartSimulationState *kart,
+    KartVec3 right,
+    KartVec3 forward,
+    KartVec3 up,
+    const KartTrackSceneVertex *vertex)
+{
+    return kart_vertex(
+        kart, right, forward, up, -vertex->x, -vertex->y, vertex->z);
+}
+
+/* One triangle of the model, ready to sort. */
+typedef struct KartModelFace {
+    float depth;
+    float shade;
+    bool wheel;
+    KartVec3 vertices[3];
+} KartModelFace;
+
+/* cotten5 is the heaviest model at 645 triangles. */
+#define KART_MODEL_MAX_FACES 1024
+
+static int compare_model_faces(const void *left, const void *right)
+{
+    const KartModelFace *a = (const KartModelFace *)left;
+    const KartModelFace *b = (const KartModelFace *)right;
+    /* Far to near: the painter's order for a convex-ish hull with no z-buffer. */
+    if (a->depth > b->depth) return -1;
+    if (a->depth < b->depth) return 1;
+    return 0;
+}
+
+static COLORREF scale_color(COLORREF color, float shade)
+{
+    const float r = (float)GetRValue(color) * shade;
+    const float g = (float)GetGValue(color) * shade;
+    const float b = (float)GetBValue(color) * shade;
+    return RGB(
+        (BYTE)(r > 255.0f ? 255.0f : r),
+        (BYTE)(g > 255.0f ? 255.0f : g),
+        (BYTE)(b > 255.0f ? 255.0f : b));
+}
+
+/* Draws the recovered mesh: every submesh, depth sorted, flat shaded.
+
+   The paint is the demo's state colour rather than the original skin. That is
+   not a shortcut waiting to be finished - the skins carry no colour to use.
+   All 26 are achromatic apart from a 900-texel marker patch, so a textured
+   kart would come out grey. See docs/KART_MODEL_CATALOG.md. */
+static void draw_kart_model(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartSimulationState *kart,
+    const KartTrackScene *model,
+    const KartModelParts *parts,
+    bool boost_active)
+{
+    /* Fixed world-space key light, so the shading reads as the kart turning
+       under a light rather than the light turning with the kart. */
+    const KartVec3 light = {0.38f, -0.52f, 0.76f};
+    const COLORREF body_color =
+        boost_active
+            ? RGB(255, 165, 35)
+            : (drift_visual_active(kart)
+                ? RGB(65, 205, 255)
+                : RGB(235, 65, 80));
+    /* Dark enough to read as tyres, light enough that the shading on them is
+       still visible against the track fill. */
+    const COLORREF wheel_color = RGB(96, 100, 112);
+    static KartModelFace faces[KART_MODEL_MAX_FACES];
+    KartVec3 body_right;
+    KartVec3 body_forward;
+    KartVec3 body_up;
+    HGDIOBJ old_pen;
+    HGDIOBJ old_brush;
+    size_t face_count = 0;
+    size_t i;
+    uint32_t mesh_index;
+
+    orientation_axes(kart->orientation, &body_right, &body_forward, &body_up);
+
+    for (mesh_index = 0; mesh_index < model->mesh_count; ++mesh_index) {
+        const KartTrackSceneMesh *mesh = &model->meshes[mesh_index];
+        const bool wheel = kart_model_is_wheel(parts, mesh_index);
+        const uint32_t triangle_count = mesh->index_count / 3u;
+        uint32_t triangle;
+        for (triangle = 0; triangle < triangle_count; ++triangle) {
+            const uint32_t base = triangle * 3u;
+            KartModelFace *face;
+            KartVec3 normal;
+            KartVec3 centre;
+            float facing;
+            if (face_count == KART_MODEL_MAX_FACES) break;
+            face = &faces[face_count];
+            face->wheel = wheel;
+            face->vertices[0] = kart_model_vertex(
+                kart, body_right, body_forward, body_up,
+                &mesh->vertices[mesh->indices[base]]);
+            face->vertices[1] = kart_model_vertex(
+                kart, body_right, body_forward, body_up,
+                &mesh->vertices[mesh->indices[base + 1u]]);
+            face->vertices[2] = kart_model_vertex(
+                kart, body_right, body_forward, body_up,
+                &mesh->vertices[mesh->indices[base + 2u]]);
+            centre = vec_scale(
+                vec_add(vec_add(face->vertices[0], face->vertices[1]),
+                        face->vertices[2]),
+                1.0f / 3.0f);
+            face->depth = vec_dot(
+                vec_sub(centre, camera.position), camera.forward);
+            if (face->depth <= 0.25f) continue;
+            normal = vec_normalize(vec_cross(
+                vec_sub(face->vertices[1], face->vertices[0]),
+                vec_sub(face->vertices[2], face->vertices[0])));
+            /* The exports do not agree on winding between submeshes, so the
+               normal is folded to whichever side faces the camera instead of
+               being used to cull. Nothing here is a closed hull anyway. */
+            facing = vec_dot(normal, light);
+            if (facing < 0.0f) facing = -facing;
+            face->shade = 0.42f + 0.58f * facing;
+            ++face_count;
+        }
+    }
+    if (face_count == 0) {
+        return;
+    }
+    qsort(faces, face_count, sizeof(faces[0]), compare_model_faces);
+
+    old_pen = SelectObject(dc, GetStockObject(NULL_PEN));
+    old_brush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+    for (i = 0; i < face_count; ++i) {
+        const KartModelFace *face = &faces[i];
+        KartVec3 clipped[8];
+        POINT points[8];
+        HBRUSH brush;
+        HGDIOBJ previous;
+        int clipped_count = clip_to_near_plane(
+            face->vertices, 3, camera, 0.25f, clipped);
+        int point;
+        if (clipped_count < 3) continue;
+        for (point = 0; point < clipped_count; ++point) {
+            const ProjectedPoint projected =
+                project_point(client, camera, clipped[point]);
+            points[point].x = clamp_device_coordinate(projected.point.x);
+            points[point].y = clamp_device_coordinate(projected.point.y);
+        }
+        brush = CreateSolidBrush(scale_color(
+            face->wheel ? wheel_color : body_color, face->shade));
+        previous = SelectObject(dc, brush);
+        Polygon(dc, points, clipped_count);
+        SelectObject(dc, previous);
+        DeleteObject(brush);
+    }
+    SelectObject(dc, old_brush);
+    SelectObject(dc, old_pen);
+}
+
+/* One of the three model-space boxes, as a wireframe in the kart's frame. */
+static void draw_kart_model_box(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartSimulationState *kart,
+    const KartModelBox *box,
+    COLORREF color)
+{
+    static const unsigned int edges[12][2] = {
+        {0,1},{1,2},{2,3},{3,0}, {4,5},{5,6},{6,7},{7,4},
+        {0,4},{1,5},{2,6},{3,7},
+    };
+    KartVec3 body_right;
+    KartVec3 body_forward;
+    KartVec3 body_up;
+    ProjectedPoint projected[8];
+    HPEN pen;
+    HGDIOBJ old_pen;
+    unsigned int i;
+    if (!box->valid) {
+        return;
+    }
+    orientation_axes(kart->orientation, &body_right, &body_forward, &body_up);
+    for (i = 0; i < 8; ++i) {
+        /* 0-3 walk the bottom face in order and 4-7 the top, which is what the
+           edge table above expects. Deriving the corners from the bits of i
+           instead would put 1 and 2 diagonally opposite and draw an X across
+           each face. */
+        static const unsigned char corners[8][3] = {
+            {0,0,0}, {1,0,0}, {1,1,0}, {0,1,0},
+            {0,0,1}, {1,0,1}, {1,1,1}, {0,1,1},
+        };
+        const KartTrackSceneVertex corner = {
+            corners[i][0] ? box->maximum[0] : box->minimum[0],
+            corners[i][1] ? box->maximum[1] : box->minimum[1],
+            corners[i][2] ? box->maximum[2] : box->minimum[2],
+            0.0f,
+            0.0f,
+        };
+        projected[i] = project_point(
+            client, camera,
+            kart_model_vertex(
+                kart, body_right, body_forward, body_up, &corner));
+    }
+    pen = CreatePen(PS_SOLID, 1, color);
+    old_pen = SelectObject(dc, pen);
+    for (i = 0; i < 12; ++i) {
+        const unsigned int a = edges[i][0];
+        const unsigned int b = edges[i][1];
+        if (!projected[a].visible || !projected[b].visible) continue;
+        MoveToEx(dc, projected[a].point.x, projected[a].point.y, NULL);
+        LineTo(dc, projected[b].point.x, projected[b].point.y);
+    }
+    SelectObject(dc, old_pen);
+    DeleteObject(pen);
+}
+
+/* full yellow, body green, wheels magenta - the same three volumes the
+   catalogue tabulates, drawn so the wheels-wider-than-body gap is visible. */
+static void draw_kart_model_bounds(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartSimulationState *kart,
+    const KartModelParts *parts)
+{
+    if (parts == NULL || !parts->valid) {
+        return;
+    }
+    draw_kart_model_box(
+        dc, client, camera, kart, &parts->full, RGB(235, 215, 90));
+    draw_kart_model_box(
+        dc, client, camera, kart, &parts->wheels, RGB(225, 105, 220));
+    draw_kart_model_box(
+        dc, client, camera, kart, &parts->body, RGB(110, 235, 140));
+}
+
+static void draw_kart_box(
     HDC dc,
     RECT client,
     Camera3D camera,
@@ -1223,6 +1527,33 @@ static void draw_kart(
     SelectObject(dc, old_pen);
     DeleteObject(body_brush);
     DeleteObject(body_pen);
+}
+
+/* Draws whichever hull the driver asked for, then the boxes over it.
+
+   The box is still here and still correct: it is what the demo drew before the
+   models were recovered, and it is the shape the physics actually reasons
+   about. M switches between them so the two can be compared directly, and a
+   build without embedded models simply always shows the box. */
+static void draw_kart(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const Demo3DState *demo)
+{
+    const KartModelParts *parts = NULL;
+    const KartTrackScene *model = active_kart_model(demo, &parts);
+    if (demo->show_model && model != NULL && parts != NULL && parts->valid) {
+        draw_kart_model(
+            dc, client, camera, &demo->kart, model, parts, demo->boost_active);
+    } else {
+        draw_kart_box(
+            dc, client, camera, &demo->kart, demo->kart_spec,
+            demo->boost_active);
+    }
+    if (demo->show_model_bounds) {
+        draw_kart_model_bounds(dc, client, camera, &demo->kart, parts);
+    }
 }
 
 /* World to screen for the top-down view. World +Y points up the screen and
@@ -1747,9 +2078,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
             buffer, client, camera, demo->track_spec, active_track_scene(demo));
         draw_skid_marks(buffer, client, camera, demo);
         draw_boost_effect(buffer, client, camera, demo);
-        draw_kart(
-            buffer, client, camera, &demo->kart, demo->kart_spec,
-            demo->boost_active);
+        draw_kart(buffer, client, camera, demo);
         if (demo->show_vectors) {
             draw_motion_vectors(
                 buffer, client, camera, &demo->kart, demo->acceleration);
@@ -1784,8 +2113,10 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     snprintf(
         help,
         sizeof(help),
-        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  V: %s vectors  P: parameters  K: kart  T: track  F: drag trigger  S: screenshot  R: reset",
-        demo->show_vectors ? "hide" : "show");
+        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  V: %s vectors  P: parameters  K: kart  T: track  F: drag trigger  S: screenshot  R: reset  M: %s  B: %s bounds",
+        demo->show_vectors ? "hide" : "show",
+        demo->show_model ? "box hull" : "mesh hull",
+        demo->show_model_bounds ? "hide" : "show");
     TextOutA(buffer, 16, 32, help, (int)strlen(help));
     /* The inferred layers, kept on their own line so they read as what they
        are rather than as part of the recovered demo. */
@@ -1909,6 +2240,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)demo);
         g_input_window = window;
         load_track_scenes(create->hInstance, demo);
+        load_kart_models(create->hInstance, demo);
         kart_demo_sound_start(create->hInstance, &demo->sound);
         kart_demo_minimap_set_load(create->hInstance, &demo->minimaps);
         reset_kart(demo);
@@ -1997,6 +2329,16 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             const bool view_key_down = key_down('C') != 0;
             const bool vector_key_down = key_down('V') != 0;
             const bool param_key_down = key_down('P') != 0;
+            const bool model_key_down = key_down('M') != 0;
+            const bool bounds_key_down = key_down('B') != 0;
+            if (model_key_down && !demo->model_key_was_down) {
+                demo->show_model = !demo->show_model;
+            }
+            demo->model_key_was_down = model_key_down;
+            if (bounds_key_down && !demo->bounds_key_was_down) {
+                demo->show_model_bounds = !demo->show_model_bounds;
+            }
+            demo->bounds_key_was_down = bounds_key_down;
             if (vector_key_down && !demo->vector_key_was_down) {
                 demo->show_vectors = !demo->show_vectors;
             }
@@ -2226,6 +2568,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE previous, LPSTR command_line, i
     (void)show;
 
     demo.gauge_config = kart_gauge_default_config();
+    /* The recovered hull is the better default now that there is one; M falls
+       back to the box the physics constants describe. */
+    demo.show_model = true;
     window_class.lpfnWndProc = window_proc;
     window_class.hInstance = instance;
     window_class.lpszClassName = CLASS_NAME;

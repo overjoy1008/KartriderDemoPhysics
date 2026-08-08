@@ -1,0 +1,31 @@
+TARGET 005724e0
+  004bc2cc READ function=004bc200 FUN_004bc200
+  004bc2e0 READ function=004bc200 FUN_004bc200
+  004bc2f4 READ function=004bc200 FUN_004bc200
+  004bc35f READ function=004bc200 FUN_004bc200
+  004bc38a READ function=004bc200 FUN_004bc200
+  004bc5a5 READ function=004bc530 FUN_004bc530
+  004bc5b6 READ function=004bc530 FUN_004bc530
+  004bc5c7 READ function=004bc530 FUN_004bc530
+  004bc5de READ function=004bc530 FUN_004bc530
+  004bb963 READ function=004bb730 FUN_004bb730
+  004bb9d1 READ function=004bb730 FUN_004bb730
+  004bb9e5 READ function=004bb730 FUN_004bb730
+  004bba2b READ function=004bb730 FUN_004bb730
+  004bba54 READ function=004bb730 FUN_004bb730
+  004bbc1c READ function=004bb730 FUN_004bb730
+  004bbc36 READ function=004bb730 FUN_004bb730
+  004bbc9f READ function=004bb730 FUN_004bb730
+  004bbcc2 READ function=004bb730 FUN_004bb730
+  004bbd59 READ function=004bb730 FUN_004bb730
+  004bbd70 READ function=004bb730 FUN_004bb730
+  004bbdd4 READ function=004bb730 FUN_004bb730
+  004bbe06 READ function=004bb730 FUN_004bb730
+  004bbff8 READ function=004bb730 FUN_004bb730
+  004bc06f READ function=004bb730 FUN_004bb730
+  00441a7e READ function=00441a10 FUN_00441a10
+  004c0c33 READ function=004c0ac0 FUN_004c0ac0
+  004f3ce0 READ function=004f3c94 FUN_004f3c94
+  004f3f82 READ function=004f3f36 FUN_004f3f36
+  004f45d4 READ function=004f4588 FUN_004f4588
+

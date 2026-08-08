@@ -198,6 +198,49 @@ if(WIN32)
         endforeach()
     endif()
 
+    # Kart asset names in KARTS[] order; the RCDATA ids in
+    # demo/kart_model_resources.h follow the same order. mine1 is in the archive
+    # but is not a kart, so it is not listed here.
+    set(KART_MODEL_NAMES
+        practice1
+        burst1 burst2 burst3 burst4 burst5
+        cotten1 cotten2 cotten3 cotten4 cotten5
+        marathon1 marathon2 marathon3 marathon4 marathon5
+        saber1 saber2 saber3 saber4 saber5
+        solid1 solid2 solid3 solid4 solid5)
+    set(KART_MODEL_MESH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/analysis/kart-assets/meshes")
+    set(KART_MODEL_PACK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/analysis/kart-assets/packed")
+
+    set(KART_HAVE_ALL_MODELS TRUE)
+    foreach(KART_MODEL_NAME IN LISTS KART_MODEL_NAMES)
+        if(NOT EXISTS "${KART_MODEL_MESH_DIR}/${KART_MODEL_NAME}.ktrk")
+            set(KART_HAVE_ALL_MODELS FALSE)
+        endif()
+    endforeach()
+
+    # Same KTKZ container as the track scenes, so the same packer and the same
+    # loader handle both. All 26 models together are 130 KB packed.
+    if(KART_HAVE_ALL_MODELS)
+        execute_process(
+            COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+                    -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/pack_track_scenes.ps1"
+                    -InputDirectory "analysis/kart-assets/meshes"
+                    -OutputDirectory "analysis/kart-assets/packed"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            RESULT_VARIABLE KART_MODEL_PACK_RESULT
+            OUTPUT_VARIABLE KART_MODEL_PACK_OUTPUT
+            ERROR_VARIABLE KART_MODEL_PACK_OUTPUT)
+        if(NOT KART_MODEL_PACK_RESULT EQUAL 0)
+            message(FATAL_ERROR
+                "Packing the kart models failed:\n${KART_MODEL_PACK_OUTPUT}")
+        endif()
+        foreach(KART_MODEL_NAME IN LISTS KART_MODEL_NAMES)
+            if(NOT EXISTS "${KART_MODEL_PACK_DIR}/${KART_MODEL_NAME}.ktkz")
+                set(KART_HAVE_ALL_MODELS FALSE)
+            endif()
+        endforeach()
+    endif()
+
     # One executable with both renderers behind the V key; it calls the scene
     # and collision queries unconditionally and only the resource loading is
     # compiled out when there are no embedded scenes.
@@ -223,10 +266,29 @@ if(WIN32)
     else()
         message(STATUS "KTRK scene files not found; the demo will use bounds/grid fallback")
     endif()
+    if(KART_HAVE_ALL_MODELS)
+        set(KART_MODEL_RC_ENTRIES "")
+        foreach(KART_MODEL_NAME IN LISTS KART_MODEL_NAMES)
+            string(TOUPPER "${KART_MODEL_NAME}" KART_MODEL_NAME_UPPER)
+            string(APPEND KART_MODEL_RC_ENTRIES
+                "IDR_KART_MODEL_${KART_MODEL_NAME_UPPER} RCDATA \"${KART_MODEL_PACK_DIR}/${KART_MODEL_NAME}.ktkz\"\n")
+        endforeach()
+        configure_file(
+            demo/kart_models.rc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_models.rc
+            @ONLY)
+        list(APPEND KART_DEMO_SOURCES
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_models.rc)
+    else()
+        message(STATUS "KTRK kart models not found; the demo will draw the box hull")
+    endif()
     add_executable(kart WIN32 ${KART_DEMO_SOURCES})
     target_include_directories(kart PRIVATE include demo)
     if(KART_HAVE_ALL_SCENES)
         target_compile_definitions(kart PRIVATE KART_EMBED_TRACK_SCENES=1)
+    endif()
+    if(KART_HAVE_ALL_MODELS)
+        target_compile_definitions(kart PRIVATE KART_EMBED_KART_MODELS=1)
     endif()
     if(KART_HAVE_ALL_MINIMAPS)
         target_compile_definitions(kart PRIVATE KART_EMBED_MINIMAPS=1)
@@ -251,6 +313,17 @@ if(WIN32)
     # must still configure.
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tools/oracle/kart_binary_oracle.c")
         add_executable(kart_binary_oracle tools/oracle/kart_binary_oracle.c)
+    endif()
+
+    if(KART_HAVE_ALL_MODELS)
+        add_executable(kart_model_asset_tests
+            tests/test_kart_model_assets.c
+            src/kart_track_scene.c)
+        target_include_directories(kart_model_asset_tests PRIVATE include demo)
+        target_link_libraries(kart_model_asset_tests PRIVATE kart_dynamics)
+        add_test(
+            NAME kart_model_asset_tests
+            COMMAND kart_model_asset_tests "${KART_MODEL_PACK_DIR}")
     endif()
 
     # End-to-end over the real exports, so it only exists once they are packed.

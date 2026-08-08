@@ -54,6 +54,27 @@ distribution copies; the `.app` bundles are the files to run directly.
 - **[Track asset pipeline](docs/TRACK_ASSET_PIPELINE.md)** documents the
   read-only RHO inventory, minimap/texture extraction, `track.1s` decoding,
   and C-friendly KTRK mesh preparation.
+- **[Original collision](docs/ORIGINAL_COLLISION.md)** is a decompilation-only
+  account of how the 2004 EXE collides: the 4-unit hashed triangle grid, the
+  `property/road` asset flag that decides what is collidable at all, the
+  per-wheel ray versus the oriented body box, and the single `0.65` face-normal
+  test that separates floor from wall. It records what could not be established
+  as well as what could.
+- **[Collision divergence](docs/COLLISION_DIVERGENCE.md)** puts that account
+  next to what this simulator actually does. The response is a faithful port;
+  the query layer is not. It lists every difference, largest first — every mesh
+  colliding instead of only the `road`-tagged ones, a 0.20 ground threshold
+  against the original's 0.65, and a flattened 2D body test in place of the
+  oriented box.
+- **[Kart parameter tables](docs/KART_PARAMETERS.md)** lists every value the 26
+  karts hand to the physics: the five `parameter.xml` dynamics sets side by
+  side, which karts use each, and each kart's own body dimensions. All of it is
+  recovered, and it is what the `P` editor's **Kart defaults** restores.
+- **[Kart model catalogue](docs/KART_MODEL_CATALOG.md)** records, per kart, the
+  submesh breakdown of `model.1s`, the three different bounding boxes it yields
+  (full, body, wheels) and why only the body one reproduces the physics
+  constants, the wheel placement, and what the skins actually contain.
+  Re-run it with `python scripts/derive_kart_catalog.py`.
 - [Recovery notes](analysis/RECOVERY_NOTES.md) connect recovered formulas to
   executable addresses and supporting reports.
 - [Differential-oracle results](analysis/RECOVERY_NOTES.md#differential-oracle-results)
@@ -105,8 +126,10 @@ distribution copies; the `.app` bundles are the files to run directly.
   and all 78 dimension constants are reproduced exactly from the body mesh of
   its `model.1s`. See
   [kart asset verification](docs/KART_ASSET_VERIFICATION.md); re-run it with
-  `python scripts/derive_kart_constants.py`. The kart's drawn **shape** is not
-  from the assets — it is a box built from those dimensions.
+  `python scripts/derive_kart_constants.py`. All 26 **models** are embedded too,
+  so the drawn kart is now that `model.1s` rather than a box built from its
+  dimensions; `M` switches back to the box and `B` shows the bounding volumes.
+  See [the kart model catalogue](docs/KART_MODEL_CATALOG.md).
 - all 13 demo track mesh-AABB sizes, every one of them re-derived from that
   track's decoded `track.1s` mesh so the scene, walls, minimap and spawn share
   one source.

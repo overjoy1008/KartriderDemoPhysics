@@ -55,6 +55,10 @@ typedef struct KartDemoTrackSpec {
     KartVec3 start_line;
 } KartDemoTrackSpec;
 
+/* Compile-time mirror of kart_demo_kart_count(), so the demos' index-parallel
+   resource tables can be checked against it with _Static_assert. */
+#define KART_DEMO_KART_COUNT 26
+
 unsigned int kart_demo_kart_count(void);
 const KartDemoKartSpec *kart_demo_kart_at(unsigned int index);
 const KartDemoKartSpec *kart_demo_find_kart(const char *asset_name);
