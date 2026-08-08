@@ -220,6 +220,39 @@ world X를 미니맵 원본 좌표로 되돌리는 `u = 0.5 - x_world / track_wi
 덕분에 대상 삼각형이 3~5배 늘었는데도 실측 비용은 5 ms 서브스텝의 **0.8~2.5%**다
 (`ice_R01` 50,046 삼각형 기준 0.056 ms). 바퀴 레이 4개와 차체 쿼리 1개를 합친 값이다.
 
+## 텍스처: KTEX 테이블
+
+KTRK 메시는 처음부터 `track.1s`가 머티리얼에 지정한 텍스처 이름과 정점별 UV를
+싣고 있었다. 없던 것은 픽셀뿐이고, 그 픽셀은 추출된 테마 아카이브
+(`analysis/track-assets/shared/theme_*/texture`, `track_common`)에 DDS와 PNG로
+들어 있다.
+
+`scripts/pack_track_textures.py`가 이 둘을 잇는다.
+
+- 참조 목록은 KTRK에서 직접 읽는다. 이름 해석 순서는
+  `scripts/map_track_textures.ps1`과 같다: `theme_<트랙 테마>` → `theme_common`
+  → `track_common`.
+- DDS는 DXT1/DXT3/DXT5와 비압축 레이아웃을, PNG는 팔레트/그레이/RGB/RGBA를
+  자체 디코딩한다 (외부 이미지 라이브러리 없음, Python 표준 `zlib`만 사용).
+- 박스 필터로 2의 거듭제곱 크기까지 축소한다(기본 상한 64x64). RGB는 알파로
+  가중 평균하므로 컷아웃 가장자리에 투명 픽셀 색이 번지지 않는다.
+- 저장 포맷은 텍셀당 RGB565 16비트 + 텍셀당 1비트 커버리지 마스크.
+  래스터라이저가 곱셈 없이 샘플링할 수 있는 최소 형태다.
+- 이름은 테마마다 겹치므로 키는 `"<테마>/<메시의 texture 필드 바이트>"`다.
+  내용이 같은 이미지는 해시로 합쳐진다.
+
+13개 트랙 전체에서 **키 411개 / 이미지 400개**, 원본 3.4 MB가 deflate 후
+1.25 MB이며 `IDR_TRACK_TEXTURES` RCDATA 하나로 들어간다. 트랙별로 나누지 않는
+이유는 같은 텍스처가 여러 트랙에 중복 등장하기 때문이다.
+
+해석되지 않는 이름은 30개다. `ad_board_*` / `ad_fence_*` / `ad_start`는 인게임
+광고 슬롯이라 데모 아카이브에 픽셀이 없고, `ice_01`, `ice_cave_B02`,
+`ice_ob_a`, `ice_tree_01`도 어느 아카이브에도 없다. 이 메시들은 텍스처 없이
+바닥/벽 색으로 칠해진다.
+
+포맷 정의는 `include/kart_track_texture.h`, 로더는 `src/kart_track_texture.c`
+(KTKZ와 같은 모양의 `KTXZ` 컨테이너, 같은 `kart_inflate` 사용).
+
 ## 알려진 데이터 품질 문제
 
 `track-mesh-exporter`는 노드 이름을 `Encoding.UTF8.GetBytes`로 기록하는데,
@@ -232,9 +265,10 @@ world X를 미니맵 원본 좌표로 되돌리는 `u = 0.5 - x_world / track_wi
 1. 11개 트랙의 출발 주행 방향 부호를 원작과 대조 (위 등급표 참고)
 2. `ice_I02`의 실제 출발선 주행면 식별
 3. 원본 런타임에서 충돌 대상으로 채택하는 장면 태그/속성 식별
-4. 테마별 텍스처 참조를 `theme_<name>.rho`, `theme_common.rho`,
-   `track_common.rho`에서 해석
-5. GDI 소프트웨어 렌더러에 맞는 가시성 절두체, 거리 LOD, 삼각형 정렬/컬링 구현
+4. 미해석 텍스처 30개(광고 슬롯 7종, `ice_*` 4종)의 출처 확인
+5. 텍스처 렌더러의 남은 항목: 스카이돔(`extracted/<track>/skydome.png`은 이미
+   추출되어 있다), 카트 모델 텍스처, 카트/스키드/부스트를 깊이 버퍼에 함께
+   그리기(현재는 GDI로 그 위에 덧그린다), 거리 LOD
 6. 공간 분할 도입. 현재 충돌 쿼리는 road 삼각형 완전 탐색이고, `ice_R01`은
    road 후보가 가장 많아 초당 수백만 회 교차 검사가 발생한다
 

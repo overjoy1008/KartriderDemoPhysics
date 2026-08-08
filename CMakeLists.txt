@@ -69,6 +69,18 @@ add_executable(
 target_link_libraries(kart_track_collision_tests PRIVATE kart_dynamics)
 add_test(NAME kart_track_collision_tests COMMAND kart_track_collision_tests)
 
+# The course tables are generated from the track assets by
+# scripts/derive_course_gates.py, so this needs no packed scene to run.
+add_executable(
+    kart_course_tests
+    tests/test_course_progress.c
+    src/kart_course.c
+    src/kart_course_data.c
+    src/kart_track_collision.c
+    src/kart_track_scene.c)
+target_link_libraries(kart_course_tests PRIVATE kart_dynamics)
+add_test(NAME kart_course_tests COMMAND kart_course_tests)
+
 add_executable(kart_inflate_tests tests/test_inflate.c src/kart_track_scene.c)
 target_link_libraries(kart_inflate_tests PRIVATE kart_dynamics)
 add_test(NAME kart_inflate_tests COMMAND kart_inflate_tests)
@@ -241,12 +253,44 @@ if(WIN32)
         endforeach()
     endif()
 
+    # The tracks' texture assets, decoded out of the theme archives and packed
+    # into one shared KTEX table keyed by theme and texture name. The KTRK
+    # meshes already name a texture and carry the asset's UVs, so this is the
+    # only piece the textured renderer was missing.
+    set(KART_TRACK_TEXTURE_PACK
+        "${CMAKE_CURRENT_SOURCE_DIR}/analysis/track-assets/packed/track_textures.ktxz")
+    set(KART_HAVE_TRACK_TEXTURES FALSE)
+    if(KART_HAVE_ALL_SCENES)
+        find_package(Python3 COMPONENTS Interpreter QUIET)
+        if(Python3_Interpreter_FOUND)
+            execute_process(
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/pack_track_textures.py"
+                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                RESULT_VARIABLE KART_TEXTURE_PACK_RESULT
+                OUTPUT_VARIABLE KART_TEXTURE_PACK_OUTPUT
+                ERROR_VARIABLE KART_TEXTURE_PACK_OUTPUT)
+            if(NOT KART_TEXTURE_PACK_RESULT EQUAL 0)
+                message(WARNING
+                    "Packing the track textures failed; the demo will draw untextured:\n${KART_TEXTURE_PACK_OUTPUT}")
+            endif()
+        else()
+            message(STATUS "Python not found; reusing any existing track texture pack")
+        endif()
+        if(EXISTS "${KART_TRACK_TEXTURE_PACK}")
+            set(KART_HAVE_TRACK_TEXTURES TRUE)
+        endif()
+    endif()
+
     # One executable with both renderers behind the V key; it calls the scene
     # and collision queries unconditionally and only the resource loading is
     # compiled out when there are no embedded scenes.
     set(KART_DEMO_SOURCES
         demo/kart_win32.c
+        src/kart_course.c
+        src/kart_course_data.c
         src/kart_track_scene.c
+        src/kart_track_texture.c
         src/kart_track_collision.c
         ${KART_MINIMAP_SOURCES}
         ${KART_AUDIO_SOURCES})
@@ -302,6 +346,21 @@ if(WIN32)
     else()
         message(STATUS "KTRK kart models not found; the demo will draw the box hull")
     endif()
+    if(KART_HAVE_TRACK_TEXTURES)
+        configure_file(
+            demo/kart_track_textures.rc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_track_textures.rc
+            @ONLY)
+        # As with the scenes: the .rc only names the pack, so a repack has to
+        # invalidate the resource object or the executable keeps stale pixels.
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_track_textures.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_TRACK_TEXTURE_PACK}")
+        list(APPEND KART_DEMO_SOURCES
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_track_textures.rc)
+    else()
+        message(STATUS "Track texture pack not found; the demo will draw untextured")
+    endif()
     add_executable(kart WIN32 ${KART_DEMO_SOURCES})
     target_include_directories(kart PRIVATE include demo)
     if(KART_HAVE_ALL_SCENES)
@@ -309,6 +368,9 @@ if(WIN32)
     endif()
     if(KART_HAVE_ALL_MODELS)
         target_compile_definitions(kart PRIVATE KART_EMBED_KART_MODELS=1)
+    endif()
+    if(KART_HAVE_TRACK_TEXTURES)
+        target_compile_definitions(kart PRIVATE KART_EMBED_TRACK_TEXTURES=1)
     endif()
     if(KART_HAVE_ALL_MINIMAPS)
         target_compile_definitions(kart PRIVATE KART_EMBED_MINIMAPS=1)
@@ -350,6 +412,8 @@ if(WIN32)
     if(KART_HAVE_ALL_SCENES)
         add_executable(kart_scene_asset_tests
             tests/test_track_scene_assets.c
+            src/kart_course.c
+            src/kart_course_data.c
             src/kart_track_scene.c
             src/kart_track_collision.c)
         target_link_libraries(kart_scene_asset_tests PRIVATE kart_dynamics)

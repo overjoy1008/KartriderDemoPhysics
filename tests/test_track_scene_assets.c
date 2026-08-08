@@ -7,6 +7,7 @@
 
    Registered only when the exports are present, since they are not tracked. */
 
+#include "kart_course.h"
 #include "kart_demo_data.h"
 #include "kart_track_collision.h"
 #include "kart_track_scene.h"
@@ -72,6 +73,7 @@ int main(int argc, char **argv)
     const unsigned int count = kart_demo_track_count();
     unsigned int i;
     unsigned int grounded = 0;
+    unsigned int course_grounded = 0;
 
     for (i = 0; i < count; ++i) {
         const KartDemoTrackSpec *track = kart_demo_track_at(i);
@@ -153,7 +155,12 @@ int main(int argc, char **argv)
            throttle for two seconds says the suspension, the body box and the
            collision response all agree well enough to keep the kart on the
            road. A sign error in any of them ends with the kart under the
-           track, which the fall limit catches. */
+           track, which the fall limit catches.
+
+           The pose comes from the course now, not from the start-line mesh.
+           That is what settles which way round the lap is driven: the mesh
+           never said, and a kart pointed the wrong way would drive away from
+           the first checkpoint, which the gate count below catches. */
         {
             DriveWorld bound = {&scene, track};
             const KartSimulationWorld world = {
@@ -161,13 +168,40 @@ int main(int argc, char **argv)
             KartSimulationControls controls = {0};
             KartSimulationState kart;
             const float fall_limit = kart_demo_track_fall_limit(track);
+            const KartCourseAsset *asset =
+                kart_course_find_asset(track->asset_name);
+            KartCourse course;
+            KartCourseProgress progress;
             unsigned int grounded_steps = 0;
+            unsigned int wrong_way_steps = 0;
+            unsigned int gates = 0;
             unsigned int step;
+            KartVec3 previous;
 
-            kart_simulation_init(&kart, NULL, NULL);
-            if (kart_demo_track_start_position(track, &kart.position)) {
-                kart_demo_track_start_orientation(track, &kart.orientation);
+            if (asset == NULL || !kart_course_build(&course, asset)) {
+                printf("FAIL %s: no usable course\n", track->asset_name);
+                return 1;
             }
+            kart_course_set_lap_count(&course, 3u);
+            kart_simulation_init(&kart, NULL, NULL);
+            kart_course_start_pose(&course, 0u, &kart.position, &kart.orientation);
+            /* 0x004260e0 finishes the grid placement with a ray from 10 above
+               the slot, 100 down. */
+            {
+                const KartVec3 above = {
+                    kart.position.x, kart.position.y, kart.position.z + 10.0f};
+                const KartVec3 down = {0.0f, 0.0f, -100.0f};
+                if (kart_track_scene_query_ground(&scene, track, above, down, &hit)) {
+                    ++course_grounded;
+                    assert(hit.normal.z >= 0.649f);
+                    kart.position = hit.point;
+                } else {
+                    printf("note %-12s: the start grid snap found no road\n",
+                           track->asset_name);
+                }
+            }
+            kart_course_progress_init(&course, &progress, kart.position);
+            previous = kart.position;
             kart.position.z += 0.5f;
             controls.forward_input = 1.0f;
             for (step = 0; step < 100; ++step) {
@@ -178,23 +212,49 @@ int main(int argc, char **argv)
                            track->asset_name, step, kart.position.z, fall_limit);
                     return 1;
                 }
+                if (kart_course_progress_step(
+                        &course, &progress, previous, kart.position,
+                        kart.orientation, kart.linear_velocity,
+                        (step + 1u) * 20u) != 0) {
+                    ++gates;
+                }
+                if (progress.wrong_way) ++wrong_way_steps;
+                previous = kart.position;
             }
             if (grounded_steps * 2u < 100u) {
                 printf("FAIL %s: grounded for only %u of 100 steps\n",
                        track->asset_name, grounded_steps);
                 return 1;
             }
-            printf("ok   %-12s meshes=%4u road=%3u tris=%6u grounded %3u/100 %s\n",
+            /* Two seconds of throttle from the line always clears the start
+               gate, which sits half a unit ahead of the spawn. Pointed the
+               other way the kart would never reach it. */
+            if (gates == 0) {
+                printf("FAIL %s: two seconds from the line crossed no gate\n",
+                       track->asset_name);
+                return 1;
+            }
+            if (wrong_way_steps != 0) {
+                printf("FAIL %s: reported the wrong way for %u of 100 steps "
+                       "while driving away from the line\n",
+                       track->asset_name, wrong_way_steps);
+                return 1;
+            }
+            printf("ok   %-12s meshes=%4u road=%3u tris=%6u grounded %3u/100 "
+                   "nodes=%3u lap=%u node=%u\n",
                    track->asset_name, scene.mesh_count, road_meshes,
                    scene.total_triangle_count, grounded_steps,
-                   kart_demo_track_start_kind_label(track));
+                   course.node_count, progress.lap, progress.node_id);
+            kart_course_free(&course);
         }
         kart_track_scene_free(&scene);
     }
 
     /* All 13 real tracks have a start quad, and every mesh is collidable, so
        the ray must land for each of them. */
-    printf("%u of %u tracks grounded at their start line\n", grounded, count);
+    printf("%u of %u tracks grounded at their start line, %u at their start "
+           "grid\n", grounded, count, course_grounded);
     assert(grounded == 13);
+    assert(course_grounded == 13);
     return 0;
 }

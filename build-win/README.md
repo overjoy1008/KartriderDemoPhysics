@@ -5,8 +5,10 @@ repository's current source with MinGW:
 
 - `kart.exe`: both renderers in one binary, V switches between the software
   3D chase view and the top-down view. It embeds the 13 track scenes and all
-  26 kart models; M switches the kart between the recovered mesh and the box
-  built from its physics constants, and B draws the model's bounding volumes.
+  26 kart models plus the tracks' texture table; the kart is always drawn as
+  its recovered mesh, X switches the track between the textured rasterizer and
+  the wireframe, N toggles the course's checkpoint gates, and B draws the
+  model's bounding volumes.
 
 The remaining CMake cache, object, test, and comparison files in this local
 directory are reproducible build artifacts and are intentionally excluded from

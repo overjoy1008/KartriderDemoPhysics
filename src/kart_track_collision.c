@@ -218,6 +218,18 @@ static bool segment_triangle_intersection(
     return dot(*normal, *normal) > 0.0f;
 }
 
+bool kart_track_segment_triangle_hit(
+    KartVec3 start,
+    KartVec3 delta,
+    KartVec3 a,
+    KartVec3 b,
+    KartVec3 c)
+{
+    float fraction;
+    KartVec3 normal;
+    return segment_triangle_intersection(start, delta, a, b, c, &fraction, &normal);
+}
+
 bool kart_track_scene_query_ground(
     const KartTrackScene *scene,
     const KartDemoTrackSpec *track,
