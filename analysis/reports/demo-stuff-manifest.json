@@ -1,0 +1,104 @@
+{
+  "Archive": "C:\\Program Files (x86)\\Nexon\\KartRider Demo\\Data\\stuff.rho",
+  "ArchiveSize": 361216,
+  "Sha256": "19593C9FB7FB394AC073DC8DF9339189C2E6DD4F269C2EDFAA6F2A32D8BB4201",
+  "EntryCount": 16,
+  "Entries": [
+    {
+      "Path": "award/model.1s",
+      "Size": 679004,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "award/ob_award.tga",
+      "Size": 24620,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_final/model.1s",
+      "Size": 22520,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_final/ufo2-3.tga",
+      "Size": 131116,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_final/ufo2-4.tga",
+      "Size": 4140,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_final/ufo3-final.png",
+      "Size": 4902,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_retire/model.1s",
+      "Size": 29120,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_retire/ufo2-4.tga",
+      "Size": 4140,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_retire/ufo4-1.tga",
+      "Size": 131116,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_start/1.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_start/2.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_start/3.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_start/model.1s",
+      "Size": 34605,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_start/ufo2-3.tga",
+      "Size": 131116,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_start/ufo2-4.tga",
+      "Size": 4140,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "ufo_start/ufo2-5.tga",
+      "Size": 32812,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    }
+  ]
+}

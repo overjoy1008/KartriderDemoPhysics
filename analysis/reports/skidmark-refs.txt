@@ -1,0 +1,156 @@
+TARGET 005748c8
+  0046ff9b DATA function=0046ff80 FUN_0046ff80
+  00470013 DATA function=00470000 FUN_00470000
+
+TARGET 005748e0
+  0046ff92 DATA function=0046ff80 FUN_0046ff80
+  0047000a DATA function=00470000 FUN_00470000
+
+TARGET 0057491c
+  00470874 DATA function=00470860 FUN_00470860
+  0047099a DATA function=00470990 FUN_00470990
+
+TARGET 004ac1f0
+  0057461c DATA function=none
+  0057466c DATA function=none
+  005746cc DATA function=none
+  00574760 DATA function=none
+  005747bc DATA function=none
+  00574850 DATA function=none
+  005748cc DATA function=none
+  00574964 DATA function=none
+  005749d0 DATA function=none
+  00574a30 DATA function=none
+  00574a94 DATA function=none
+  00575f1c DATA function=none
+  00575f6c DATA function=none
+  00575fc8 DATA function=none
+  00576068 DATA function=none
+  005760c8 DATA function=none
+  00576144 DATA function=none
+  0057619c DATA function=none
+  005762d8 DATA function=none
+  00576414 DATA function=none
+  0057646c DATA function=none
+
+TARGET 004ac210
+  00574620 DATA function=none
+  00574670 DATA function=none
+  005746d0 DATA function=none
+  00574764 DATA function=none
+  005747c0 DATA function=none
+  00574854 DATA function=none
+  005748d0 DATA function=none
+  00574968 DATA function=none
+  005749d4 DATA function=none
+  00574a34 DATA function=none
+  00574a98 DATA function=none
+  00575f20 DATA function=none
+  00575f70 DATA function=none
+  00575fcc DATA function=none
+  0057606c DATA function=none
+  005760cc DATA function=none
+  00576148 DATA function=none
+  005761a0 DATA function=none
+  005762dc DATA function=none
+  00576418 DATA function=none
+  00576470 DATA function=none
+
+TARGET 004ac270
+  00574624 DATA function=none
+  00574674 DATA function=none
+  005746d4 DATA function=none
+  00574768 DATA function=none
+  005747c4 DATA function=none
+  00574858 DATA function=none
+  005748d4 DATA function=none
+  0057496c DATA function=none
+  005749d8 DATA function=none
+  00574a38 DATA function=none
+  00574a9c DATA function=none
+  00575f24 DATA function=none
+  00575f74 DATA function=none
+  00575fd0 DATA function=none
+  00576070 DATA function=none
+  005760d0 DATA function=none
+  0057614c DATA function=none
+  005761a4 DATA function=none
+  005762e0 DATA function=none
+  0057641c DATA function=none
+  00576474 DATA function=none
+
+TARGET 004ac2b0
+  00574628 DATA function=none
+  00574678 DATA function=none
+  005746d8 DATA function=none
+  0057476c DATA function=none
+  005747c8 DATA function=none
+  0057485c DATA function=none
+  005748d8 DATA function=none
+  00574970 DATA function=none
+  005749dc DATA function=none
+  00574a3c DATA function=none
+  00574aa0 DATA function=none
+  00575f28 DATA function=none
+  00575f78 DATA function=none
+  00575fd4 DATA function=none
+  00576074 DATA function=none
+  005760d4 DATA function=none
+  00576150 DATA function=none
+  005761a8 DATA function=none
+  005762e4 DATA function=none
+  00576420 DATA function=none
+  00576478 DATA function=none
+
+TARGET 004ac1b0
+  00574650 DATA function=none
+  005746a0 DATA function=none
+  00574700 DATA function=none
+  00574794 DATA function=none
+  005747f4 DATA function=none
+  00574884 DATA function=none
+  00574900 DATA function=none
+  00574998 DATA function=none
+  00574a04 DATA function=none
+  00574a64 DATA function=none
+  00574ac8 DATA function=none
+  0057609c DATA function=none
+  005760fc DATA function=none
+  0057630c DATA function=none
+
+TARGET 00482800
+  00499e3d UNCONDITIONAL_CALL function=00499e20 FUN_00499e20
+  00572998 DATA function=none
+  00572bcc DATA function=none
+  00572eb0 DATA function=none
+  00573258 DATA function=none
+  00573374 DATA function=none
+  00573420 DATA function=none
+  00573538 DATA function=none
+  005735a4 DATA function=none
+  005736f0 DATA function=none
+  00573828 DATA function=none
+  00573978 DATA function=none
+  005739d8 DATA function=none
+  00573a0c DATA function=none
+  00574730 DATA function=none
+  00574750 DATA function=none
+  00574930 DATA function=none
+  00574b04 DATA function=none
+  00575974 DATA function=none
+  005759ac DATA function=none
+  005764d0 DATA function=none
+  005764fc DATA function=none
+  00576524 DATA function=none
+  00576554 DATA function=none
+  0057657c DATA function=none
+  005765a8 DATA function=none
+  005765d0 DATA function=none
+  005765fc DATA function=none
+  00576628 DATA function=none
+  00577f54 DATA function=none
+  00577fa4 DATA function=none
+  00578168 DATA function=none
+  00578444 DATA function=none
+  005784b4 DATA function=none
+

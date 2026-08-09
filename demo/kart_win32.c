@@ -29,8 +29,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_SKID_SEGMENTS 2048
-#define SKID_LIFETIME_MS 15000
+#define SKID_MARK_POOL_SIZE 50u
+#define SKID_MARK_MAX_CROSS_SECTIONS 44u
+#define SKID_MARK_SIDE_COUNT 2u
+#define SKID_MARK_WIDTH 0.28f
+#define SKID_MARK_SURFACE_BIAS 0.02f
+#define SKID_MARK_LOCAL_X 0.61f
+#define SKID_MARK_LOCAL_Y 0.5f
 
 /* Half-extents of the top-down view's window onto the world, in metres. */
 static const float VIEW_HALF_WIDTH = 55.0f;
@@ -43,17 +48,17 @@ typedef enum DemoViewMode {
     DEMO_VIEW_TOPDOWN = 1
 } DemoViewMode;
 
-typedef struct SkidSegment3D {
-    float left_x0;
-    float left_y0;
-    float left_x1;
-    float left_y1;
-    float right_x0;
-    float right_y0;
-    float right_x1;
-    float right_y1;
-    unsigned int created_ms;
-} SkidSegment3D;
+typedef struct SkidMarkCrossSection {
+    KartVec3 edge[2];
+    float texture_v;
+} SkidMarkCrossSection;
+
+typedef struct SkidMarkStrip {
+    SkidMarkCrossSection sections[SKID_MARK_MAX_CROSS_SECTIONS];
+    unsigned int section_count;
+    unsigned int sequence;
+    bool building;
+} SkidMarkStrip;
 
 typedef struct Demo3DState {
     KartSimulationState kart;
@@ -61,13 +66,11 @@ typedef struct Demo3DState {
     const KartDemoTrackSpec *track_spec;
     DWORD previous_tick;
     unsigned int simulation_time_ms;
-    unsigned int skid_head;
-    unsigned int skid_count;
-    SkidSegment3D skid_segments[MAX_SKID_SEGMENTS];
-    float previous_skid_left_x;
-    float previous_skid_left_y;
-    float previous_skid_right_x;
-    float previous_skid_right_y;
+    SkidMarkStrip skid_marks[SKID_MARK_SIDE_COUNT][SKID_MARK_POOL_SIZE];
+    unsigned int skid_next[SKID_MARK_SIDE_COUNT];
+    unsigned int skid_sequence;
+    int skid_building[SKID_MARK_SIDE_COUNT];
+    KartTrackTextureImage skid_texture;
     DemoViewMode view_mode;
     bool view_key_was_down;
     bool vector_key_was_down;
@@ -267,6 +270,79 @@ static void load_track_textures(HINSTANCE instance, Demo3DState *demo)
     (void)instance;
     (void)demo;
 #endif
+}
+
+/* `effect.rho/skidmark/skidmark.tga`, loaded without image-library conversion
+   so the executable samples the exact 64x32 BGRA pixels shipped by the demo. */
+static void load_skidmark_texture(HINSTANCE instance, Demo3DState *demo)
+{
+    HRSRC resource = FindResourceA(
+        instance, MAKEINTRESOURCEA(IDR_SKIDMARK_TEXTURE), RT_RCDATA);
+    HGLOBAL loaded;
+    const unsigned char *bytes;
+    DWORD size;
+    uint32_t width;
+    uint32_t height;
+    size_t texel_count;
+    size_t mask_bytes;
+    uint32_t y;
+    if (resource == NULL) return;
+    loaded = LoadResource(instance, resource);
+    size = SizeofResource(instance, resource);
+    bytes = loaded != NULL ? (const unsigned char *)LockResource(loaded) : NULL;
+    if (bytes == NULL || size < 18u || bytes[2] != 2u || bytes[16] != 32u) return;
+    width = (uint32_t)bytes[12] | ((uint32_t)bytes[13] << 8);
+    height = (uint32_t)bytes[14] | ((uint32_t)bytes[15] << 8);
+    texel_count = (size_t)width * (size_t)height;
+    if (width != 64u || height != 32u || 18u + texel_count * 4u > (size_t)size) return;
+    mask_bytes = (texel_count + 7u) / 8u;
+    demo->skid_texture.texels = (uint16_t *)malloc(
+        texel_count * sizeof(*demo->skid_texture.texels));
+    demo->skid_texture.mask = (uint8_t *)calloc(mask_bytes, 1u);
+    demo->skid_texture.alpha = (uint8_t *)malloc(texel_count);
+    if (demo->skid_texture.texels == NULL || demo->skid_texture.mask == NULL ||
+        demo->skid_texture.alpha == NULL) {
+        free(demo->skid_texture.texels);
+        free(demo->skid_texture.mask);
+        free(demo->skid_texture.alpha);
+        memset(&demo->skid_texture, 0, sizeof(demo->skid_texture));
+        return;
+    }
+    demo->skid_texture.width = width;
+    demo->skid_texture.height = height;
+    demo->skid_texture.flags =
+        KART_TRACK_TEXTURE_MASKED | KART_TRACK_TEXTURE_ALPHA8 |
+        KART_TRACK_TEXTURE_BLEND_ALPHA8;
+    for (y = 0; y < height; ++y) {
+        const uint32_t source_y =
+            (bytes[17] & 0x20u) != 0u ? y : height - 1u - y;
+        uint32_t x;
+        for (x = 0; x < width; ++x) {
+            const size_t destination = (size_t)y * width + x;
+            const size_t source = 18u + ((size_t)source_y * width + x) * 4u;
+            const uint8_t b = bytes[source];
+            const uint8_t g = bytes[source + 1u];
+            const uint8_t r = bytes[source + 2u];
+            const uint8_t a = bytes[source + 3u];
+            demo->skid_texture.texels[destination] = (uint16_t)(
+                ((uint16_t)(r >> 3) << 11) |
+                ((uint16_t)(g >> 2) << 5) |
+                (uint16_t)(b >> 3));
+            demo->skid_texture.alpha[destination] = a;
+            if (a != 0u) {
+                demo->skid_texture.mask[destination >> 3] |=
+                    (uint8_t)(1u << (destination & 7u));
+            }
+        }
+    }
+}
+
+static void free_skidmark_texture(Demo3DState *demo)
+{
+    free(demo->skid_texture.texels);
+    free(demo->skid_texture.mask);
+    free(demo->skid_texture.alpha);
+    memset(&demo->skid_texture, 0, sizeof(demo->skid_texture));
 }
 
 /* The theme half of a texture key. Track asset names are "<theme>_<code>", the
@@ -571,8 +647,11 @@ static void reset_kart(Demo3DState *demo)
     demo->respawn_arm_ms = 0;
     demo->previous_tick = GetTickCount();
     demo->simulation_time_ms = 0;
-    demo->skid_head = 0;
-    demo->skid_count = 0;
+    memset(demo->skid_marks, 0, sizeof(demo->skid_marks));
+    memset(demo->skid_next, 0, sizeof(demo->skid_next));
+    demo->skid_sequence = 0;
+    demo->skid_building[0] = -1;
+    demo->skid_building[1] = -1;
     demo->previous_skid_active = false;
     demo->boost_active = false;
     demo->previous_velocity = demo->kart.linear_velocity;
@@ -604,61 +683,132 @@ static bool drift_visual_active(const KartSimulationState *kart)
            kart->drift.slip_detected || kart->drift.linger_timer > 0.0f;
 }
 
+static unsigned int skid_mark_segment_count(const Demo3DState *demo)
+{
+    unsigned int count = 0;
+    unsigned int side;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        unsigned int mark;
+        for (mark = 0; mark < SKID_MARK_POOL_SIZE; ++mark) {
+            const unsigned int sections = demo->skid_marks[side][mark].section_count;
+            if (sections > 1u) count += sections - 1u;
+        }
+    }
+    return count;
+}
+
 static void update_skid_marks(Demo3DState *demo)
 {
+    static const float rear_wheel_x[SKID_MARK_SIDE_COUNT] = {-0.8f, 0.8f};
     KartVec3 right;
     KartVec3 forward;
     KartVec3 up;
-    float speed;
-    float rear_offset;
-    float side_offset;
-    float rear_x;
-    float rear_y;
-    float left_x;
-    float left_y;
-    float right_x;
-    float right_y;
+    const float local_x[SKID_MARK_SIDE_COUNT] = {
+        -SKID_MARK_LOCAL_X, SKID_MARK_LOCAL_X};
+    KartGroundHit hits[SKID_MARK_SIDE_COUNT];
+    bool contacts[SKID_MARK_SIDE_COUNT] = {false, false};
     bool active;
+    unsigned int side;
 
     orientation_axes(demo->kart.orientation, &right, &forward, &up);
-    (void)up;
-    speed = sqrtf(
-        demo->kart.linear_velocity.x * demo->kart.linear_velocity.x +
-        demo->kart.linear_velocity.y * demo->kart.linear_velocity.y);
-    rear_offset = demo->kart.geometry.half_length * 0.8f;
-    side_offset = demo->kart.geometry.half_width * 0.8f;
-    rear_x = demo->kart.position.x - forward.x * rear_offset;
-    rear_y = demo->kart.position.y - forward.y * rear_offset;
-    left_x = rear_x - right.x * side_offset;
-    left_y = rear_y - right.y * side_offset;
-    right_x = rear_x + right.x * side_offset;
-    right_y = rear_y + right.y * side_offset;
-    active = demo->kart.grounded && speed > 5.0f &&
-             drift_visual_active(&demo->kart);
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        KartVec3 ray_start = demo->kart.position;
+        const KartVec3 ray_delta = vec_scale(
+            up, -2.0f * demo->kart.geometry.suspension_range);
+        /* The original gates emission on wheel contacts 2 and 3. Reuse the
+           recovered wheel query's exact rear-wheel locations for that test. */
+        ray_start = vec_add(ray_start, vec_scale(
+            right, demo->kart.geometry.half_width * rear_wheel_x[side]));
+        ray_start = vec_add(ray_start, vec_scale(
+            forward, -demo->kart.geometry.half_length * 0.8f));
+        ray_start = vec_add(
+            ray_start, vec_scale(up, demo->kart.geometry.suspension_range));
+        contacts[side] = query_track_ground(
+            demo, ray_start, ray_delta, &hits[side]);
+    }
+    active = drift_visual_active(&demo->kart) && contacts[0] && contacts[1];
 
-    if (active && demo->previous_skid_active) {
-        SkidSegment3D *segment = &demo->skid_segments[demo->skid_head];
-        *segment = (SkidSegment3D){
-            .left_x0 = demo->previous_skid_left_x,
-            .left_y0 = demo->previous_skid_left_y,
-            .left_x1 = left_x,
-            .left_y1 = left_y,
-            .right_x0 = demo->previous_skid_right_x,
-            .right_y0 = demo->previous_skid_right_y,
-            .right_x1 = right_x,
-            .right_y1 = right_y,
-            .created_ms = demo->simulation_time_ms,
-        };
-        demo->skid_head = (demo->skid_head + 1) % MAX_SKID_SEGMENTS;
-        if (demo->skid_count < MAX_SKID_SEGMENTS) {
-            demo->skid_count += 1;
+    if (!active) {
+        for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+            if (demo->skid_building[side] >= 0) {
+                demo->skid_marks[side][demo->skid_building[side]].building = false;
+                demo->skid_building[side] = -1;
+            }
         }
+        demo->previous_skid_active = false;
+        return;
     }
 
-    demo->previous_skid_left_x = left_x;
-    demo->previous_skid_left_y = left_y;
-    demo->previous_skid_right_x = right_x;
-    demo->previous_skid_right_y = right_y;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        SkidMarkStrip *strip;
+        KartVec3 centre = demo->kart.position;
+        KartVec3 lateral;
+        SkidMarkCrossSection *section;
+        if (demo->skid_building[side] < 0) {
+            const unsigned int index = demo->skid_next[side];
+            strip = &demo->skid_marks[side][index];
+            memset(strip, 0, sizeof(*strip));
+            strip->sequence = ++demo->skid_sequence;
+            strip->building = true;
+            demo->skid_building[side] = (int)index;
+            demo->skid_next[side] = (index + 1u) % SKID_MARK_POOL_SIZE;
+        } else {
+            strip = &demo->skid_marks[side][demo->skid_building[side]];
+        }
+        if (strip->section_count >= SKID_MARK_MAX_CROSS_SECTIONS) {
+            const unsigned int index = demo->skid_next[side];
+            strip->building = false;
+            strip = &demo->skid_marks[side][index];
+            memset(strip, 0, sizeof(*strip));
+            strip->sequence = ++demo->skid_sequence;
+            strip->building = true;
+            demo->skid_building[side] = (int)index;
+            demo->skid_next[side] = (index + 1u) % SKID_MARK_POOL_SIZE;
+        }
+        centre = vec_add(centre, vec_scale(right, local_x[side]));
+        centre = vec_add(centre, vec_scale(forward, -SKID_MARK_LOCAL_Y));
+        centre = vec_sub(centre, vec_scale(
+            hits[side].normal,
+            vec_dot(vec_sub(centre, hits[side].point), hits[side].normal)));
+        /* KartRider.exe 0x00428D30 builds the second frame used by SkidMark
+           from -linearVelocity and chassis column 2. 0x00470110/0x00470470
+           then transforms (-1,0,0) by that frame, dots it with the same axis
+           from the chassis frame, clamps the dot to 0.7, and finally applies
+           width * 0.5. Keeping this velocity frame is what prevents steering
+           angle from directly turning every ribbon cross-section. */
+        if (vec_dot(demo->kart.linear_velocity, demo->kart.linear_velocity) == 0.0f) {
+            lateral = vec_scale(right, -1.0f);
+        } else {
+            const KartVec3 backward = vec_normalize(
+                vec_scale(demo->kart.linear_velocity, -1.0f));
+            lateral = vec_cross(up, backward);
+        }
+        {
+            float frame_dot = vec_dot(lateral, vec_scale(right, -1.0f));
+            if (frame_dot < 0.7f) frame_dot = 0.7f;
+            lateral = vec_scale(
+                lateral, frame_dot * SKID_MARK_WIDTH * 0.5f);
+        }
+        section = &strip->sections[strip->section_count];
+        section->edge[0] = vec_add(
+            vec_sub(centre, lateral),
+            vec_scale(hits[side].normal, SKID_MARK_SURFACE_BIAS));
+        section->edge[1] = vec_add(
+            vec_add(centre, lateral),
+            vec_scale(hits[side].normal, SKID_MARK_SURFACE_BIAS));
+        if (strip->section_count != 0u) {
+            const SkidMarkCrossSection *previous =
+                &strip->sections[strip->section_count - 1u];
+            const KartVec3 centre_previous = vec_scale(
+                vec_add(previous->edge[0], previous->edge[1]), 0.5f);
+            const KartVec3 centre_current = vec_scale(
+                vec_add(section->edge[0], section->edge[1]), 0.5f);
+            const KartVec3 delta = vec_sub(centre_current, centre_previous);
+            section->texture_v = previous->texture_v +
+                sqrtf(vec_dot(delta, delta));
+        }
+        strip->section_count += 1u;
+    }
     demo->previous_skid_active = active;
 }
 
@@ -953,7 +1103,9 @@ static void raster_triangle(
     for (y = minimum_y; y <= maximum_y; ++y) {
         const float py = (float)y + 0.5f;
         uint32_t *row = target->pixels + (size_t)y * (size_t)target->width;
-        float *depth_row = target->depth + (size_t)y * (size_t)target->width;
+        float *depth_row = target->depth != NULL
+            ? target->depth + (size_t)y * (size_t)target->width
+            : NULL;
         for (x = minimum_x; x <= maximum_x; ++x) {
             const float px = (float)x + 0.5f;
             const float w0 =
@@ -968,7 +1120,8 @@ static void raster_triangle(
             }
             inverse_z =
                 w0 * a.inverse_z + w1 * b.inverse_z + w2 * c.inverse_z;
-            if (inverse_z <= 0.0f || inverse_z <= depth_row[x]) {
+            if (inverse_z <= 0.0f ||
+                (depth_row != NULL && inverse_z <= depth_row[x])) {
                 continue;
             }
             colour = flat_colour;
@@ -989,8 +1142,24 @@ static void raster_triangle(
                     continue;
                 }
                 colour = rgb565_to_bgrx(image->texels[texel]);
+                if ((image->flags & KART_TRACK_TEXTURE_BLEND_ALPHA8) != 0u &&
+                    image->alpha != NULL && image->alpha[texel] < 255u) {
+                    const uint32_t alpha = image->alpha[texel];
+                    const uint32_t inverse_alpha = 255u - alpha;
+                    const uint32_t destination = row[x];
+                    const uint32_t red =
+                        (((colour >> 16) & 0xffu) * alpha +
+                         ((destination >> 16) & 0xffu) * inverse_alpha) / 255u;
+                    const uint32_t green =
+                        (((colour >> 8) & 0xffu) * alpha +
+                         ((destination >> 8) & 0xffu) * inverse_alpha) / 255u;
+                    const uint32_t blue =
+                        ((colour & 0xffu) * alpha +
+                         (destination & 0xffu) * inverse_alpha) / 255u;
+                    colour = (red << 16) | (green << 8) | blue;
+                }
             }
-            depth_row[x] = inverse_z;
+            if (depth_row != NULL) depth_row[x] = inverse_z;
             row[x] = colour;
         }
     }
@@ -1521,50 +1690,27 @@ static void draw_skid_marks(
     Camera3D camera,
     const Demo3DState *demo)
 {
-    HPEN fresh_pen = CreatePen(PS_SOLID, 4, RGB(8, 10, 12));
-    HPEN middle_pen = CreatePen(PS_SOLID, 3, RGB(23, 26, 29));
-    HPEN old_pen_color = CreatePen(PS_SOLID, 2, RGB(43, 47, 51));
-    HPEN selected_pen = NULL;
-    HGDIOBJ original_pen = NULL;
-    unsigned int i;
-
-    for (i = 0; i < demo->skid_count; ++i) {
-        const unsigned int oldest =
-            (demo->skid_head + MAX_SKID_SEGMENTS - demo->skid_count) %
-            MAX_SKID_SEGMENTS;
-        const SkidSegment3D *segment =
-            &demo->skid_segments[(oldest + i) % MAX_SKID_SEGMENTS];
-        const unsigned int age = demo->simulation_time_ms - segment->created_ms;
-        HPEN wanted_pen;
-        if (age > SKID_LIFETIME_MS) {
-            continue;
-        }
-        wanted_pen = age < 4000
-            ? fresh_pen
-            : (age < 9000 ? middle_pen : old_pen_color);
-        if (wanted_pen != selected_pen) {
-            if (selected_pen == NULL) {
-                original_pen = SelectObject(dc, wanted_pen);
-            } else {
-                SelectObject(dc, wanted_pen);
+    HPEN pen = CreatePen(PS_SOLID, 4, RGB(8, 10, 12));
+    HGDIOBJ old_pen = SelectObject(dc, pen);
+    unsigned int side;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        unsigned int mark;
+        for (mark = 0; mark < SKID_MARK_POOL_SIZE; ++mark) {
+            const SkidMarkStrip *strip = &demo->skid_marks[side][mark];
+            unsigned int section;
+            for (section = 1; section < strip->section_count; ++section) {
+                const KartVec3 a = vec_scale(
+                    vec_add(strip->sections[section - 1u].edge[0],
+                            strip->sections[section - 1u].edge[1]), 0.5f);
+                const KartVec3 b = vec_scale(
+                    vec_add(strip->sections[section].edge[0],
+                            strip->sections[section].edge[1]), 0.5f);
+                draw_line_3d(dc, client, camera, a, b);
             }
-            selected_pen = wanted_pen;
         }
-        draw_line_3d(
-            dc, client, camera,
-            (KartVec3){segment->left_x0, segment->left_y0, 0.025f},
-            (KartVec3){segment->left_x1, segment->left_y1, 0.025f});
-        draw_line_3d(
-            dc, client, camera,
-            (KartVec3){segment->right_x0, segment->right_y0, 0.025f},
-            (KartVec3){segment->right_x1, segment->right_y1, 0.025f});
     }
-    if (selected_pen != NULL) {
-        SelectObject(dc, original_pen);
-    }
-    DeleteObject(fresh_pen);
-    DeleteObject(middle_pen);
-    DeleteObject(old_pen_color);
+    SelectObject(dc, old_pen);
+    DeleteObject(pen);
 }
 
 static void draw_boost_effect(
@@ -2366,52 +2512,32 @@ static void raster_skid_marks(
     Camera3D camera,
     const Demo3DState *demo)
 {
-    /* The GDI pass draws these as pen-width lines, which have no world size at
-       all. Through the rasterizer they have to be geometry, so each segment
-       becomes a quad of a tyre's width lying on the ground. */
-    const float half_width = 0.09f;
-    unsigned int i;
-
-    for (i = 0; i < demo->skid_count; ++i) {
-        const unsigned int oldest =
-            (demo->skid_head + MAX_SKID_SEGMENTS - demo->skid_count) %
-            MAX_SKID_SEGMENTS;
-        const SkidSegment3D *segment =
-            &demo->skid_segments[(oldest + i) % MAX_SKID_SEGMENTS];
-        const unsigned int age = demo->simulation_time_ms - segment->created_ms;
-        uint32_t colour;
-        int side;
-        if (age > SKID_LIFETIME_MS) {
-            continue;
-        }
-        colour = age < 4000u ? 0x00080A0Cu
-                             : (age < 9000u ? 0x00171A1Du : 0x002B2F33u);
-        for (side = 0; side < 2; ++side) {
-            const float x0 = side == 0 ? segment->left_x0 : segment->right_x0;
-            const float y0 = side == 0 ? segment->left_y0 : segment->right_y0;
-            const float x1 = side == 0 ? segment->left_x1 : segment->right_x1;
-            const float y1 = side == 0 ? segment->left_y1 : segment->right_y1;
-            const float dx = x1 - x0;
-            const float dy = y1 - y0;
-            const float length = sqrtf(dx * dx + dy * dy);
-            float nx;
-            float ny;
-            KartVec3 quad[4];
-            if (length < 1.0e-4f) {
-                continue;
+    const KartTrackTextureImage *texture =
+        demo->skid_texture.texels != NULL ? &demo->skid_texture : NULL;
+    unsigned int side;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        unsigned int mark;
+        for (mark = 0; mark < SKID_MARK_POOL_SIZE; ++mark) {
+            const SkidMarkStrip *strip = &demo->skid_marks[side][mark];
+            unsigned int section;
+            for (section = 1; section < strip->section_count; ++section) {
+                const SkidMarkCrossSection *a = &strip->sections[section - 1u];
+                const SkidMarkCrossSection *b = &strip->sections[section];
+                const float uv0[6] = {
+                    0.0f, a->texture_v, 0.0f, b->texture_v,
+                    0.499999f, b->texture_v};
+                const float uv1[6] = {
+                    0.0f, a->texture_v, 0.499999f, b->texture_v,
+                    0.499999f, a->texture_v};
+                raster_world_triangle(
+                    target, client, camera,
+                    a->edge[0], b->edge[0], b->edge[1],
+                    texture != NULL ? uv0 : NULL, texture, 0x00141414u);
+                raster_world_triangle(
+                    target, client, camera,
+                    a->edge[0], b->edge[1], a->edge[1],
+                    texture != NULL ? uv1 : NULL, texture, 0x00141414u);
             }
-            nx = -dy / length * half_width;
-            ny = dx / length * half_width;
-            /* The same 0.025 lift the GDI pass uses, which keeps the mark off
-               the road surface it is drawn over. */
-            quad[0] = (KartVec3){x0 + nx, y0 + ny, 0.025f};
-            quad[1] = (KartVec3){x1 + nx, y1 + ny, 0.025f};
-            quad[2] = (KartVec3){x1 - nx, y1 - ny, 0.025f};
-            quad[3] = (KartVec3){x0 - nx, y0 - ny, 0.025f};
-            raster_flat_triangle(
-                target, client, camera, quad[0], quad[1], quad[2], colour);
-            raster_flat_triangle(
-                target, client, camera, quad[0], quad[2], quad[3], colour);
         }
     }
 }
@@ -2483,16 +2609,58 @@ static KartVec3 kart_forward(KartQuat q)
     };
 }
 
-static void draw_scene_topdown(HDC buffer, RECT client, const Demo3DState *demo)
+static void raster_skid_marks_topdown(
+    SoftwareTarget *target,
+    RECT client,
+    float camera_x,
+    float camera_y,
+    const Demo3DState *demo)
+{
+    const KartTrackTextureImage *texture =
+        demo->skid_texture.texels != NULL ? &demo->skid_texture : NULL;
+    unsigned int side;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        unsigned int mark;
+        for (mark = 0; mark < SKID_MARK_POOL_SIZE; ++mark) {
+            const SkidMarkStrip *strip = &demo->skid_marks[side][mark];
+            unsigned int section;
+            for (section = 1; section < strip->section_count; ++section) {
+                const SkidMarkCrossSection *a = &strip->sections[section - 1u];
+                const SkidMarkCrossSection *b = &strip->sections[section];
+                const POINT p00 = world_to_screen(
+                    client, camera_x, camera_y, a->edge[0].x, a->edge[0].y);
+                const POINT p01 = world_to_screen(
+                    client, camera_x, camera_y, a->edge[1].x, a->edge[1].y);
+                const POINT p10 = world_to_screen(
+                    client, camera_x, camera_y, b->edge[0].x, b->edge[0].y);
+                const POINT p11 = world_to_screen(
+                    client, camera_x, camera_y, b->edge[1].x, b->edge[1].y);
+                const ScreenVertex v00 = {
+                    (float)p00.x, (float)p00.y, 1.0f, 0.0f, a->texture_v};
+                const ScreenVertex v01 = {
+                    (float)p01.x, (float)p01.y, 1.0f, 0.499999f, a->texture_v};
+                const ScreenVertex v10 = {
+                    (float)p10.x, (float)p10.y, 1.0f, 0.0f, b->texture_v};
+                const ScreenVertex v11 = {
+                    (float)p11.x, (float)p11.y, 1.0f, 0.499999f, b->texture_v};
+                raster_triangle(target, v00, v10, v11, texture, 0x00141414u);
+                raster_triangle(target, v00, v11, v01, texture, 0x00141414u);
+            }
+        }
+    }
+}
+
+static void draw_scene_topdown(
+    HDC buffer,
+    RECT client,
+    const Demo3DState *demo,
+    void *frame_pixels)
 {
     HBRUSH track_brush;
     HPEN wall_pen;
     HPEN grid_pen;
     HPEN heading_pen;
     HPEN velocity_pen;
-    HPEN skid_fresh_pen;
-    HPEN skid_middle_pen;
-    HPEN skid_old_pen;
     HBRUSH kart_brush;
     HGDIOBJ old_brush;
     HGDIOBJ old_pen;
@@ -2560,57 +2728,16 @@ static void draw_scene_topdown(HDC buffer, RECT client, const Demo3DState *demo)
     SelectObject(buffer, old_pen);
     DeleteObject(grid_pen);
 
-    skid_fresh_pen = CreatePen(PS_SOLID, 3, RGB(12, 14, 16));
-    skid_middle_pen = CreatePen(PS_SOLID, 3, RGB(25, 28, 31));
-    skid_old_pen = CreatePen(PS_SOLID, 2, RGB(39, 44, 48));
-    {
-        unsigned int i;
-        HPEN selected_pen = NULL;
-        for (i = 0; i < demo->skid_count; ++i) {
-            const unsigned int oldest =
-                (demo->skid_head + MAX_SKID_SEGMENTS - demo->skid_count) %
-                MAX_SKID_SEGMENTS;
-            const SkidSegment3D *segment =
-                &demo->skid_segments[(oldest + i) % MAX_SKID_SEGMENTS];
-            const unsigned int age =
-                demo->simulation_time_ms - segment->created_ms;
-            HPEN wanted_pen;
-            POINT a;
-            POINT b;
-            if (age > SKID_LIFETIME_MS) {
-                continue;
-            }
-            wanted_pen = age < 4000
-                ? skid_fresh_pen
-                : (age < 9000 ? skid_middle_pen : skid_old_pen);
-            if (wanted_pen != selected_pen) {
-                if (selected_pen == NULL) {
-                    old_pen = SelectObject(buffer, wanted_pen);
-                } else {
-                    SelectObject(buffer, wanted_pen);
-                }
-                selected_pen = wanted_pen;
-            }
-            a = world_to_screen(
-                client, camera_x, camera_y, segment->left_x0, segment->left_y0);
-            b = world_to_screen(
-                client, camera_x, camera_y, segment->left_x1, segment->left_y1);
-            MoveToEx(buffer, a.x, a.y, NULL);
-            LineTo(buffer, b.x, b.y);
-            a = world_to_screen(
-                client, camera_x, camera_y, segment->right_x0, segment->right_y0);
-            b = world_to_screen(
-                client, camera_x, camera_y, segment->right_x1, segment->right_y1);
-            MoveToEx(buffer, a.x, a.y, NULL);
-            LineTo(buffer, b.x, b.y);
-        }
-        if (selected_pen != NULL) {
-            SelectObject(buffer, old_pen);
-        }
+    if (frame_pixels != NULL && demo->skid_texture.texels != NULL) {
+        SoftwareTarget frame;
+        memset(&frame, 0, sizeof(frame));
+        frame.pixels = (uint32_t *)frame_pixels;
+        frame.width = client.right;
+        frame.height = client.bottom;
+        GdiFlush();
+        raster_skid_marks_topdown(
+            &frame, client, camera_x, camera_y, demo);
     }
-    DeleteObject(skid_fresh_pen);
-    DeleteObject(skid_middle_pen);
-    DeleteObject(skid_old_pen);
 
     center = world_to_screen(
         client, camera_x, camera_y,
@@ -2983,7 +3110,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
 
     camera = make_chase_camera(&demo->camera_pose, client);
     if (topdown) {
-        draw_scene_topdown(buffer, client, demo);
+        draw_scene_topdown(buffer, client, demo, frame_pixels);
     } else {
         const KartTrackScene *scene = active_track_scene(demo);
         const bool textured =
@@ -2993,8 +3120,13 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
            is right: the wireframe is line art with no depth to test against. */
         const bool kart_only =
             !textured && demo->kart_textured && frame_pixels != NULL;
+        const bool skid_only =
+            !textured && !kart_only && frame_pixels != NULL &&
+            demo->skid_texture.texels != NULL;
         bool rasterized = false;
-        if (textured || kart_only) {
+        bool skid_rasterized = false;
+        bool wireframe_base_drawn = false;
+        if (textured || kart_only || skid_only) {
             SoftwareTarget frame;
             char theme[32];
             memset(&frame, 0, sizeof(frame));
@@ -3002,7 +3134,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
             frame.depth = frame_depth_buffer(client.right, client.bottom);
             frame.width = client.right;
             frame.height = client.bottom;
-            if (kart_only) {
+            if (kart_only || skid_only) {
                 /* Everything the kart is drawn over has to be on the DIB first,
                    because the rasterizer writes pixels GDI will not touch
                    again. Gates included, so they read as annotation under it. */
@@ -3012,16 +3144,20 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
                 if (demo->show_gates && demo->course_ready) {
                     draw_course_gates(buffer, client, camera, &demo->course);
                 }
-                draw_skid_marks(buffer, client, camera, demo);
+                wireframe_base_drawn = true;
                 draw_boost_effect(buffer, client, camera, demo);
             }
             /* GDI batches, so everything drawn so far has to have landed in the
                DIB before anything writes to it behind GDI's back. */
             GdiFlush();
+            if (frame.depth != NULL && (kart_only || skid_only)) {
+                raster_skid_marks(&frame, client, camera, demo);
+                skid_rasterized = true;
+            }
             if (frame.depth != NULL && kart_only) {
                 rasterized = true;
                 raster_kart(&frame, client, camera, demo);
-            } else if (frame.depth != NULL) {
+            } else if (frame.depth != NULL && textured) {
                 const KartTrackScene *dome = active_skydome(demo);
                 rasterized = true;
                 track_theme(demo->track_spec, theme, sizeof(theme));
@@ -3044,16 +3180,18 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
                 raster_kart(&frame, client, camera, demo);
             }
         }
-        if (!rasterized) {
+        if (!rasterized && !wireframe_base_drawn) {
             draw_track(buffer, client, camera, demo->track_spec);
             draw_track_scene(
                 buffer, client, camera, demo->track_spec, scene);
         }
-        if (demo->show_gates && demo->course_ready && !kart_only) {
+        if (demo->show_gates && demo->course_ready && !wireframe_base_drawn) {
             draw_course_gates(buffer, client, camera, &demo->course);
         }
         if (!rasterized) {
-            draw_skid_marks(buffer, client, camera, demo);
+            if (!skid_rasterized) {
+                draw_skid_marks(buffer, client, camera, demo);
+            }
             draw_boost_effect(buffer, client, camera, demo);
             draw_kart(buffer, client, camera, demo);
         } else if (demo->show_model_bounds) {
@@ -3154,7 +3292,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         demo->kart.instant_boost.opportunity_timer,
         demo->kart.instant_boost.active ? "ON" : "off",
         demo->kart.grounded_drag_scale,
-        demo->skid_count);
+        skid_mark_segment_count(demo));
     SetTextColor(
         buffer,
         demo->boost_active ? RGB(75, 225, 255) :
@@ -3267,6 +3405,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         load_skydomes(create->hInstance, demo);
         load_kart_models(create->hInstance, demo);
         load_track_textures(create->hInstance, demo);
+        load_skidmark_texture(create->hInstance, demo);
         demo->kart_colour = KART_COLOURSET_DEFAULT;
         kart_demo_sound_start(create->hInstance, &demo->sound);
         kart_demo_minimap_set_load(create->hInstance, &demo->minimaps);
@@ -3644,6 +3783,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             kart_demo_sound_stop(&demo->sound);
             free_track_scenes(demo);
             kart_track_texture_free(&demo->textures);
+            free_skidmark_texture(demo);
             free(demo->skin_texels);
             demo->skin_texels = NULL;
             kart_demo_minimap_set_free(&demo->minimaps);

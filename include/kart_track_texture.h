@@ -26,6 +26,9 @@
    carry it: 0x00417160 composites them over a solid colour when the kart is
    built, which needs the real alpha rather than a cutout. */
 #define KART_TRACK_TEXTURE_ALPHA8 2u
+/* Bit 2: blend source alpha while rasterizing. The original skid-mark TGA
+   needs this; kart skins keep their existing precomposited treatment. */
+#define KART_TRACK_TEXTURE_BLEND_ALPHA8 4u
 
 typedef struct KartTrackTextureImage {
     uint32_t width;

@@ -5,5 +5,6 @@
    of them, so keying by theme and packing once keeps the resource to a single
    payload instead of thirteen overlapping ones. */
 #define IDR_TRACK_TEXTURES 260
+#define IDR_SKIDMARK_TEXTURE 261
 
 #endif

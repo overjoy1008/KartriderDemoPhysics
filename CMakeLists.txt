@@ -329,6 +329,21 @@ if(WIN32)
         src/kart_track_collision.c
         ${KART_MINIMAP_SOURCES}
         ${KART_AUDIO_SOURCES})
+    set(KART_SKIDMARK_TEXTURE
+        "${CMAKE_CURRENT_SOURCE_DIR}/analysis/kart-assets/demo_effect/skidmark/skidmark.tga")
+    if(EXISTS "${KART_SKIDMARK_TEXTURE}")
+        configure_file(
+            demo/kart_skidmark.rc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skidmark.rc
+            @ONLY)
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skidmark.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_SKIDMARK_TEXTURE}")
+        list(APPEND KART_DEMO_SOURCES
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skidmark.rc)
+    else()
+        message(WARNING "Original skidmark.tga not found; skid marks will be untextured")
+    endif()
     if(KART_HAVE_ALL_SCENES)
         set(KART_TRACK_SCENE_RC_ENTRIES "")
         foreach(KART_TRACK_CODE IN LISTS KART_TRACK_CODES)
