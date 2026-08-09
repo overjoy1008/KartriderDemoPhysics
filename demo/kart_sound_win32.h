@@ -29,6 +29,7 @@ typedef struct KartDemoSound {
     /* Kept so a boost that is cut short takes its sample with it. */
     int booster_voice;
     int instant_boost_voice;
+    unsigned int instant_boost_activation_count;
 } KartDemoSound;
 
 static int kart_demo_load_sound_resource(
@@ -73,6 +74,7 @@ static void kart_demo_sound_start(HINSTANCE instance, KartDemoSound *sound)
     sound->booster_idle_voice = -1;
     sound->booster_voice = -1;
     sound->instant_boost_voice = -1;
+    sound->instant_boost_activation_count = 0;
     kart_sound_driver_reset(&sound->driver);
     /* A machine with no output device simply runs silent. */
     if (!kart_audio_start(&sound->audio)) return;
@@ -165,7 +167,11 @@ static void kart_demo_sound_update(
         kart_audio_stop_voice(sound->audio, sound->booster_voice);
         sound->booster_voice = -1;
     }
-    if (state.start_instant_boost && sound->instant_boost_sound >= 0) {
+    if ((state.start_instant_boost ||
+         (kart->instant_boost.active &&
+          kart->instant_boost.activation_count !=
+              sound->instant_boost_activation_count)) &&
+        sound->instant_boost_sound >= 0) {
         sound->instant_boost_voice = kart_audio_play_overlapping(
             sound->audio, sound->instant_boost_sound, 1.0f);
     } else if (!kart->instant_boost.active &&
@@ -173,6 +179,8 @@ static void kart_demo_sound_update(
         kart_audio_stop_voice(sound->audio, sound->instant_boost_voice);
         sound->instant_boost_voice = -1;
     }
+    sound->instant_boost_activation_count =
+        kart->instant_boost.activation_count;
     if (state.start_crash && sound->crash_sound >= 0) {
         kart_audio_play_once(sound->audio, sound->crash_sound, state.crash_volume);
     }

@@ -380,6 +380,8 @@ static void kart_demo_draw_gauge(
     RECT client,
     float ratio,
     unsigned int boosters,
+    unsigned int max_boosters,
+    bool unlimited_boosters,
     bool charging,
     const char *model_name)
 {
@@ -407,7 +409,7 @@ static void kart_demo_draw_gauge(
     HGDIOBJ old_pen = SelectObject(dc, edge_pen);
     HGDIOBJ old_font = SelectObject(dc, font);
     int fill_width;
-    int slot;
+    unsigned int slot;
 
     (void)charging;
     if (ratio < 0.0f) ratio = 0.0f;
@@ -422,12 +424,18 @@ static void kart_demo_draw_gauge(
         };
         FillRect(dc, &fill, fill_brush);
     }
-    for (slot = 0; slot < 2; ++slot) {
-        const int left = bar.right + 10 + slot * (slot_width + 6);
-        SelectObject(
-            dc, (unsigned int)slot < boosters ? slot_full_brush
-                                              : slot_empty_brush);
-        Rectangle(dc, left, bar.top, left + slot_width, bar.bottom);
+    if (unlimited_boosters) {
+        char count[32];
+        snprintf(count, sizeof(count), "BOOSTERS x%u", boosters);
+        SetBkMode(dc, TRANSPARENT);
+        SetTextColor(dc, RGB(255, 170, 70));
+        TextOutA(dc, bar.right + 10, bar.top + 2, count, (int)strlen(count));
+    } else {
+        for (slot = 0; slot < max_boosters; ++slot) {
+            const int left = bar.right + 10 + (int)slot * (slot_width + 6);
+            SelectObject(dc, slot < boosters ? slot_full_brush : slot_empty_brush);
+            Rectangle(dc, left, bar.top, left + slot_width, bar.bottom);
+        }
     }
 
     SetBkMode(dc, TRANSPARENT);

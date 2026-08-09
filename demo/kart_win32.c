@@ -83,6 +83,9 @@ typedef struct Demo3DState {
     bool vector_key_was_down;
     bool param_key_was_down;
     bool gauge_key_was_down;
+    bool booster_storage_key_was_down;
+    bool instant_model_key_was_down;
+    bool boost_cutoff_key_was_down;
     bool boost_press_allowed;
     bool show_vectors;
     KartGaugeConfig gauge_config;
@@ -646,6 +649,8 @@ static void snap_to_ground(Demo3DState *demo, KartVec3 *position)
 
 static void reset_kart(Demo3DState *demo)
 {
+    const bool stored_instant_model = demo->kart.instant_boost.stored_model;
+    const bool reverse_input_ends_boost = demo->kart.reverse_input_ends_boost;
     KartVec3 start_position;
     KartQuat start_orientation;
     if (demo->kart_spec == NULL) {
@@ -656,6 +661,8 @@ static void reset_kart(Demo3DState *demo)
     }
     kart_simulation_init(
         &demo->kart, &demo->kart_spec->dynamics, &demo->kart_spec->geometry);
+    demo->kart.instant_boost.stored_model = stored_instant_model;
+    demo->kart.reverse_input_ends_boost = reverse_input_ends_boost;
     /* 0x00424530: the start grid, taken from the course itself. Slot 0 sits on
        the course's own start pose, which the track asset fixes exactly -
        including which way round the lap is driven, something the start-line
@@ -3166,6 +3173,11 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
         kart->instant_boost.active_timer,
         kart->instant_boost.opportunity_timer);
     TELEMETRY_LINE(
+        RGB(190, 165, 240),
+        "INST    model %-6s stored %u  (Q: model, Up: use)",
+        kart->instant_boost.stored_model ? "stored" : "window",
+        kart->instant_boost.stored_count);
+    TELEMETRY_LINE(
         RGB(200, 212, 220),
         "FORCES  fwd %6.0f  brake %6.0f  Gf %4.2f  Gr %4.2f",
         kart->config.forward_accel_force, kart->config.grip_brake_force,
@@ -3177,11 +3189,13 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
         kart->config.drag_factor, kart->config.mass);
     TELEMETRY_LINE(
         demo->gauge.rate > 0.0f ? RGB(255, 210, 90) : RGB(200, 212, 220),
-        "GAUGE   %-17s %5.1f%%  rate %6.2f  W %4.2f",
+        "GAUGE   %-17s %5.1f%%  rate %6.2f  W %4.2f  store %s %u/%u",
         kart_gauge_model_name(demo->gauge.model),
         demo->gauge_config.full_value > 0.0f
             ? demo->gauge.value / demo->gauge_config.full_value * 100.0f : 0.0f,
-        demo->gauge.rate, demo->gauge.contact_weight);
+        demo->gauge.rate, demo->gauge.contact_weight,
+        demo->gauge.unlimited_boosters ? "unlimited" : "capped",
+        demo->gauge.boosters, demo->kart_spec->max_boosters);
     TELEMETRY_LINE(
         demo->last_step.body_contacts != 0 ? RGB(255, 140, 120)
                                            : RGB(150, 165, 180),
@@ -3392,7 +3406,7 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
     TextOutA(buffer, 16, 12, status, (int)strlen(status));
     {
         static const char driving[] =
-            "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  "
+            "Arrows: drive/instant  Shift/W: drift  Ctrl/D: boost  C: camera  "
             "P: parameters  K: kart  T: track  F: drag trigger  "
             "S: screenshot  R: reset";
         TextOutA(buffer, 16, 32, driving, (int)(sizeof(driving) - 1));
@@ -3419,9 +3433,13 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
     snprintf(
         help,
         sizeof(help),
-        "(experimental)  E: gear model [%s]  G: gauge model [%s]",
+        "(experimental) E: gear [%s] G: gauge [%s] H: storage [%s] Q: instant [%s, %u] M: stop [%s]",
         demo->gearbox.mode == KART_GEAR_MULTI ? "multi" : "single",
-        kart_gauge_model_name(demo->gauge.model));
+        kart_gauge_model_name(demo->gauge.model),
+        demo->gauge.unlimited_boosters ? "unlimited" : "capped",
+        demo->kart.instant_boost.stored_model ? "stored" : "window",
+        demo->kart.instant_boost.stored_count,
+        demo->kart.reverse_input_ends_boost ? "reverse" : "release");
     SetTextColor(buffer, RGB(190, 165, 240));
     TextOutA(buffer, 16, 72, help, (int)strlen(help));
     SetTextColor(buffer, RGB(235, 240, 245));
@@ -3507,7 +3525,8 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
         buffer, client,
         demo->gauge_config.full_value > 0.0f
             ? demo->gauge.value / demo->gauge_config.full_value : 0.0f,
-        demo->gauge.boosters, demo->gauge.rate > 0.0f,
+        demo->gauge.boosters, demo->kart_spec->max_boosters,
+        demo->gauge.unlimited_boosters, demo->gauge.rate > 0.0f,
         kart_gauge_model_name(demo->gauge.model));
     kart_demo_draw_wheel_load(
         buffer, client, demo->kart.wheels.compression, demo->kart.grounded);
@@ -3659,6 +3678,9 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             const bool drag_key_down = key_down('F') != 0;
             const bool gear_key_down = key_down('E') != 0;
             const bool gauge_key_down = key_down('G') != 0;
+            const bool booster_storage_key_down = key_down('H') != 0;
+            const bool instant_model_key_down = key_down('Q') != 0;
+            const bool boost_cutoff_key_down = key_down('M') != 0;
             if (gear_key_down && !demo->gear_key_was_down) {
                 demo->gearbox.mode =
                     demo->gearbox.mode == KART_GEAR_SINGLE
@@ -3673,6 +3695,27 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                     ((demo->gauge.model + 1) % KART_GAUGE_MODEL_COUNT);
             }
             demo->gauge_key_was_down = gauge_key_down;
+            if (booster_storage_key_down &&
+                !demo->booster_storage_key_was_down) {
+                demo->gauge.unlimited_boosters =
+                    !demo->gauge.unlimited_boosters;
+                if (!demo->gauge.unlimited_boosters &&
+                    demo->gauge.boosters > demo->kart_spec->max_boosters) {
+                    demo->gauge.boosters = demo->kart_spec->max_boosters;
+                }
+            }
+            demo->booster_storage_key_was_down = booster_storage_key_down;
+            if (instant_model_key_down && !demo->instant_model_key_was_down) {
+                demo->kart.instant_boost.stored_model =
+                    !demo->kart.instant_boost.stored_model;
+                demo->kart.instant_boost.opportunity_timer = 0.0f;
+            }
+            demo->instant_model_key_was_down = instant_model_key_down;
+            if (boost_cutoff_key_down && !demo->boost_cutoff_key_was_down) {
+                demo->kart.reverse_input_ends_boost =
+                    !demo->kart.reverse_input_ends_boost;
+            }
+            demo->boost_cutoff_key_was_down = boost_cutoff_key_down;
             const bool shot_key_down = key_down('S') != 0;
             const bool view_key_down = key_down('C') != 0;
             const bool vector_key_down = key_down('V') != 0;
@@ -3734,6 +3777,10 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                     demo->kart_spec = selected;
                     demo->kart.config = selected->dynamics;
                     demo->kart.geometry = selected->geometry;
+                    if (!demo->gauge.unlimited_boosters &&
+                        demo->gauge.boosters > selected->max_boosters) {
+                        demo->gauge.boosters = selected->max_boosters;
+                    }
                     demo->kart.grounded_drag_scale =
                         selected->geometry.grounded_drag_scale *
                         (demo->drag_trigger_active ? 4.0f : 1.0f);
@@ -3852,6 +3899,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                     vec_dot(demo->kart.linear_velocity, body_forward),
                     vec_dot(demo->kart.linear_velocity, body_right),
                     drift_visual_active(&demo->kart),
+                    demo->kart_spec->max_boosters,
                     (float)elapsed * 0.001f);
             }
             /* 0x00426470 walks the kart's position trail one segment at a

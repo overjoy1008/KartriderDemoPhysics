@@ -144,7 +144,10 @@ typedef struct KartLongitudinalState {
 typedef struct KartInstantBoostState {
     float opportunity_timer;
     float active_timer;
+    unsigned int stored_count;
+    unsigned int activation_count;
     bool active;
+    bool stored_model;
 } KartInstantBoostState;
 
 typedef struct KartTimedBoostState {
@@ -178,6 +181,8 @@ void kart_instant_boost_step_timers(
     float dt);
 
 void kart_instant_boost_press_forward(KartInstantBoostState *state);
+
+bool kart_instant_boost_use_stored(KartInstantBoostState *state);
 
 void kart_instant_boost_update_drift_exit(
     KartInstantBoostState *boost,

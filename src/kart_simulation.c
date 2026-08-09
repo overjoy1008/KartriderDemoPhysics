@@ -399,16 +399,18 @@ KartSimulationStepResult kart_simulate_milliseconds(
         result.substeps += 1;
     }
     kart_timed_boost_step_milliseconds(&state->timed_boost, frame_elapsed_ms);
-    /* Releasing the accelerator ends the boost immediately instead of letting
-       it run out its remaining time. This is a simulator-side rule; the
-       original only expires the timer. */
-    if (active_controls->forward_input == 0.0f) {
+    /* Two simulator-side cutoff models can be compared: the current model ends
+       both boosts on throttle release, while the alternate model keeps them
+       alive until reverse is pressed. */
+    if ((!state->reverse_input_ends_boost &&
+         active_controls->forward_input == 0.0f) ||
+        (state->reverse_input_ends_boost &&
+         active_controls->reverse_input != 0.0f)) {
         if (state->timed_boost.active) {
             state->timed_boost.remaining_ms = 0;
             state->timed_boost.active = false;
         }
-        /* The instant boost follows the same rule, so both boosts need the
-           throttle held to run and both stop the moment it is let go. */
+        /* The selected cutoff is shared by the item and instant boosts. */
         if (state->instant_boost.active) {
             state->instant_boost.active_timer = 0.0f;
             state->instant_boost.active = false;

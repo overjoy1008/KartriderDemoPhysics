@@ -108,6 +108,7 @@ typedef struct KartSimulationState {
     bool previous_forward_input;
     bool previous_drift_input;
     bool previous_boost_input;
+    bool reverse_input_ends_boost;
     bool grounded;
 } KartSimulationState;
 

@@ -29,6 +29,7 @@
 
 #include <math.h>
 #include <stdbool.h>
+#include <limits.h>
 
 typedef enum KartGaugeModel {
     KART_GAUGE_INFINITE = 0,
@@ -37,7 +38,6 @@ typedef enum KartGaugeModel {
 } KartGaugeModel;
 
 #define KART_GAUGE_MODEL_COUNT 3
-#define KART_GAUGE_MAX_BOOSTERS 2
 
 typedef struct KartGaugeConfig {
     /* Kg: gauge units per metre of rear-axle side travel. */
@@ -53,6 +53,7 @@ typedef struct KartGaugeState {
     KartGaugeModel model;
     float value;
     unsigned int boosters;
+    bool unlimited_boosters;
     /* Last update's charge rate and contact weight, for the telemetry line. */
     float rate;
     float contact_weight;
@@ -109,6 +110,7 @@ static void kart_gauge_update(
     float forward_speed,
     float lateral_speed,
     bool drift_active,
+    unsigned int max_boosters,
     float dt)
 {
     const KartVec3 v = kart->linear_velocity;
@@ -125,7 +127,9 @@ static void kart_gauge_update(
            slots already taken throws the booster away. */
         if (state->value >= config->full_value) {
             state->value = 0.0f;
-            if (state->boosters < KART_GAUGE_MAX_BOOSTERS) {
+            if (state->unlimited_boosters) {
+                if (state->boosters != UINT_MAX) state->boosters += 1;
+            } else if (state->boosters < max_boosters) {
                 state->boosters += 1;
             }
         }

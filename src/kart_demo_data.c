@@ -22,8 +22,10 @@
 #define SOLID_DYNAMICS \
     DYNAMICS(100.0f, 3.0f, 0.855f, 3800.0f, 2000.0f, 2500.0f, 1500.0f, \
              10.0f, 30.0f, 5.0f, 5.0f, 0.2f, 0.2f, 0.2f, 4000.0f, 0.0f)
+#define KART_DEFAULT_MAX_BOOSTERS 2u
 #define KART(name_, dynamics_, half_width_, half_length_, height_) \
-    { (name_), dynamics_, { (half_width_), (half_length_), 0.5f, 1.0f }, (height_) }
+    { (name_), dynamics_, { (half_width_), (half_length_), 0.5f, 1.0f }, \
+      (height_), KART_DEFAULT_MAX_BOOSTERS }
 
 /* Exact model-root AABBs and parameter.xml values extracted from the 2004
    demo's kart.rho. The archive spells Cotton as "cotten". */

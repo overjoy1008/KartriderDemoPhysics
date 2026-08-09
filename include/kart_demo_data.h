@@ -12,6 +12,7 @@ typedef struct KartDemoKartSpec {
     KartDynamicsConfig dynamics;
     KartSimulationGeometry geometry;
     float model_height;
+    unsigned int max_boosters;
 } KartDemoKartSpec;
 
 /* Which horizontal axis the start line runs along. The stripe crosses the road,

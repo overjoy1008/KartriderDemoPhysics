@@ -16,10 +16,14 @@ static int near(float actual, float expected, float epsilon)
 static void test_defaults(void)
 {
     const KartDynamicsConfig config = kart_dynamics_default_config();
+    unsigned int kart_index;
     assert(near(config.mass, 100.0f, 0.0001f));
     assert(near(config.forward_accel_force, 3000.0f, 0.0001f));
     assert(near(config.drift_escape_force, 5000.0f, 0.0001f));
     assert(near(config.drift_trigger_time, 0.1f, 0.0001f));
+    for (kart_index = 0; kart_index < kart_demo_kart_count(); ++kart_index) {
+        assert(kart_demo_kart_at(kart_index)->max_boosters == 2u);
+    }
 }
 
 static void test_steering_attenuation(void)
@@ -372,6 +376,29 @@ static void test_instant_boost_state_machine(void)
     assert(steps >= 99 && steps <= 101);
     assert(near(boost.active_timer, 0.0f, 0.0001f));
     assert(!boost.active);
+}
+
+static void test_stored_instant_boost_state_machine(void)
+{
+    KartDriftState drift = {.entry_was_forward = true};
+    KartInstantBoostState boost = {.stored_model = true};
+
+    kart_instant_boost_update_drift_exit(&boost, &drift, true);
+    assert(boost.stored_count == 1);
+    assert(near(boost.opportunity_timer, 0.0f, 0.0001f));
+
+    kart_instant_boost_press_forward(&boost);
+    assert(boost.active);
+    assert(boost.stored_count == 0);
+    assert(near(boost.active_timer, 0.5f, 0.0001f));
+    assert(boost.activation_count == 1);
+    assert(!kart_instant_boost_use_stored(&boost));
+
+    boost.stored_count = 2;
+    assert(kart_instant_boost_use_stored(&boost));
+    assert(boost.activation_count == 2);
+    assert(kart_instant_boost_use_stored(&boost));
+    assert(boost.activation_count == 3);
 }
 
 static void test_timed_boost_state_machine(void)
@@ -773,6 +800,32 @@ static void test_integrated_timed_boost_lockout(void)
     assert(state.timed_boost.remaining_ms == 2999);
 }
 
+static void test_reverse_input_boost_cutoff_model(void)
+{
+    KartSimulationState state;
+    FlatGroundContext context = {0};
+    const KartSimulationWorld world = {
+        .query_ground = query_flat_ground,
+        .user_data = &context,
+    };
+    KartSimulationControls controls = {0};
+
+    kart_simulation_init(&state, NULL, NULL);
+    state.reverse_input_ends_boost = true;
+    state.timed_boost = (KartTimedBoostState){.remaining_ms = 3000, .active = true};
+    state.instant_boost.active = true;
+    state.instant_boost.active_timer = 0.5f;
+
+    kart_simulate_milliseconds(&state, &controls, &world, 1);
+    assert(state.timed_boost.active);
+    assert(state.instant_boost.active);
+
+    controls.reverse_input = 1.0f;
+    kart_simulate_milliseconds(&state, &controls, &world, 1);
+    assert(!state.timed_boost.active);
+    assert(!state.instant_boost.active);
+}
+
 typedef struct CollisionContext {
     unsigned int calls;
 } CollisionContext;
@@ -903,6 +956,7 @@ int main(void)
     test_drift_trigger_timing();
     test_drift_slip_detection();
     test_instant_boost_state_machine();
+    test_stored_instant_boost_state_machine();
     test_timed_boost_state_machine();
     test_drag_and_linear_integration();
     test_collision_response();
@@ -914,6 +968,7 @@ int main(void)
     test_fixed_step_simulation();
     test_integrated_instant_boost_input_edge();
     test_integrated_timed_boost_lockout();
+    test_reverse_input_boost_cutoff_model();
     test_airborne_and_integrated_collision();
     test_event_ordered_new_cut_steering();
     test_integrated_drift_input_edge();

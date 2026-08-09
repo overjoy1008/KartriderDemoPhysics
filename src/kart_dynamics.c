@@ -1,5 +1,6 @@
 #include "kart_dynamics.h"
 
+#include <limits.h>
 #include <math.h>
 
 /* Constants read from KartRider.exe .rdata at 0x00571d20-0x00571d38. */
@@ -619,11 +620,26 @@ void kart_instant_boost_step_timers(
 void kart_instant_boost_press_forward(KartInstantBoostState *state)
 {
     /* GoKart::SetAccel(true), 0x00431960. */
-    if (state->opportunity_timer > 0.0f) {
+    if (!state->stored_model && state->opportunity_timer > 0.0f) {
         state->opportunity_timer = 0.0f;
         state->active_timer = 0.5f;
         state->active = true;
+        state->activation_count += 1;
+    } else if (state->stored_model) {
+        kart_instant_boost_use_stored(state);
     }
+}
+
+bool kart_instant_boost_use_stored(KartInstantBoostState *state)
+{
+    if (!state->stored_model || state->stored_count == 0) {
+        return false;
+    }
+    state->stored_count -= 1;
+    state->active_timer = 0.5f;
+    state->active = true;
+    state->activation_count += 1;
+    return true;
 }
 
 void kart_instant_boost_update_drift_exit(
@@ -634,10 +650,15 @@ void kart_instant_boost_update_drift_exit(
     /* Tail of 0x0042fc40. A forward drift ending without remaining manual or
        automatic slip opens a one-shot 0.5 second accelerator-input window. */
     if (drift->entry_was_forward && was_drifting &&
-        !drift->input_active && !drift->slip_detected &&
-        boost->opportunity_timer == 0.0f) {
+        !drift->input_active && !drift->slip_detected) {
         drift->entry_was_forward = false;
-        boost->opportunity_timer = 0.5f;
+        if (boost->stored_model) {
+            if (boost->stored_count != UINT_MAX) {
+                boost->stored_count += 1;
+            }
+        } else if (boost->opportunity_timer == 0.0f) {
+            boost->opportunity_timer = 0.5f;
+        }
     }
 }
 
