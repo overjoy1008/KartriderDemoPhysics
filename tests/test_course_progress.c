@@ -368,10 +368,54 @@ static void test_gate_crossing(void)
           "a segment beside the gate counted as a crossing");
 }
 
+static void test_ice_r01_warp(void)
+{
+    const KartCourseAsset *asset = kart_course_find_asset("ice_R01");
+    KartCourse course;
+    unsigned int node;
+    unsigned int warps = 0;
+    CHECK(asset != NULL && kart_course_build(&course, asset),
+          "could not build ice_R01 for warp test");
+    if (asset == NULL || course.node_count == 0) return;
+    for (node = 0; node < course.node_count; ++node) {
+        if (course.nodes[node].warp_next) {
+            KartVec3 destination;
+            float yaw;
+            const KartVec3 direction = course.nodes[node].warp_source_direction;
+            const KartVec3 source = course.nodes[node].warp_source;
+            ++warps;
+            CHECK(kart_course_warp_next(
+                      &course,
+                      (KartVec3){source.x - direction.x, source.y - direction.y,
+                                source.z - direction.z},
+                      (KartVec3){source.x + direction.x, source.y + direction.y,
+                                source.z + direction.z},
+                      &destination, &yaw),
+                  "ice_R01 warpnext plane did not trigger forwards");
+            CHECK(fabsf(destination.x - -200.307503f) < 0.001f &&
+                      fabsf(destination.y - 367.408401f) < 0.001f &&
+                      fabsf(destination.z - 23.999023f) < 0.001f,
+                  "ice_R01 warp destination is %.6f %.6f %.6f",
+                  destination.x, destination.y, destination.z);
+            CHECK(!kart_course_warp_next(
+                      &course,
+                      (KartVec3){source.x + direction.x, source.y + direction.y,
+                                source.z + direction.z},
+                      (KartVec3){source.x - direction.x, source.y - direction.y,
+                                source.z - direction.z},
+                      NULL, NULL),
+                  "ice_R01 warpnext triggered backwards");
+        }
+    }
+    CHECK(warps == 1u, "ice_R01 has %u warpnext nodes, expected 1", warps);
+    kart_course_free(&course);
+}
+
 int main(void)
 {
     unsigned int index;
     test_gate_crossing();
+    test_ice_r01_warp();
     CHECK(kart_course_asset_count() == 13,
           "expected 13 course assets, found %u", kart_course_asset_count());
     for (index = 0; index < kart_demo_track_count(); ++index) {

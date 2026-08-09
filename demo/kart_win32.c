@@ -48,6 +48,13 @@ typedef enum DemoViewMode {
     DEMO_VIEW_TOPDOWN = 1
 } DemoViewMode;
 
+typedef enum DemoTrackRenderMode {
+    DEMO_TRACK_RENDER_ALPHA_85 = 0,
+    DEMO_TRACK_RENDER_DEPTH_ALPHA_190 = 1,
+    DEMO_TRACK_RENDER_TEXTURED = 2,
+    DEMO_TRACK_RENDER_MODE_COUNT = 3
+} DemoTrackRenderMode;
+
 typedef struct SkidMarkCrossSection {
     KartVec3 edge[2];
     float texture_v;
@@ -110,6 +117,11 @@ typedef struct Demo3DState {
     unsigned int countdown_remaining_ms;
     /* Counts down after GO so the START flash outlives the single cue frame. */
     DWORD start_notice_ms;
+    /* Completed WM_PAINT frames measured with the performance counter. */
+    LARGE_INTEGER fps_frequency;
+    LARGE_INTEGER fps_sample_start;
+    unsigned int fps_sample_frames;
+    double fps;
     /* Drift plus throttle held on the line: booster idle loop and boost look. */
     bool countdown_rev_active;
     bool forward_key_was_down;
@@ -133,7 +145,7 @@ typedef struct Demo3DState {
        starts off: the mesh is what the rest of the demo is about. */
     KartTrackTextureTable textures;
     bool textures_ready;
-    bool textured;
+    DemoTrackRenderMode track_render_mode;
     bool texture_key_was_down;
     /* The kart's own skin, on its own key: it only applies in the textured
        renderer, and the state colour is still the more readable of the two. */
@@ -431,6 +443,27 @@ static KartVec3 vec_sub(KartVec3 a, KartVec3 b)
 static KartVec3 vec_scale(KartVec3 value, float amount)
 {
     return (KartVec3){value.x * amount, value.y * amount, value.z * amount};
+}
+
+static KartVec3 vec_rotate_z(KartVec3 value, float radians)
+{
+    const float cosine = cosf(radians);
+    const float sine = sinf(radians);
+    return (KartVec3){
+        cosine * value.x - sine * value.y,
+        sine * value.x + cosine * value.y,
+        value.z};
+}
+
+static KartQuat quat_pre_rotate_z(KartQuat value, float radians)
+{
+    const float half = radians * 0.5f;
+    const KartQuat turn = {cosf(half), 0.0f, 0.0f, sinf(half)};
+    return (KartQuat){
+        turn.w * value.w - turn.x * value.x - turn.y * value.y - turn.z * value.z,
+        turn.w * value.x + turn.x * value.w + turn.y * value.z - turn.z * value.y,
+        turn.w * value.y - turn.x * value.z + turn.y * value.w + turn.z * value.x,
+        turn.w * value.z + turn.x * value.y - turn.y * value.x + turn.z * value.w};
 }
 
 static float vec_dot(KartVec3 a, KartVec3 b)
@@ -987,6 +1020,8 @@ typedef struct SoftwareTarget {
     float *depth;
     int width;
     int height;
+    bool depth_only;
+    bool shade_depth_equal;
 } SoftwareTarget;
 
 /* Camera space: x right, y up, z forward. */
@@ -1073,7 +1108,8 @@ static void raster_triangle(
     ScreenVertex b,
     ScreenVertex c,
     const KartTrackTextureImage *image,
-    uint32_t flat_colour)
+    uint32_t flat_colour,
+    unsigned int flat_alpha)
 {
     const float area =
         (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
@@ -1120,8 +1156,18 @@ static void raster_triangle(
             }
             inverse_z =
                 w0 * a.inverse_z + w1 * b.inverse_z + w2 * c.inverse_z;
-            if (inverse_z <= 0.0f ||
-                (depth_row != NULL && inverse_z <= depth_row[x])) {
+            if (inverse_z <= 0.0f) {
+                continue;
+            }
+            if (depth_row != NULL) {
+                if (target->shade_depth_equal) {
+                    if (fabsf(inverse_z - depth_row[x]) > 0.000001f) continue;
+                } else if (inverse_z <= depth_row[x]) {
+                    continue;
+                }
+            }
+            if (target->depth_only) {
+                if (depth_row != NULL) depth_row[x] = inverse_z;
                 continue;
             }
             colour = flat_colour;
@@ -1158,8 +1204,23 @@ static void raster_triangle(
                          (destination & 0xffu) * inverse_alpha) / 255u;
                     colour = (red << 16) | (green << 8) | blue;
                 }
+            } else if (flat_alpha < 255u) {
+                const uint32_t inverse_alpha = 255u - flat_alpha;
+                const uint32_t destination = row[x];
+                const uint32_t red =
+                    (((colour >> 16) & 0xffu) * flat_alpha +
+                     ((destination >> 16) & 0xffu) * inverse_alpha) / 255u;
+                const uint32_t green =
+                    (((colour >> 8) & 0xffu) * flat_alpha +
+                     ((destination >> 8) & 0xffu) * inverse_alpha) / 255u;
+                const uint32_t blue =
+                    ((colour & 0xffu) * flat_alpha +
+                     (destination & 0xffu) * inverse_alpha) / 255u;
+                colour = (red << 16) | (green << 8) | blue;
             }
-            if (depth_row != NULL) depth_row[x] = inverse_z;
+            if (depth_row != NULL && !target->shade_depth_equal) {
+                depth_row[x] = inverse_z;
+            }
             row[x] = colour;
         }
     }
@@ -1227,7 +1288,8 @@ static void raster_world_triangle(
     }
     for (corner = 1; corner < clipped_count - 1; ++corner) {
         raster_triangle(
-            target, screen[0], screen[corner], screen[corner + 1], image, colour);
+            target, screen[0], screen[corner], screen[corner + 1], image, colour,
+            255u);
     }
 }
 
@@ -1260,7 +1322,8 @@ static void draw_track_scene_textured(
     const KartTrackScene *scene,
     const KartTrackTextureTable *textures,
     const char *theme,
-    float draw_radius)
+    float draw_radius,
+    unsigned int flat_alpha)
 {
     /* The dome is thousands of units across and has to be drawn whole, so a
        radius of zero means no distance cull at all. */
@@ -1331,7 +1394,7 @@ static void draw_track_scene_textured(
             for (corner = 1; corner < clipped_count - 1; ++corner) {
                 raster_triangle(
                     target, screen[0], screen[corner], screen[corner + 1],
-                    image, flat_colour);
+                    image, flat_colour, flat_alpha);
             }
         }
     }
@@ -1429,13 +1492,12 @@ static void draw_track_scene_faces(
     RECT client,
     Camera3D camera,
     const KartDemoTrackSpec *track,
-    const KartTrackScene *scene)
+    const KartTrackScene *scene,
+    BYTE alpha)
 {
     const int width = client.right - client.left;
     const int height = client.bottom - client.top;
-    /* Roughly one third opacity: enough to read the surface, light enough that
-       the wireframe and the grid behind it stay legible. */
-    BLENDFUNCTION blend = {AC_SRC_OVER, 0, 85, 0};
+    BLENDFUNCTION blend = {AC_SRC_OVER, 0, alpha, 0};
     HDC layer;
     HBITMAP bitmap;
     HGDIOBJ old_bitmap;
@@ -1473,7 +1535,7 @@ static void draw_track_scene(
     if (scene == NULL) {
         return;
     }
-    draw_track_scene_faces(dc, client, camera, track, scene);
+    draw_track_scene_faces(dc, client, camera, track, scene, 85u);
     scenery_pen = CreatePen(PS_SOLID, 1, RGB(93, 125, 95));
     road_pen = CreatePen(PS_SOLID, 2, RGB(205, 194, 159));
     old_pen = SelectObject(dc, scenery_pen);
@@ -2078,13 +2140,14 @@ static unsigned int kart_demo_popup_select_colour(
 
 static COLORREF kart_model_body_color(
     const KartSimulationState *kart,
-    bool boost_active)
+    bool boost_active,
+    unsigned int colour_index)
 {
     return boost_active
         ? RGB(255, 165, 35)
         : (drift_visual_active(kart)
             ? RGB(65, 205, 255)
-            : RGB(235, 65, 80));
+            : kart_model_base_colour(colour_index));
 }
 
 /* Builds the model's world-space faces with their shade. Shared by the GDI
@@ -2160,9 +2223,11 @@ static void draw_kart_model(
     const KartSimulationState *kart,
     const KartTrackScene *model,
     const KartModelParts *parts,
-    bool boost_active)
+    bool boost_active,
+    unsigned int colour_index)
 {
-    const COLORREF body_color = kart_model_body_color(kart, boost_active);
+    const COLORREF body_color =
+        kart_model_body_color(kart, boost_active, colour_index);
     const COLORREF wheel_color = KART_MODEL_WHEEL_COLOR;
     static KartModelFace faces[KART_MODEL_MAX_FACES];
     HGDIOBJ old_pen;
@@ -2288,7 +2353,8 @@ static void draw_kart_box(
     Camera3D camera,
     const KartSimulationState *kart,
     const KartDemoKartSpec *spec,
-    bool boost_active)
+    bool boost_active,
+    unsigned int colour_index)
 {
     static const unsigned int edges[12][2] = {
         {0,1},{1,2},{2,3},{3,0}, {4,5},{5,6},{6,7},{7,4},
@@ -2330,7 +2396,7 @@ static void draw_kart_box(
             ? RGB(255, 165, 35)
             : (drift_visual_active(kart)
                 ? RGB(65, 205, 255)
-                : RGB(235, 65, 80)));
+                : kart_model_base_colour(colour_index)));
     body_pen = CreatePen(PS_SOLID, 2, RGB(255, 230, 220));
     old_brush = SelectObject(dc, body_brush);
     old_pen = SelectObject(dc, body_pen);
@@ -2370,11 +2436,12 @@ static void draw_kart(
     const KartTrackScene *model = active_kart_model(demo, &parts);
     if (model != NULL && parts != NULL && parts->valid) {
         draw_kart_model(
-            dc, client, camera, &demo->kart, model, parts, demo->boost_active);
+            dc, client, camera, &demo->kart, model, parts, demo->boost_active,
+            demo->kart_colour);
     } else {
         draw_kart_box(
             dc, client, camera, &demo->kart, demo->kart_spec,
-            demo->boost_active);
+            demo->boost_active, demo->kart_colour);
     }
     if (demo->show_model_bounds) {
         draw_kart_model_bounds(dc, client, camera, &demo->kart, parts);
@@ -2545,7 +2612,8 @@ static void raster_kart(
     const KartModelParts *parts = NULL;
     const KartTrackScene *model = active_kart_model(demo, &parts);
     const COLORREF body_color =
-        kart_model_body_color(&demo->kart, demo->boost_active);
+        kart_model_body_color(
+            &demo->kart, demo->boost_active, demo->kart_colour);
     /* The kart's own skin. A kart mesh names no material - the exporter finds
        none on a ReToonRigid node - so the lookup is by the kart's asset name
        under the "kart" theme, which is where the packer put its 1.png. */
@@ -2712,8 +2780,10 @@ static void raster_skid_marks_topdown(
                     (float)p10.x, (float)p10.y, 1.0f, 0.0f, b->texture_v};
                 const ScreenVertex v11 = {
                     (float)p11.x, (float)p11.y, 1.0f, 0.499999f, b->texture_v};
-                raster_triangle(target, v00, v10, v11, texture, 0x00141414u);
-                raster_triangle(target, v00, v11, v01, texture, 0x00141414u);
+                raster_triangle(
+                    target, v00, v10, v11, texture, 0x00141414u, 255u);
+                raster_triangle(
+                    target, v00, v11, v01, texture, 0x00141414u, 255u);
             }
         }
     }
@@ -3182,20 +3252,24 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
         draw_scene_topdown(buffer, client, demo, frame_pixels);
     } else {
         const KartTrackScene *scene = active_track_scene(demo);
+        const bool depth_fill =
+            demo->track_render_mode == DEMO_TRACK_RENDER_DEPTH_ALPHA_190 &&
+            scene != NULL && frame_pixels != NULL;
         const bool textured =
-            demo->textured && scene != NULL && frame_pixels != NULL;
+            demo->track_render_mode == DEMO_TRACK_RENDER_TEXTURED &&
+            scene != NULL && frame_pixels != NULL;
         /* The kart's skin is a separate switch, so Z alone rasterizes just the
            kart over the wireframe track. Its depth buffer is then empty, which
            is right: the wireframe is line art with no depth to test against. */
         const bool kart_only =
-            !textured && demo->kart_textured && frame_pixels != NULL;
+            !depth_fill && !textured && demo->kart_textured && frame_pixels != NULL;
         const bool skid_only =
             !textured && !kart_only && frame_pixels != NULL &&
             demo->skid_texture.texels != NULL;
         bool rasterized = false;
         bool skid_rasterized = false;
         bool wireframe_base_drawn = false;
-        if (textured || kart_only || skid_only) {
+        if (depth_fill || textured || kart_only || skid_only) {
             SoftwareTarget frame;
             char theme[32];
             memset(&frame, 0, sizeof(frame));
@@ -3229,7 +3303,7 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
             if (frame.depth != NULL && kart_only) {
                 rasterized = true;
                 raster_kart(&frame, client, camera, demo);
-            } else if (frame.depth != NULL && textured) {
+            } else if (frame.depth != NULL && (depth_fill || textured)) {
                 const KartTrackScene *dome = active_skydome(demo);
                 rasterized = true;
                 track_theme(demo->track_spec, theme, sizeof(theme));
@@ -3237,14 +3311,25 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
                    units across and encloses the whole track, so it is drawn
                    where the asset puts it and the depth buffer keeps everything
                    else in front of it. */
-                if (dome != NULL) {
+                if (textured && dome != NULL) {
                     draw_track_scene_textured(
                         &frame, client, camera, demo->track_spec, dome,
-                        &demo->textures, theme, 0.0f);
+                        &demo->textures, theme, 0.0f, 255u);
+                }
+                if (depth_fill) {
+                    frame.depth_only = true;
+                    draw_track_scene_textured(
+                        &frame, client, camera, demo->track_spec, scene,
+                        NULL, NULL, 210.0f, 255u);
+                    frame.depth_only = false;
+                    frame.shade_depth_equal = true;
                 }
                 draw_track_scene_textured(
                     &frame, client, camera, demo->track_spec, scene,
-                    &demo->textures, theme, 210.0f);
+                    textured ? &demo->textures : NULL,
+                    textured ? theme : NULL, 210.0f,
+                    depth_fill ? 190u : 255u);
+                frame.shade_depth_equal = false;
                 /* Everything that used to be painted over the track goes
                    through the same depth buffer now. */
                 raster_skid_marks(&frame, client, camera, demo);
@@ -3297,7 +3382,8 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
     snprintf(
         status,
         sizeof(status),
-        "speed %.2f m/s | slip %.1f deg | vf %.1f vs %.1f | AUTO %s",
+        "FPS %5.1f | speed %.2f m/s | slip %.1f deg | vf %.1f vs %.1f | AUTO %s",
+        demo->fps,
         speed,
         slip_angle,
         forward_speed,
@@ -3317,7 +3403,10 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
         help,
         sizeof(help),
         "X: %s  Z: %s kart skin  L: colour %u [%s]  N: %s checkpoints  B: %s bounds  V: %s vectors",
-        demo->textured ? "wireframe" : "textured",
+        demo->track_render_mode == DEMO_TRACK_RENDER_ALPHA_85
+            ? "depth fill"
+            : (demo->track_render_mode == DEMO_TRACK_RENDER_DEPTH_ALPHA_190
+                ? "textured" : "alpha 85"),
         demo->kart_textured ? "hide" : "show",
         demo->kart_colour,
         KART_COLOURSETS[demo->kart_colour].name,
@@ -3462,6 +3551,23 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
     SelectObject(buffer, old_bitmap);
     DeleteObject(bitmap);
     DeleteDC(buffer);
+    if (demo->fps_frequency.QuadPart > 0) {
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        ++demo->fps_sample_frames;
+        if (demo->fps_sample_start.QuadPart == 0) {
+            demo->fps_sample_start = now;
+            demo->fps_sample_frames = 0;
+        } else {
+            const LONGLONG ticks = now.QuadPart - demo->fps_sample_start.QuadPart;
+            if (ticks * 2 >= demo->fps_frequency.QuadPart) {
+                demo->fps = (double)demo->fps_sample_frames *
+                    (double)demo->fps_frequency.QuadPart / (double)ticks;
+                demo->fps_sample_start = now;
+                demo->fps_sample_frames = 0;
+            }
+        }
+    }
 }
 
 static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
@@ -3480,6 +3586,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         load_skidmark_texture(create->hInstance, demo);
         demo->kart_colour = KART_COLOURSET_DEFAULT;
         demo->kart_textured = true;
+        QueryPerformanceFrequency(&demo->fps_frequency);
         kart_demo_sound_start(create->hInstance, &demo->sound);
         kart_demo_minimap_set_load(create->hInstance, &demo->minimaps);
         if (demo->track_spec == NULL) {
@@ -3564,8 +3671,6 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                    suspension, so the three can be compared back to back. */
                 demo->gauge.model = (KartGaugeModel)
                     ((demo->gauge.model + 1) % KART_GAUGE_MODEL_COUNT);
-                demo->gauge.value = 0.0f;
-                demo->gauge.boosters = 0;
             }
             demo->gauge_key_was_down = gauge_key_down;
             const bool shot_key_down = key_down('S') != 0;
@@ -3577,7 +3682,8 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             const bool texture_key_down = key_down('X') != 0;
             const bool kart_texture_key_down = key_down('Z') != 0;
             if (texture_key_down && !demo->texture_key_was_down) {
-                demo->textured = !demo->textured;
+                demo->track_render_mode = (DemoTrackRenderMode)(
+                    (demo->track_render_mode + 1) % DEMO_TRACK_RENDER_MODE_COUNT);
             }
             demo->texture_key_was_down = texture_key_down;
             const bool kart_colour_key_down = key_down('L') != 0;
@@ -3751,10 +3857,26 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             /* 0x00426470 walks the kart's position trail one segment at a
                time; one simulation step is one such segment. */
             if (demo->course_ready) {
-                kart_course_progress_step(
-                    &demo->course, &demo->progress, demo->previous_position,
-                    demo->kart.position, demo->kart.orientation,
-                    demo->kart.linear_velocity, demo->simulation_time_ms);
+                KartVec3 warp_destination;
+                float warp_yaw;
+                if (kart_course_warp_next(
+                        &demo->course,
+                        demo->previous_position, demo->kart.position,
+                        &warp_destination, &warp_yaw)) {
+                    demo->kart.position = warp_destination;
+                    demo->kart.linear_velocity =
+                        vec_rotate_z(demo->kart.linear_velocity, warp_yaw);
+                    demo->kart.angular_velocity =
+                        vec_rotate_z(demo->kart.angular_velocity, warp_yaw);
+                    demo->kart.orientation =
+                        quat_pre_rotate_z(demo->kart.orientation, warp_yaw);
+                    demo->previous_position = warp_destination;
+                } else {
+                    kart_course_progress_step(
+                        &demo->course, &demo->progress, demo->previous_position,
+                        demo->kart.position, demo->kart.orientation,
+                        demo->kart.linear_velocity, demo->simulation_time_ms);
+                }
             }
             demo->previous_position = demo->kart.position;
         }
@@ -3883,6 +4005,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE previous, LPSTR command_line, i
     (void)show;
 
     demo.gauge_config = kart_gauge_default_config();
+    demo.gauge.model = KART_GAUGE_SLIP;
     window_class.lpfnWndProc = window_proc;
     window_class.hInstance = instance;
     window_class.lpszClassName = CLASS_NAME;

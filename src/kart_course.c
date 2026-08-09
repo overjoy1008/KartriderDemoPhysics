@@ -125,9 +125,11 @@ static unsigned int new_node(Builder *builder, unsigned int id)
         builder->forward_tail = forward_tail;
         builder->backward_tail = backward_tail;
     }
-    course->nodes[index] = (KartCourseNode){
-        id, KART_COURSE_NO_INDEX, KART_COURSE_NO_INDEX,
-        course->point_count, 0u, 0.0f};
+    memset(&course->nodes[index], 0, sizeof course->nodes[index]);
+    course->nodes[index].id = id;
+    course->nodes[index].forward = KART_COURSE_NO_INDEX;
+    course->nodes[index].backward = KART_COURSE_NO_INDEX;
+    course->nodes[index].point_first = course->point_count;
     builder->forward_tail[index] = KART_COURSE_NO_INDEX;
     builder->backward_tail[index] = KART_COURSE_NO_INDEX;
     ++course->node_count;
@@ -333,6 +335,48 @@ static void build_road(
                 append_point(builder, *current,
                              read_point(element->records[record].position),
                              read_point(element->records[record].direction));
+            }
+            if (element->extra != NULL &&
+                strcmp(element->extra, "warpnext") == 0) {
+                for (record = 0; record + 2u < element->record_count; ++record) {
+                    const KartVec3 first =
+                        read_point(element->records[record].position);
+                    const KartVec3 duplicate =
+                        read_point(element->records[record + 1u].position);
+                    if (first.x == duplicate.x && first.y == duplicate.y &&
+                        first.z == duplicate.z) {
+                        KartCourseNode *node = &builder->course->nodes[*current];
+                        node->warp_next = true;
+                        node->warp_source = first;
+                        node->warp_destination = read_point(
+                            element->records[record + 2u].position);
+                        node->warp_source_direction = read_point(
+                            element->records[record].direction);
+                        {
+                            unsigned int a;
+                            unsigned int b;
+                            for (a = 0; a < 2u; ++a) {
+                                for (b = 0; b < 3u; ++b) {
+                                    unsigned int c;
+                                    unsigned int d;
+                                    for (c = 0; c < 2u; ++c) {
+                                        for (d = 0; d < 3u; ++d) {
+                                            const float span = dot(
+                                                subtract(gate.face[a][b],
+                                                         gate.face[c][d]),
+                                                subtract(gate.face[a][b],
+                                                         gate.face[c][d]));
+                                            if (span > node->warp_radius_squared) {
+                                                node->warp_radius_squared = span;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
             }
         } else {
             unsigned int record = point_source->record_count;
@@ -542,6 +586,28 @@ bool kart_course_build(KartCourse *course, const KartCourseAsset *asset)
     course->first_node = 0u;
     course->last_node = course->node_count - 1u;
     free(emitted.items);
+
+    /* "warpnext" targets the first point of the following graph node: on
+       ice_R01 that is RoadObj01's named `liftup` element. */
+    {
+        unsigned int node_index;
+        for (node_index = 0; node_index < course->node_count; ++node_index) {
+            KartCourseNode *node = &course->nodes[node_index];
+            unsigned int link;
+            unsigned int target;
+            if (!node->warp_next) continue;
+            link = node->backward;
+            if (link == KART_COURSE_NO_INDEX) continue;
+            target = course->links[link].node;
+            if (target == KART_COURSE_NO_INDEX ||
+                target >= course->node_count ||
+                course->nodes[target].point_count == 0) continue;
+            node->warp_destination =
+                course->points[course->nodes[target].point_first].position;
+            node->warp_destination_direction =
+                course->points[course->nodes[target].point_first].direction;
+        }
+    }
 
     /* 0x004240f0: the start pose, from the first node's first point. Column 1
        is the negated direction of travel, which is the kart's forward axis
@@ -782,6 +848,41 @@ int kart_course_progress_step(
     measure_progress(course, progress, position);
     progress->wrong_way = wrong_way(course, progress->node, orientation, velocity);
     return advance;
+}
+
+bool kart_course_warp_next(
+    const KartCourse *course,
+    KartVec3 segment_start,
+    KartVec3 segment_end,
+    KartVec3 *destination,
+    float *yaw_radians)
+{
+    unsigned int node_index;
+    if (course == NULL) return false;
+    for (node_index = 0; node_index < course->node_count; ++node_index) {
+        const KartCourseNode *node = &course->nodes[node_index];
+        const float before = dot(subtract(segment_start, node->warp_source),
+                                 node->warp_source_direction);
+        const float after = dot(subtract(segment_end, node->warp_source),
+                                node->warp_source_direction);
+        KartVec3 crossing;
+        float t;
+        if (!node->warp_next || before >= 0.0f || after < 0.0f) continue;
+        t = before / (before - after);
+        crossing = add(segment_start, scale(subtract(segment_end, segment_start), t));
+        if (dot(subtract(crossing, node->warp_source),
+                subtract(crossing, node->warp_source)) >
+            node->warp_radius_squared) continue;
+        if (destination != NULL) *destination = node->warp_destination;
+        if (yaw_radians != NULL) {
+            *yaw_radians = atan2f(node->warp_destination_direction.y,
+                                  node->warp_destination_direction.x) -
+                           atan2f(node->warp_source_direction.y,
+                                  node->warp_source_direction.x);
+        }
+        return true;
+    }
+    return false;
 }
 
 /* --- placement ---------------------------------------------------------- */

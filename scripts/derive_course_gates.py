@@ -113,7 +113,7 @@ def read_toroad(data, offset):
         gates = [struct.unpack_from("<3H", data, offset + i * 6)
                  for i in range(gate_count)]
         offset += gate_count * 6
-        _, offset = wstr(data, offset)
+        extra, offset = wstr(data, offset)
         wall_count = u32(data, offset)
         offset += 4 + wall_count * 6
         record_count = u32(data, offset)
@@ -122,7 +122,7 @@ def read_toroad(data, offset):
                    for i in range(record_count)]
         offset += record_count * 36
         elements.append({"name": element_name, "vertices": vertices,
-                         "gates": gates, "records": records})
+                         "gates": gates, "extra": extra, "records": records})
     return {"index": index, "name": name, "elements": elements}, offset
 
 
@@ -331,9 +331,10 @@ class Emitter:
                         format_float(point[0]), format_float(point[1]),
                         format_float(point[2])))
             records = ("%s_R%u" % (symbol, index)) if element["records"] else "NULL"
-            self.lines.append("    {%s, {{%s},\n      {%s}}, %s, %u}," % (
+            self.lines.append("    {%s, {{%s},\n      {%s}}, %s, %s, %u}," % (
                 c_string(element["name"]), ", ".join(faces[0:3]),
-                ", ".join(faces[3:6]), records, len(element["records"])))
+                ", ".join(faces[3:6]), c_string(element["extra"]), records,
+                len(element["records"])))
         self.lines.append("};")
         self.lines.append("")
 

@@ -37,6 +37,8 @@ typedef struct KartCourseElement {
     /* The gate quad's two triangles, corners in the asset's index order. The
        graph builder permutes them by `reverse`. */
     float face[2][3][3];
+    /* ToRoad element +0x1c. Only ice_R01 carries "warpnext". */
+    const char *extra;
     const KartCourseRecord *records;
     unsigned int record_count;
 } KartCourseElement;
@@ -101,6 +103,13 @@ typedef struct KartCourseNode {
     unsigned int point_count;
     /* +0x2c: the summed length of the point polyline. */
     float length;
+    /* Asset-authored discontinuity in a "warpnext" centreline. */
+    bool warp_next;
+    KartVec3 warp_source;
+    KartVec3 warp_destination;
+    KartVec3 warp_source_direction;
+    KartVec3 warp_destination_direction;
+    float warp_radius_squared;
 } KartCourseNode;
 
 typedef struct KartCourse {
@@ -180,6 +189,15 @@ int kart_course_gate_crossing(
     const KartCourseGate *gate,
     KartVec3 segment_start,
     KartVec3 segment_end);
+
+/* Returns the asset-authored warp destination and horizontal turn when the
+   active node's "warpnext" plane is crossed in the forward direction. */
+bool kart_course_warp_next(
+    const KartCourse *course,
+    KartVec3 segment_start,
+    KartVec3 segment_end,
+    KartVec3 *destination,
+    float *yaw_radians);
 
 /* --- placement ---------------------------------------------------------- */
 
