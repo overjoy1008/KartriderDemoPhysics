@@ -1,0 +1,1815 @@
+<Relement name="">
+    <RelementProperties>
+        <Transform>
+               1.000,    0.000,    0.000,    0.000
+               0.000,    1.000,    0.000,    0.000
+               0.000,    0.000,    1.000,    0.000
+               0.000,    0.000,    0.000,    1.000
+        </Transform>
+        <Position> (   0.000,    0.000,    0.000) </Position>
+        <Scale> (   1.000,    1.000,    1.000) </Scale>
+        <BoundingBox>
+            <BoundingBox>
+                <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+            </BoundingBox>
+        </BoundingBox>
+        <_unknownByte_70> 0(00) </_unknownByte_70>
+        <_unknownFloat_74>
+            0
+        </_unknownFloat_74>
+        <_unknownBB_78>
+            <BoundingBox>
+                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+            </BoundingBox>
+        </_unknownBB_78>
+        <_unknownFloat_90>
+            0
+        </_unknownFloat_90>
+        <_unknownByte_94> 1(01) </_unknownByte_94>
+        <PRSTontroller> (NULL) </PRSTontroller>
+        <VisTontroller> (NULL) </VisTontroller>
+        <UnknownTontroller> (NULL) </UnknownTontroller>
+        <Alpha> (NULL) </Alpha>
+        <Fog> (NULL) </Fog>
+        <Mtl> (NULL) </Mtl>
+        <Tex> (NULL) </Tex>
+        <Toon> (NULL) </Toon>
+        <Wire> (NULL) </Wire>
+        <ZBuf> (NULL) </ZBuf>
+        <Additional> (NULL) </Additional>
+    </RelementProperties>
+    <Children>
+        <Relement name="kart00">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> (1562.717,  -18.533,    0.000) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> True </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.SourceAlpha </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.InverseSourceAlpha </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl> (NULL) </Mtl>
+                <Tex>
+                    <u1>1(00000001)</u1>
+                    <u3>aw_01</u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>1(00000001)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (  -7.500,   -7.500,    0.000) </MinPosition>
+                                <MaxPosition> (   7.500,    7.500,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  -7.500,    7.500,    0.000) </Array:  0>
+                                <Array:  1> (  -7.500,   -7.500,    0.000) </Array:  1>
+                                <Array:  2> (   7.500,    7.500,    0.000) </Array:  2>
+                                <Array:  3> (   7.500,   -7.500,    0.000) </Array:  3>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 1(0001) </TexCoordPerVertex>
+                        <TextureUVs>
+                                <Array:  0> (   0.000,    0.781) </Array:  0>
+                                <Array:  1> (   0.000,    0.840) </Array:  1>
+                                <Array:  2> (   0.059,    0.781) </Array:  2>
+                                <Array:  3> (   0.059,    0.840) </Array:  3>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 2(0002) </Array:  4>
+                                <Array:  5> 1(0001) </Array:  5>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="kart01">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> (1594.717,  -18.533,    0.000) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> True </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.SourceAlpha </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.InverseSourceAlpha </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl> (NULL) </Mtl>
+                <Tex>
+                    <u1>1(00000001)</u1>
+                    <u3>aw_01</u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>1(00000001)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (  -7.500,   -7.500,    0.000) </MinPosition>
+                                <MaxPosition> (   7.500,    7.500,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  -7.500,    7.500,    0.000) </Array:  0>
+                                <Array:  1> (  -7.500,   -7.500,    0.000) </Array:  1>
+                                <Array:  2> (   7.500,    7.500,    0.000) </Array:  2>
+                                <Array:  3> (   7.500,   -7.500,    0.000) </Array:  3>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 1(0001) </TexCoordPerVertex>
+                        <TextureUVs>
+                                <Array:  0> (   0.059,    0.781) </Array:  0>
+                                <Array:  1> (   0.059,    0.840) </Array:  1>
+                                <Array:  2> (   0.117,    0.781) </Array:  2>
+                                <Array:  3> (   0.117,    0.840) </Array:  3>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 2(0002) </Array:  4>
+                                <Array:  5> 1(0001) </Array:  5>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="kart02">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> (1626.717,  -18.533,    0.000) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> True </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.SourceAlpha </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.InverseSourceAlpha </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl> (NULL) </Mtl>
+                <Tex>
+                    <u1>1(00000001)</u1>
+                    <u3>aw_01</u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>1(00000001)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (  -7.500,   -7.500,    0.000) </MinPosition>
+                                <MaxPosition> (   7.500,    7.500,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  -7.500,    7.500,    0.000) </Array:  0>
+                                <Array:  1> (  -7.500,   -7.500,    0.000) </Array:  1>
+                                <Array:  2> (   7.500,    7.500,    0.000) </Array:  2>
+                                <Array:  3> (   7.500,   -7.500,    0.000) </Array:  3>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 1(0001) </TexCoordPerVertex>
+                        <TextureUVs>
+                                <Array:  0> (   0.117,    0.781) </Array:  0>
+                                <Array:  1> (   0.117,    0.840) </Array:  1>
+                                <Array:  2> (   0.176,    0.781) </Array:  2>
+                                <Array:  3> (   0.176,    0.840) </Array:  3>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 2(0002) </Array:  4>
+                                <Array:  5> 1(0001) </Array:  5>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="kart03">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> (1658.717,  -18.533,    0.000) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> True </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.SourceAlpha </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.InverseSourceAlpha </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl> (NULL) </Mtl>
+                <Tex>
+                    <u1>1(00000001)</u1>
+                    <u3>aw_01</u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>1(00000001)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (  -7.500,   -7.500,    0.000) </MinPosition>
+                                <MaxPosition> (   7.500,    7.500,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  -7.500,    7.500,    0.000) </Array:  0>
+                                <Array:  1> (  -7.500,   -7.500,    0.000) </Array:  1>
+                                <Array:  2> (   7.500,    7.500,    0.000) </Array:  2>
+                                <Array:  3> (   7.500,   -7.500,    0.000) </Array:  3>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 1(0001) </TexCoordPerVertex>
+                        <TextureUVs>
+                                <Array:  0> (   0.176,    0.781) </Array:  0>
+                                <Array:  1> (   0.176,    0.840) </Array:  1>
+                                <Array:  2> (   0.234,    0.781) </Array:  2>
+                                <Array:  3> (   0.234,    0.840) </Array:  3>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 2(0002) </Array:  4>
+                                <Array:  5> 1(0001) </Array:  5>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="kart04">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> (1690.717,  -18.533,    0.000) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> True </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.SourceAlpha </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.InverseSourceAlpha </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl> (NULL) </Mtl>
+                <Tex>
+                    <u1>1(00000001)</u1>
+                    <u3>aw_01</u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>1(00000001)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (  -7.500,   -7.500,    0.000) </MinPosition>
+                                <MaxPosition> (   7.500,    7.500,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  -7.500,    7.500,    0.000) </Array:  0>
+                                <Array:  1> (  -7.500,   -7.500,    0.000) </Array:  1>
+                                <Array:  2> (   7.500,    7.500,    0.000) </Array:  2>
+                                <Array:  3> (   7.500,   -7.500,    0.000) </Array:  3>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 1(0001) </TexCoordPerVertex>
+                        <TextureUVs>
+                                <Array:  0> (   0.234,    0.781) </Array:  0>
+                                <Array:  1> (   0.234,    0.840) </Array:  1>
+                                <Array:  2> (   0.293,    0.781) </Array:  2>
+                                <Array:  3> (   0.293,    0.840) </Array:  3>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 2(0002) </Array:  4>
+                                <Array:  5> 1(0001) </Array:  5>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="kart05">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> (1722.717,  -18.533,    0.000) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> True </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.SourceAlpha </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.InverseSourceAlpha </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl> (NULL) </Mtl>
+                <Tex>
+                    <u1>1(00000001)</u1>
+                    <u3>aw_01</u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>1(00000001)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (  -7.500,   -7.500,    0.000) </MinPosition>
+                                <MaxPosition> (   7.500,    7.500,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  -7.500,    7.500,    0.000) </Array:  0>
+                                <Array:  1> (  -7.500,   -7.500,    0.000) </Array:  1>
+                                <Array:  2> (   7.500,    7.500,    0.000) </Array:  2>
+                                <Array:  3> (   7.500,   -7.500,    0.000) </Array:  3>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 1(0001) </TexCoordPerVertex>
+                        <TextureUVs>
+                                <Array:  0> (   0.293,    0.781) </Array:  0>
+                                <Array:  1> (   0.293,    0.840) </Array:  1>
+                                <Array:  2> (   0.352,    0.781) </Array:  2>
+                                <Array:  3> (   0.352,    0.840) </Array:  3>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 2(0002) </Array:  4>
+                                <Array:  5> 1(0001) </Array:  5>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="kart06">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> (1754.717,  -18.533,    0.000) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> True </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.SourceAlpha </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.InverseSourceAlpha </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl> (NULL) </Mtl>
+                <Tex>
+                    <u1>1(00000001)</u1>
+                    <u3>aw_01</u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>1(00000001)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (  -7.500,   -7.500,    0.000) </MinPosition>
+                                <MaxPosition> (   7.500,    7.500,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  -7.500,    7.500,    0.000) </Array:  0>
+                                <Array:  1> (  -7.500,   -7.500,    0.000) </Array:  1>
+                                <Array:  2> (   7.500,    7.500,    0.000) </Array:  2>
+                                <Array:  3> (   7.500,   -7.500,    0.000) </Array:  3>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 1(0001) </TexCoordPerVertex>
+                        <TextureUVs>
+                                <Array:  0> (   0.352,    0.781) </Array:  0>
+                                <Array:  1> (   0.352,    0.840) </Array:  1>
+                                <Array:  2> (   0.411,    0.781) </Array:  2>
+                                <Array:  3> (   0.411,    0.840) </Array:  3>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 2(0002) </Array:  4>
+                                <Array:  5> 1(0001) </Array:  5>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="kart07">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> (1786.717,  -18.533,    0.000) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> True </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.SourceAlpha </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.InverseSourceAlpha </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl> (NULL) </Mtl>
+                <Tex>
+                    <u1>1(00000001)</u1>
+                    <u3>aw_01</u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>1(00000001)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (  -7.500,   -7.500,    0.000) </MinPosition>
+                                <MaxPosition> (   7.500,    7.500,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  -7.500,    7.500,    0.000) </Array:  0>
+                                <Array:  1> (  -7.500,   -7.500,    0.000) </Array:  1>
+                                <Array:  2> (   7.500,    7.500,    0.000) </Array:  2>
+                                <Array:  3> (   7.500,   -7.500,    0.000) </Array:  3>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 1(0001) </TexCoordPerVertex>
+                        <TextureUVs>
+                                <Array:  0> (   0.411,    0.781) </Array:  0>
+                                <Array:  1> (   0.411,    0.840) </Array:  1>
+                                <Array:  2> (   0.469,    0.781) </Array:  2>
+                                <Array:  3> (   0.469,    0.840) </Array:  3>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 2(0002) </Array:  4>
+                                <Array:  5> 1(0001) </Array:  5>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="me">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> ( -76.850,    1.361,    0.500) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> False </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.One </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.Zero </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl>
+                    KartLibrary.Game.Engine.Properities.MtlProperty
+                </Mtl>
+                <Tex>
+                    <u1>4(00000004)</u1>
+                    <u3></u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>0(00000000)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> ( -16.587,  -16.396,    0.000) </MinPosition>
+                                <MaxPosition> (  16.587,   21.517,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  16.587,  -16.396,    0.000) </Array:  0>
+                                <Array:  1> (   0.274,   21.517,    0.000) </Array:  1>
+                                <Array:  2> ( -16.587,  -16.396,    0.000) </Array:  2>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 0(0000) </TexCoordPerVertex>
+                        <TextureUVs>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="other">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> (-121.007,    1.045,    0.000) </Position>
+                <Scale> (   1.203,    1.203,    1.203) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> False </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.One </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.Zero </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl>
+                    KartLibrary.Game.Engine.Properities.MtlProperty
+                </Mtl>
+                <Tex>
+                    <u1>4(00000004)</u1>
+                    <u3></u3>
+                    <u4>1(00000001)</u4>
+                    <u5>1(00000001)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>1(00000001)</u7>
+                    <u8>0(00000000)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>1</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (  -8.381,   -7.971,    0.000) </MinPosition>
+                                <MaxPosition> (   8.381,    7.971,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (  -2.590,    7.971,    0.000) </Array:  0>
+                                <Array:  1> (   6.781,    4.926,    0.000) </Array:  1>
+                                <Array:  2> (   2.590,    7.971,    0.000) </Array:  2>
+                                <Array:  3> (  -6.781,    4.926,    0.000) </Array:  3>
+                                <Array:  4> (  -8.381,   -0.000,    0.000) </Array:  4>
+                                <Array:  5> (  -6.781,   -4.926,    0.000) </Array:  5>
+                                <Array:  6> (  -2.590,   -7.971,    0.000) </Array:  6>
+                                <Array:  7> (   2.590,   -7.971,    0.000) </Array:  7>
+                                <Array:  8> (   6.781,   -4.926,    0.000) </Array:  8>
+                                <Array:  9> (   8.381,    0.000,    0.000) </Array:  9>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                                <Array:  4> (   0.000,    0.000,    1.000) </Array:  4>
+                                <Array:  5> (   0.000,    0.000,    1.000) </Array:  5>
+                                <Array:  6> (   0.000,    0.000,    1.000) </Array:  6>
+                                <Array:  7> (   0.000,    0.000,    1.000) </Array:  7>
+                                <Array:  8> (   0.000,    0.000,    1.000) </Array:  8>
+                                <Array:  9> (   0.000,    0.000,    1.000) </Array:  9>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 0(0000) </TexCoordPerVertex>
+                        <TextureUVs>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 1(0001) </Array:  4>
+                                <Array:  5> 0(0000) </Array:  5>
+                                <Array:  6> 4(0004) </Array:  6>
+                                <Array:  7> 1(0001) </Array:  7>
+                                <Array:  8> 3(0003) </Array:  8>
+                                <Array:  9> 5(0005) </Array:  9>
+                                <Array: 10> 1(0001) </Array: 10>
+                                <Array: 11> 4(0004) </Array: 11>
+                                <Array: 12> 6(0006) </Array: 12>
+                                <Array: 13> 1(0001) </Array: 13>
+                                <Array: 14> 5(0005) </Array: 14>
+                                <Array: 15> 7(0007) </Array: 15>
+                                <Array: 16> 1(0001) </Array: 16>
+                                <Array: 17> 6(0006) </Array: 17>
+                                <Array: 18> 8(0008) </Array: 18>
+                                <Array: 19> 1(0001) </Array: 19>
+                                <Array: 20> 7(0007) </Array: 20>
+                                <Array: 21> 9(0009) </Array: 21>
+                                <Array: 22> 1(0001) </Array: 22>
+                                <Array: 23> 8(0008) </Array: 23>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+        <Relement name="minimap">
+            <RelementProperties>
+                <Transform>
+                       1.000,    0.000,    0.000,    0.000
+                       0.000,    1.000,    0.000,    0.000
+                       0.000,    0.000,    1.000,    0.000
+                       0.000,    0.000,    0.000,    1.000
+                </Transform>
+                <Position> ( 128.000,  128.000,    0.000) </Position>
+                <Scale> (   1.000,    1.000,    1.000) </Scale>
+                <BoundingBox>
+                    <BoundingBox>
+                        <MinPosition> (100000000000000000000000000000000000000.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </BoundingBox>
+                <_unknownByte_70> 0(00) </_unknownByte_70>
+                <_unknownFloat_74>
+                    0
+                </_unknownFloat_74>
+                <_unknownBB_78>
+                    <BoundingBox>
+                        <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                        <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                    </BoundingBox>
+                </_unknownBB_78>
+                <_unknownFloat_90>
+                    0
+                </_unknownFloat_90>
+                <_unknownByte_94> 1(01) </_unknownByte_94>
+                <PRSTontroller> (NULL) </PRSTontroller>
+                <VisTontroller> (NULL) </VisTontroller>
+                <UnknownTontroller> (NULL) </UnknownTontroller>
+                <Alpha>
+                    <AlphaProperty>
+                        <UseBlendTest> True </UseBlendTest>
+                        <SourceColorFactor> BlendFactor.SourceAlpha </SourceColorFactor>
+                        <DestinationColorFactor> BlendFactor.InverseSourceAlpha </DestinationColorFactor>
+                        <UseAlphaTest> False </UseAlphaTest>
+                        <AlphaFunction> ComparisonFunction.Always </AlphaFunction>
+                        <AlphaTestRef> 0(00) </AlphaTestRef>
+                    </AlphaProperty>
+                </Alpha>
+                <Fog> (NULL) </Fog>
+                <Mtl> (NULL) </Mtl>
+                <Tex>
+                    <u1>1(00000001)</u1>
+                    <u3>xt_minimap</u3>
+                    <u4>3(00000003)</u4>
+                    <u5>3(00000003)</u5>
+                    <u6>1(00000001)</u6>
+                    <u7>2(00000002)</u7>
+                    <u8>1(00000001)</u8>
+                    <u9>1(00000001)</u9>
+                    <u15>0.3</u15>
+                    <tmpTag></tmpTag>
+                    <uObj1></uObj1>
+                    <uObj2></uObj2>
+                    <uObj3></uObj3>
+                    <uObj4></uObj4>
+                    <uObj5></uObj5>
+                </Tex>
+                <Toon> (NULL) </Toon>
+                <Wire>
+                    <WireProperty><Value>0</Value></WireProperty>
+                </Wire>
+                <ZBuf>
+                    <u1>4(00000004)</u1>
+                    <u2>1(01)</u2>
+                </ZBuf>
+                <Additional> (NULL) </Additional>
+            </RelementProperties>
+            <Children>
+                <ReTriList name="">
+                    <RelementProperties>
+                        <Transform>
+                               1.000,    0.000,    0.000,    0.000
+                               0.000,    1.000,    0.000,    0.000
+                               0.000,    0.000,    1.000,    0.000
+                               0.000,    0.000,    0.000,    1.000
+                        </Transform>
+                        <Position> (   0.000,    0.000,    0.000) </Position>
+                        <Scale> (   1.000,    1.000,    1.000) </Scale>
+                        <BoundingBox>
+                            <BoundingBox>
+                                <MinPosition> (-1024.000, -1024.000,    0.000) </MinPosition>
+                                <MaxPosition> (1024.000, 1024.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </BoundingBox>
+                        <_unknownByte_70> 0(00) </_unknownByte_70>
+                        <_unknownFloat_74>
+                            0
+                        </_unknownFloat_74>
+                        <_unknownBB_78>
+                            <BoundingBox>
+                                <MinPosition> (   0.000,    0.000,    0.000) </MinPosition>
+                                <MaxPosition> (   0.000,    0.000,    0.000) </MaxPosition>
+                            </BoundingBox>
+                        </_unknownBB_78>
+                        <_unknownFloat_90>
+                            0
+                        </_unknownFloat_90>
+                        <_unknownByte_94> 1(01) </_unknownByte_94>
+                        <PRSTontroller> (NULL) </PRSTontroller>
+                        <VisTontroller> (NULL) </VisTontroller>
+                        <UnknownTontroller> (NULL) </UnknownTontroller>
+                        <Alpha> (NULL) </Alpha>
+                        <Fog> (NULL) </Fog>
+                        <Mtl> (NULL) </Mtl>
+                        <Tex> (NULL) </Tex>
+                        <Toon> (NULL) </Toon>
+                        <Wire> (NULL) </Wire>
+                        <ZBuf> (NULL) </ZBuf>
+                        <Additional> (NULL) </Additional>
+                    </RelementProperties>
+                <ReTriListProperties>
+                    <_unknownInt_1> 0(00000000) </_unknownInt_1>
+                </ReTriListProperties>
+                <TriList>
+                    <VertexData>
+                        <Vertices>
+                                <Array:  0> (-1024.000, 1024.000,    0.000) </Array:  0>
+                                <Array:  1> (-1024.000, -1024.000,    0.000) </Array:  1>
+                                <Array:  2> (1024.000, 1024.000,    0.000) </Array:  2>
+                                <Array:  3> (1024.000, -1024.000,    0.000) </Array:  3>
+                        </Vertices>
+                    
+                        <Unknown1>
+                                <Array:  0> (   0.000,    0.000,    1.000) </Array:  0>
+                                <Array:  1> (   0.000,    0.000,    1.000) </Array:  1>
+                                <Array:  2> (   0.000,    0.000,    1.000) </Array:  2>
+                                <Array:  3> (   0.000,    0.000,    1.000) </Array:  3>
+                        </Unknown1>
+                    
+                        <Unknown2> (NULL) </Unknown2>
+                        <TexCoordPerVertex> 1(0001) </TexCoordPerVertex>
+                        <TextureUVs>
+                                <Array:  0> (  -3.500,   -3.500) </Array:  0>
+                                <Array:  1> (  -3.500,    4.500) </Array:  1>
+                                <Array:  2> (   4.500,   -3.500) </Array:  2>
+                                <Array:  3> (   4.500,    4.500) </Array:  3>
+                        </TextureUVs>
+                    
+                        <Indexes>
+                                <Array:  0> 0(0000) </Array:  0>
+                                <Array:  1> 1(0001) </Array:  1>
+                                <Array:  2> 2(0002) </Array:  2>
+                                <Array:  3> 3(0003) </Array:  3>
+                                <Array:  4> 2(0002) </Array:  4>
+                                <Array:  5> 1(0001) </Array:  5>
+                        </Indexes>
+                    
+                    </VertexData>
+                </TriList>
+                    <Children>
+                    </Children>
+                </ReTriList>
+            </Children>
+        </Relement>
+    </Children>
+</Relement>

@@ -1556,10 +1556,12 @@ static void draw_track(
     DeleteObject(wall_pen);
 }
 
+static COLORREF kart_model_base_colour(unsigned int colour_index);
+
 static void draw_track_minimap(
     HDC dc,
     RECT client,
-    const Demo3DState *demo)
+    Demo3DState *demo)
 {
     const int panel_width = 220;
     const int panel_height = 248;
@@ -1593,30 +1595,41 @@ static void draw_track_minimap(
         panel.right - 15,
         panel.bottom - 16,
     };
-    const KartDemoMinimap *minimap = kart_demo_minimap_for_track(
+    KartDemoMinimap *minimap = kart_demo_minimap_for_track(
         &demo->minimaps, demo->track_spec);
     KartVec3 right;
     KartVec3 forward;
     KartVec3 up;
     POINT kart_point;
     POINT kart_triangle[3];
+    const COLORREF marker_colour = kart_model_base_colour(demo->kart_colour);
     HBRUSH panel_brush = CreateSolidBrush(RGB(15, 19, 26));
-    HBRUSH kart_brush = CreateSolidBrush(RGB(255, 180, 45));
+    HBRUSH kart_brush = CreateSolidBrush(marker_colour);
     HPEN panel_pen = CreatePen(PS_SOLID, 1, RGB(54, 64, 73));
     HPEN grid_pen = CreatePen(PS_SOLID, 1, RGB(86, 98, 108));
     HPEN wall_pen = CreatePen(PS_SOLID, 3, RGB(75, 220, 255));
-    HPEN kart_pen = CreatePen(PS_SOLID, 1, RGB(255, 235, 175));
+    HPEN kart_pen = CreatePen(PS_SOLID, 1, marker_colour);
     HGDIOBJ old_brush = SelectObject(dc, panel_brush);
     HGDIOBJ old_pen = SelectObject(dc, panel_pen);
     int division;
     static const char label[] = "TRACK MAP";
     char kart_size[96];
 
-    Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
     if (minimap != NULL) {
+        /* The minimap texture itself supplies the verified 0.3 blend.  Do not
+           put an opaque simulator
+           panel behind it; retain only the header fill and outer outline. */
+        RECT header = {panel.left, panel.top, panel.right, image_rect.top};
+        FillRect(dc, &header, panel_brush);
+        SelectObject(dc, GetStockObject(NULL_BRUSH));
+        Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
         boundary = image_rect;
-        kart_demo_draw_minimap_bitmap(dc, image_rect, minimap);
+        kart_demo_draw_original_minimap_camera(
+            dc, image_rect, minimap, demo->track_spec, demo->kart.position,
+            demo->kart.orientation, demo->simulation_time_ms, marker_colour);
     } else {
+        SelectObject(dc, panel_brush);
+        Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
         SelectObject(dc, grid_pen);
         for (division = 1; division < 4; ++division) {
             const int x = boundary.left +
@@ -1634,32 +1647,38 @@ static void draw_track_minimap(
     Rectangle(dc, boundary.left, boundary.top, boundary.right, boundary.bottom);
 
     orientation_axes(demo->kart.orientation, &right, &forward, &up);
-    (void)right;
     (void)up;
-    if (minimap != NULL) {
-        kart_point = kart_demo_minimap_kart_point(
-            image_rect, minimap, demo->track_spec, demo->kart.position);
-    } else {
+    if (minimap == NULL) {
+        static const float marker_vertices[3][2] = {
+            {16.587f, -16.396f}, {0.274f, 21.517f}, {-16.587f, -16.396f},
+        };
+        float heading_length;
+        int marker_index;
         kart_point = kart_demo_minimap_bounds_point(
             boundary, demo->track_spec, demo->kart.position);
+        forward = kart_demo_minimap_direction(demo->track_spec, forward);
+        forward.x = -forward.x;
+        forward.z = 0.0f;
+        heading_length = sqrtf(forward.x * forward.x + forward.y * forward.y);
+        if (heading_length > 0.0f) {
+            forward.x /= heading_length;
+            forward.y /= heading_length;
+        }
+        right = (KartVec3){forward.y, -forward.x, 0.0f};
+        for (marker_index = 0; marker_index < 3; ++marker_index) {
+            kart_triangle[marker_index] = (POINT){
+                kart_point.x + (LONG)(KART_DEMO_MINIMAP_MARKER_SCALE *
+                    (right.x * marker_vertices[marker_index][0] +
+                     forward.x * marker_vertices[marker_index][1])),
+                kart_point.y + (LONG)(KART_DEMO_MINIMAP_MARKER_SCALE *
+                    (right.y * marker_vertices[marker_index][0] +
+                     forward.y * marker_vertices[marker_index][1])),
+            };
+        }
+        SelectObject(dc, kart_brush);
+        SelectObject(dc, kart_pen);
+        Polygon(dc, kart_triangle, 3);
     }
-    right = kart_demo_minimap_direction(demo->track_spec, right);
-    forward = kart_demo_minimap_direction(demo->track_spec, forward);
-    kart_triangle[0] = (POINT){
-        kart_point.x + (LONG)(forward.x * 9.0f),
-        kart_point.y + (LONG)(forward.y * 9.0f),
-    };
-    kart_triangle[1] = (POINT){
-        kart_point.x - (LONG)(forward.x * 6.0f) + (LONG)(right.x * 5.0f),
-        kart_point.y - (LONG)(forward.y * 6.0f) + (LONG)(right.y * 5.0f),
-    };
-    kart_triangle[2] = (POINT){
-        kart_point.x - (LONG)(forward.x * 6.0f) - (LONG)(right.x * 5.0f),
-        kart_point.y - (LONG)(forward.y * 6.0f) - (LONG)(right.y * 5.0f),
-    };
-    SelectObject(dc, kart_brush);
-    SelectObject(dc, kart_pen);
-    Polygon(dc, kart_triangle, 3);
 
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, RGB(180, 205, 215));
@@ -2004,6 +2023,58 @@ static const struct {
     (unsigned int)(sizeof(KART_COLOURSETS) / sizeof(KART_COLOURSETS[0]))
 /* riderData.1s ships 8 = pink on this profile. */
 #define KART_COLOURSET_DEFAULT 8u
+#define KART_COLOUR_MENU_BASE 3000u
+
+static COLORREF kart_model_base_colour(unsigned int colour_index)
+{
+    if (colour_index >= KART_COLOURSET_COUNT) colour_index = 0u;
+    return RGB(
+        KART_COLOURSETS[colour_index].base[0],
+        KART_COLOURSETS[colour_index].base[1],
+        KART_COLOURSETS[colour_index].base[2]);
+}
+
+static unsigned int kart_demo_popup_select_colour(
+    HWND window,
+    unsigned int current)
+{
+    HMENU menu = CreatePopupMenu();
+    RECT window_rect;
+    unsigned int i;
+    UINT command;
+    if (menu == NULL) return current;
+    AppendMenuA(menu, MF_STRING | MF_DISABLED, 0, "SELECT KART COLOUR");
+    AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
+    for (i = 0; i < KART_COLOURSET_COUNT; ++i) {
+        UINT flags = MF_STRING;
+        char label[96];
+        if (i == current) flags |= MF_CHECKED;
+        snprintf(
+            label, sizeof(label), "%s  Base #%02X%02X%02X",
+            KART_COLOURSETS[i].name,
+            KART_COLOURSETS[i].base[0],
+            KART_COLOURSETS[i].base[1],
+            KART_COLOURSETS[i].base[2]);
+        AppendMenuA(menu, flags, KART_COLOUR_MENU_BASE + i, label);
+    }
+    GetWindowRect(window, &window_rect);
+    SetForegroundWindow(window);
+    command = TrackPopupMenu(
+        menu,
+        TPM_RETURNCMD | TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RIGHTBUTTON,
+        window_rect.left + 520,
+        window_rect.top + 72,
+        0,
+        window,
+        NULL);
+    DestroyMenu(menu);
+    PostMessage(window, WM_NULL, 0, 0);
+    if (command >= KART_COLOUR_MENU_BASE &&
+        command < KART_COLOUR_MENU_BASE + KART_COLOURSET_COUNT) {
+        return command - KART_COLOUR_MENU_BASE;
+    }
+    return current;
+}
 
 static COLORREF kart_model_body_color(
     const KartSimulationState *kart,
@@ -2325,9 +2396,9 @@ static void draw_kart(
    3. The plate. Each `blue` texel is the top-left of a 45x20 rectangle that
       plate.png is copied straight into.
 
-   So the paint the driver picks reads as `high` over the whole body and `base`
-   on the racing number; the 900-texel blue block at the back is the plate and
-   takes no colour at all.
+   This simulator-side display override uses `base` over the whole body as
+   requested. The racing number already uses `base`; the 900-texel blue block
+   at the back is the plate and takes no colour at all.
 
    The table's images are shared, so this starts from a copy of the asset's own
    texels rather than from whatever the last colour left behind. */
@@ -2343,7 +2414,6 @@ static void paint_kart_skin(Demo3DState *demo)
     const KartTrackTextureImage *number =
         kart_track_texture_find(&demo->textures, "kart", "@number");
     const unsigned char *base_rgb;
-    const unsigned char *high_rgb;
     const int width = image != NULL ? (int)image->width : 0;
     const int height = image != NULL ? (int)image->height : 0;
     size_t texel;
@@ -2370,9 +2440,8 @@ static void paint_kart_skin(Demo3DState *demo)
         demo->skin_texel_count = count;
     }
     base_rgb = KART_COLOURSETS[demo->kart_colour].base;
-    high_rgb = KART_COLOURSETS[demo->kart_colour].high;
 
-    /* 1. body: "1" over a solid `high`, magenta keyed out. */
+    /* 1. body: "1" over a solid `base`, magenta keyed out. */
     for (texel = 0; texel < demo->skin_texel_count; ++texel) {
         const uint16_t source = demo->skin_texels[texel];
         const unsigned int alpha = image->alpha[texel];
@@ -2387,7 +2456,7 @@ static void paint_kart_skin(Demo3DState *demo)
         channel[2] = (unsigned int)(source & 0x1Fu) << 3;
         for (i = 0; i < 3u; ++i) {
             const unsigned int blended =
-                ((255u - alpha) * high_rgb[i] + channel[i] * alpha) / 255u;
+                ((255u - alpha) * base_rgb[i] + channel[i] * alpha) / 255u;
             channel[i] = blended > 255u ? 255u : blended;
         }
         image->texels[texel] = (uint16_t)(
@@ -3061,7 +3130,7 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
     DeleteObject(font);
 }
 
-static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
+static void draw_scene(HWND window, HDC target, Demo3DState *demo)
 {
     const bool topdown = demo->view_mode == DEMO_VIEW_TOPDOWN;
     RECT client;
@@ -3145,7 +3214,6 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
                     draw_course_gates(buffer, client, camera, &demo->course);
                 }
                 wireframe_base_drawn = true;
-                draw_boost_effect(buffer, client, camera, demo);
             }
             /* GDI batches, so everything drawn so far has to have landed in the
                DIB before anything writes to it behind GDI's back. */
@@ -3153,6 +3221,10 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
             if (frame.depth != NULL && (kart_only || skid_only)) {
                 raster_skid_marks(&frame, client, camera, demo);
                 skid_rasterized = true;
+            }
+            if (kart_only || skid_only) {
+                draw_boost_effect(buffer, client, camera, demo);
+                GdiFlush();
             }
             if (frame.depth != NULL && kart_only) {
                 rasterized = true;
@@ -3407,9 +3479,12 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         load_track_textures(create->hInstance, demo);
         load_skidmark_texture(create->hInstance, demo);
         demo->kart_colour = KART_COLOURSET_DEFAULT;
+        demo->kart_textured = true;
         kart_demo_sound_start(create->hInstance, &demo->sound);
         kart_demo_minimap_set_load(create->hInstance, &demo->minimaps);
-        if (demo->track_spec == NULL) demo->track_spec = kart_demo_default_track();
+        if (demo->track_spec == NULL) {
+            demo->track_spec = kart_demo_find_track("village_R01");
+        }
         load_course(demo);
         reset_kart(demo);
         SetTimer(window, 1, 16, NULL);
@@ -3511,8 +3586,9 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             }
             demo->kart_texture_key_was_down = kart_texture_key_down;
             if (kart_colour_key_down && !demo->kart_colour_key_was_down) {
-                demo->kart_colour =
-                    (demo->kart_colour + 1u) % KART_COLOURSET_COUNT;
+                demo->kart_colour = kart_demo_popup_select_colour(
+                    window, demo->kart_colour);
+                demo->previous_tick = GetTickCount();
             }
             demo->kart_colour_key_was_down = kart_colour_key_down;
             /* Cheap once the skin is painted: it returns immediately unless the

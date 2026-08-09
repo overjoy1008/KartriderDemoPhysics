@@ -117,24 +117,14 @@ static const KartDemoTrackSpec *kart_demo_popup_select_track(
         if (spec == current) {
             flags |= MF_CHECKED;
         }
-        if (spec->difficulty != 0) {
-            snprintf(
-                utf8_label,
-                sizeof(utf8_label),
-                "%s  [%s]  난이도 %u  (%s)",
-                spec->display_name,
-                spec->race_mode,
-                spec->difficulty,
-                spec->asset_name);
-        } else {
-            snprintf(
-                utf8_label,
-                sizeof(utf8_label),
-                "%s  [%s]  난이도 ?  (%s)",
-                spec->display_name,
-                spec->race_mode,
-                spec->asset_name);
-        }
+        snprintf(
+            utf8_label,
+            sizeof(utf8_label),
+            "%s  [%s]  난이도 %u  (%s)",
+            spec->display_name,
+            spec->race_mode,
+            spec->difficulty,
+            spec->asset_name);
         kart_demo_utf8_to_wide(utf8_label, label, 256);
         AppendMenuW(
             menu, flags, KART_DEMO_TRACK_MENU_BASE + i, label);

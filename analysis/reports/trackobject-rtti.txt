@@ -1,0 +1,10 @@
+TYPE 005994d4 the::TrackObject::RTTI_Type_Descriptor
+  COL 00592058 pointer 005764b8 vftable 005764bc
+    [0] 005764bc -> 004b6f60 FUN_004b6f60
+    [1] 005764c0 -> 004b6f20 FUN_004b6f20
+    [2] 005764c4 -> 004b6ee0 FUN_004b6ee0
+    [3] 005764c8 -> 004b6f40 FUN_004b6f40
+    [4] 005764cc -> 004b6f00 FUN_004b6f00
+    [5] 005764d0 -> 00482800 FUN_00482800
+    [6] 005764d4 -> 004b6e50 FUN_004b6e50
+

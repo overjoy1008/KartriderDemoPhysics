@@ -1,0 +1,20 @@
+TYPE 0059b020 the::BufferedSource::RTTI_Type_Descriptor
+  COL 0059317c pointer 005781d0 vftable 005781d4
+    [0] 005781d4 -> 004d72a0 FUN_004d72a0
+    [1] 005781d8 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [2] 005781dc -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [3] 005781e0 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [4] 005781e4 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [5] 005781e8 -> 00479d90 FUN_00479d90
+    [6] 005781ec -> 004d70f0 FUN_004d70f0
+    [7] 005781f0 -> 004d6f70 FUN_004d6f70
+    [8] 005781f4 -> 004df3c0 FUN_004df3c0
+    [9] 005781f8 -> 004d7050 FUN_004d7050
+    [10] 005781fc -> 004d7070 FUN_004d7070
+    [11] 00578200 -> 004d7080 FUN_004d7080
+    [12] 00578204 -> 004d70a0 FUN_004d70a0
+    [13] 00578208 -> 004d70c0 FUN_004d70c0
+    [14] 0057820c -> 0049e800 FUN_0049e800
+    [15] 00578210 -> 004a1ac0 FUN_004a1ac0
+    [16] 00578214 -> 004d6f90 FUN_004d6f90
+

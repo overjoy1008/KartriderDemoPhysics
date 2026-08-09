@@ -1,0 +1,10 @@
+TYPE 0059a7a4 the::WireProperty::RTTI_Type_Descriptor
+  COL 00591628 pointer 00575de8 vftable 00575dec
+    [0] 00575dec -> 00497c50 FUN_00497c50
+    [1] 00575df0 -> 00497c10 FUN_00497c10
+    [2] 00575df4 -> 00497bd0 FUN_00497bd0
+    [3] 00575df8 -> 00497c30 FUN_00497c30
+    [4] 00575dfc -> 00497bf0 FUN_00497bf0
+    [5] 00575e00 -> 00479d90 FUN_00479d90
+    [6] 00575e04 -> 00497b90 FUN_00497b90
+

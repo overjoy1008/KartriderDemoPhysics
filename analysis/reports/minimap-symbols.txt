@@ -1,0 +1,71 @@
+0040d3d6  Label  LAB_0040d3d6   [in 0040d330 FUN_0040d330]
+0041d3db  Label  LAB_0041d3db   [in 0041d380 FUN_0041d380]
+0044d3d0  Function  FUN_0044d3d0   [in 0044d3d0 FUN_0044d3d0]
+00463d3d  Label  LAB_00463d3d   [in 00463cf0 FUN_00463cf0]
+0046d3d0  Function  FUN_0046d3d0   [in 0046d3d0 FUN_0046d3d0]
+0048d3d0  Function  FUN_0048d3d0   [in 0048d3d0 FUN_0048d3d0]
+004abd3d  Label  LAB_004abd3d   [in 004abd20 CDialogTemplate::~CDialogTemplate]
+004d3d36  Label  LAB_004d3d36   [in 004d3d10 CProcessLocal<class__AFX_SOCK_STATE>::CreateObject]
+004d3d3d  Label  LAB_004d3d3d   [in 004d3d10 CProcessLocal<class__AFX_SOCK_STATE>::CreateObject]
+004d3d50  Function  FUN_004d3d50   [in 004d3d50 FUN_004d3d50]
+004d3d70  Function  FUN_004d3d70   [in 004d3d70 FUN_004d3d70]
+004d3d90  Function  FUN_004d3d90   [in 004d3d90 FUN_004d3d90]
+004d3dc0  Function  FUN_004d3dc0   [in 004d3dc0 FUN_004d3dc0]
+004d3df0  Function  FUN_004d3df0   [in 004d3df0 FUN_004d3df0]
+004e41e6  Function  D3D9.DLL::Direct3DCreate9   [in 004e41e6 D3D9.DLL::Direct3DCreate9]
+004ed3dd  Label  LAB_004ed3dd   [in 004ed1d4 FUN_004ed1d4]
+004fed3d  Label  LAB_004fed3d   [in 004fea4f FUN_004fea4f]
+0050d3d0  Label  LAB_0050d3d0   [in 0050ce90 FUN_0050ce90]
+0055d3d5  Label  LAB_0055d3d5   [in 0055d3a0 FUN_0055d3a0]
+0056d3d0  Function  FUN_0056d3d0   [in 0056d3d0 FUN_0056d3d0]
+00572690  Label  u_Front_Chase_Cameraman_00572690
+005726bc  Label  u_Overhead_Chase_Cameraman_005726bc
+0057271c  Label  u_ReCamera_Kart_Cameraman_0057271c
+00572778  Label  u_Top_Cameraman_00572778
+005727c0  Label  u_Point_Cameraman_005727c0
+00572810  Label  u_Jump_Cameraman_00572810
+0057285c  Label  u_Surround_Cameraman_0057285c
+005728dc  Label  u_Spot_Cameraman_005728dc
+005728fc  Label  s_ChaseCameraman_005728fc
+0057290c  Label  s_KartReCameraman_0057290c
+0057291c  Label  s_TopCameraman_0057291c
+0057292c  Label  s_PointCameraman_0057292c
+0057293c  Label  s_JumpCameraman_0057293c
+0057294c  Label  s_SurroundCameraman_0057294c
+00572960  Label  s_FinalCameraman_00572960
+00572970  Label  s_SpotCameraman_00572970
+005729bc  Label  u_FinalCameraman_005729bc
+00572d7c  Label  u_camera_00572d7c
+00572e38  Label  u_minimap_00572e38
+00572ed8  Label  u_KartReCameraman_00572ed8
+00572ef8  Label  u_readyCamera_00572ef8
+00572fec  Label  u_SurroundCameraman_00572fec
+00573050  Label  u_ChaseCameraman_00573050
+00574204  Label  s_Minimap_00574204
+00576054  Label  s_ReCamera_00576054
+005765d8  Label  s_ToMinimap_005765d8
+00576c38  Label  u_cameraName_00576c38
+00576f3c  Label  s_ViewportPanel_00576f3c
+0057973c  Label  s_D3DXDoNotMute_0057973c
+0057974c  Label  s_d3d9d.dll_0057974c
+00579768  Label  s_d3d9.dll_00579768
+00579774  Label  s_D3DX:_(WARN)_D3DX_relies_upon_th_00579774
+005797a8  Label  s_D3DX:_(WARN)_least_zero_bytes._D_005797a8
+00579800  Label  s_D3DX:_(WARN)_An_allocation_of_ze_00579800
+00579860  Label  s_D3DX:_(WARN)_Overloaded_::new_an_00579860
+0057c4cc  Label  s_DisableD3DXPSGP_0057c4cc
+0057d3d8  Label  s_Huffman_code_size_table_overflow_0057d3d8
+00599890  Label  Cameraman::RTTI_Type_Descriptor
+005998a8  Label  ChaseCameraman::RTTI_Type_Descriptor
+005998c8  Label  KartReCameraman::RTTI_Type_Descriptor
+005998e8  Label  TopCameraman::RTTI_Type_Descriptor
+00599904  Label  PointCameraman::RTTI_Type_Descriptor
+00599924  Label  JumpCameraman::RTTI_Type_Descriptor
+00599940  Label  SurroundCameraman::RTTI_Type_Descriptor
+00599960  Label  FinalCameraman::RTTI_Type_Descriptor
+00599980  Label  SpotCameraman::RTTI_Type_Descriptor
+00599b10  Label  the::ReCamera::RTTI_Type_Descriptor
+00599c18  Label  the::Minimap::RTTI_Type_Descriptor
+00599c58  Label  the::ToMinimap::RTTI_Type_Descriptor
+0059ac40  Label  the::ViewportPanel::RTTI_Type_Descriptor
+EXTERNAL:000000eb  Function  D3D9.DLL::Direct3DCreate9   [in EXTERNAL:000000eb D3D9.DLL::Direct3DCreate9]

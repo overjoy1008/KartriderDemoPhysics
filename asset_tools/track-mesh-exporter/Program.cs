@@ -7,11 +7,13 @@ using KartLibrary.IO;
 using KartLibrary.Xml;
 
 // "export" reads a track.1s, whose root is a TrackContainer.
-// "export-kart" reads a kart model.1s, whose root is the Relement scene itself.
-if (args.Length != 3 || (args[0] != "export" && args[0] != "export-kart"))
+// "export-kart" and "dump-scene" read a Relement scene directly.
+if (args.Length != 3 || (args[0] != "export" && args[0] != "export-kart" &&
+                         args[0] != "dump-scene"))
 {
     Console.Error.WriteLine("Usage: track-mesh-exporter export      <track.1s> <output-prefix-below-workspace>");
     Console.Error.WriteLine("       track-mesh-exporter export-kart <model.1s> <output-prefix-below-workspace>");
+    Console.Error.WriteLine("       track-mesh-exporter dump-scene <scene.1s> <output-text-below-workspace>");
     return 2;
 }
 
@@ -23,7 +25,7 @@ const uint MeshFlagCollidable = 1u;
 // nothing in the track is solid.
 const uint KtrkVersion = 2u;
 
-bool kartModel = args[0] == "export-kart";
+bool directScene = args[0] is "export-kart" or "dump-scene";
 string input = Path.GetFullPath(args[1]);
 string outputPrefix = Path.GetFullPath(args[2]);
 string workspace = Path.GetFullPath(Directory.GetCurrentDirectory()) + Path.DirectorySeparatorChar;
@@ -39,9 +41,17 @@ using (BinaryReader reader = new(stream))
 {
     Dictionary<short, KartObject> objects = new();
     Dictionary<short, object> fields = new();
-    scene = kartModel
+    scene = directScene
         ? reader.ReadKartObject<Relement>(objects, fields)
         : reader.ReadKartObject<TrackContainer>(objects, fields).TrackScene;
+}
+
+if (args[0] == "dump-scene")
+{
+    if (File.Exists(outputPrefix)) throw new IOException($"Refusing to overwrite: {outputPrefix}");
+    File.WriteAllText(outputPrefix, scene.ToString());
+    Console.WriteLine($"Dumped scene: {outputPrefix}");
+    return 0;
 }
 
 List<MeshData> meshes = new();
@@ -243,3 +253,22 @@ static void WriteFixedUtf8(BinaryWriter writer, string value, int size)
 
 internal sealed record Vertex(Vector3 Position, Vector2 UV);
 internal sealed record MeshData(string Name, string? Texture, uint Flags, List<Vertex> Vertices, List<uint> Indices, string Kind, float Determinant);
+
+// The demo's WireProperty decoder at 0x00497c80 reads exactly one byte into
+// object offset +8.  The upstream reader does not currently register this
+// shipped class, so scene files containing it cannot otherwise be inspected.
+[KartObjectImplement]
+internal sealed class WireProperty : KartObject
+{
+    public override string ClassName => "WireProperty";
+    public byte Value { get; private set; }
+
+    public override void DecodeObject(BinaryReader reader,
+        Dictionary<short, KartObject>? decodedObjectMap,
+        Dictionary<short, object>? decodedFieldMap)
+    {
+        Value = reader.ReadByte();
+    }
+
+    public override string ToString() => $"<WireProperty><Value>{Value}</Value></WireProperty>";
+}
