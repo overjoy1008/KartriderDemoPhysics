@@ -1,0 +1,3 @@
+#include "kart_skydome_resources.h"
+
+@KART_SKYDOME_RC_ENTRIES@

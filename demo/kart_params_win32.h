@@ -8,13 +8,17 @@
 #include <windows.h>
 
 #include "kart_dynamics.h"
+#include "kart_gauge.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define KART_PARAM_FIELD_COUNT 18
+#define KART_PARAM_DYNAMICS_COUNT 18
+#define KART_PARAM_GAUGE_COUNT 4
+#define KART_PARAM_FIELD_COUNT \
+    (KART_PARAM_DYNAMICS_COUNT + KART_PARAM_GAUGE_COUNT)
 #define KART_PARAM_EDIT_BASE 3000
 #define KART_PARAM_APPLY 3100
 #define KART_PARAM_RELOAD 3101
@@ -26,7 +30,7 @@ typedef struct KartParamField {
     int decimals;
 } KartParamField;
 
-/* Declaration order of KartDynamicsConfig. */
+/* Declaration order of KartDynamicsConfig, then of KartGaugeConfig. */
 static const KartParamField KART_PARAM_FIELDS[KART_PARAM_FIELD_COUNT] = {
     {"mass", offsetof(KartDynamicsConfig, mass), 1},
     {"air friction", offsetof(KartDynamicsConfig, air_friction), 3},
@@ -46,34 +50,39 @@ static const KartParamField KART_PARAM_FIELDS[KART_PARAM_FIELD_COUNT] = {
     {"corner draw", offsetof(KartDynamicsConfig, corner_draw_factor), 3},
     {"drift lean", offsetof(KartDynamicsConfig, drift_lean_factor), 3},
     {"steer lean", offsetof(KartDynamicsConfig, steer_lean_factor), 3},
+    {"gauge Kg", offsetof(KartGaugeConfig, charge_factor), 3},
+    {"gauge full", offsetof(KartGaugeConfig, full_value), 1},
+    {"gauge Ks", offsetof(KartGaugeConfig, suspension_gain), 3},
+    {"gauge Ks max", offsetof(KartGaugeConfig, suspension_max), 3},
 };
 
 /* The window edits whatever these point at; the caller keeps ownership. */
 static KartDynamicsConfig *g_kart_param_target = NULL;
 static const KartDynamicsConfig *g_kart_param_defaults = NULL;
+static KartGaugeConfig *g_kart_gauge_target = NULL;
 static HWND g_kart_param_window = NULL;
 static HWND g_kart_param_edits[KART_PARAM_FIELD_COUNT];
 
-static float kart_param_value(const KartDynamicsConfig *config, unsigned int i)
+/* Rows past the dynamics block address the gauge config instead. */
+static float *kart_param_slot(unsigned int i)
 {
-    return *(const float *)((const char *)config + KART_PARAM_FIELDS[i].offset);
+    void *base = i < KART_PARAM_DYNAMICS_COUNT
+        ? (void *)g_kart_param_target
+        : (void *)g_kart_gauge_target;
+    if (base == NULL) return NULL;
+    return (float *)((char *)base + KART_PARAM_FIELDS[i].offset);
 }
 
-static void kart_param_set(
-    KartDynamicsConfig *config, unsigned int i, float value)
-{
-    *(float *)((char *)config + KART_PARAM_FIELDS[i].offset) = value;
-}
-
-static void kart_param_fill_edits(const KartDynamicsConfig *source)
+static void kart_param_fill_edits(void)
 {
     unsigned int i;
     char text[32];
-    if (source == NULL) return;
     for (i = 0; i < KART_PARAM_FIELD_COUNT; ++i) {
+        const float *slot = kart_param_slot(i);
+        if (slot == NULL) continue;
         snprintf(
             text, sizeof(text), "%.*f",
-            KART_PARAM_FIELDS[i].decimals, kart_param_value(source, i));
+            KART_PARAM_FIELDS[i].decimals, *slot);
         SetWindowTextA(g_kart_param_edits[i], text);
     }
 }
@@ -83,18 +92,19 @@ static void kart_param_apply_edits(void)
 {
     unsigned int i;
     char text[32];
-    if (g_kart_param_target == NULL) return;
     for (i = 0; i < KART_PARAM_FIELD_COUNT; ++i) {
+        float *slot = kart_param_slot(i);
         char *end = text;
         double parsed;
+        if (slot == NULL) continue;
         if (GetWindowTextA(g_kart_param_edits[i], text, sizeof(text)) == 0) {
             continue;
         }
         parsed = strtod(text, &end);
         if (end == text) continue;
-        kart_param_set(g_kart_param_target, i, (float)parsed);
+        *slot = (float)parsed;
     }
-    kart_param_fill_edits(g_kart_param_target);
+    kart_param_fill_edits();
 }
 
 static LRESULT CALLBACK kart_param_window_proc(
@@ -107,12 +117,15 @@ static LRESULT CALLBACK kart_param_window_proc(
             kart_param_apply_edits();
             return 0;
         case KART_PARAM_RELOAD:
-            kart_param_fill_edits(g_kart_param_target);
+            kart_param_fill_edits();
             return 0;
         case KART_PARAM_DEFAULTS:
             if (g_kart_param_target != NULL && g_kart_param_defaults != NULL) {
                 *g_kart_param_target = *g_kart_param_defaults;
-                kart_param_fill_edits(g_kart_param_target);
+                if (g_kart_gauge_target != NULL) {
+                    *g_kart_gauge_target = kart_gauge_default_config();
+                }
+                kart_param_fill_edits();
             }
             return 0;
         default:
@@ -136,7 +149,8 @@ static void kart_demo_params_open(
     HINSTANCE instance,
     HWND owner,
     KartDynamicsConfig *target,
-    const KartDynamicsConfig *defaults)
+    const KartDynamicsConfig *defaults,
+    KartGaugeConfig *gauge)
 {
     static const char CLASS_NAME[] = "KartPhysicsParamWindow";
     static bool registered = false;
@@ -144,16 +158,18 @@ static void kart_demo_params_open(
     const int label_width = 118;
     const int edit_width = 86;
     const int column_width = label_width + edit_width + 18;
-    const int rows = (KART_PARAM_FIELD_COUNT + 1) / 2;
-    const int width = column_width * 2 + 24;
+    /* Two columns of dynamics, then the gauge coefficients in a third. */
+    const int rows = KART_PARAM_DYNAMICS_COUNT / 2;
+    const int width = column_width * 3 + 24;
     const int height = rows * row_height + 78;
     HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
     unsigned int i;
 
     g_kart_param_target = target;
     g_kart_param_defaults = defaults;
+    g_kart_gauge_target = gauge;
     if (g_kart_param_window != NULL) {
-        kart_param_fill_edits(target);
+        kart_param_fill_edits();
         SetForegroundWindow(g_kart_param_window);
         return;
     }
@@ -219,7 +235,7 @@ static void kart_demo_params_open(
             x += button_width + 8;
         }
     }
-    kart_param_fill_edits(target);
+    kart_param_fill_edits();
     ShowWindow(g_kart_param_window, SW_SHOW);
     UpdateWindow(g_kart_param_window);
 }

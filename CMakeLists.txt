@@ -69,6 +69,18 @@ add_executable(
 target_link_libraries(kart_track_collision_tests PRIVATE kart_dynamics)
 add_test(NAME kart_track_collision_tests COMMAND kart_track_collision_tests)
 
+# The course tables are generated from the track assets by
+# scripts/derive_course_gates.py, so this needs no packed scene to run.
+add_executable(
+    kart_course_tests
+    tests/test_course_progress.c
+    src/kart_course.c
+    src/kart_course_data.c
+    src/kart_track_collision.c
+    src/kart_track_scene.c)
+target_link_libraries(kart_course_tests PRIVATE kart_dynamics)
+add_test(NAME kart_course_tests COMMAND kart_course_tests)
+
 add_executable(kart_inflate_tests tests/test_inflate.c src/kart_track_scene.c)
 target_link_libraries(kart_inflate_tests PRIVATE kart_dynamics)
 add_test(NAME kart_inflate_tests COMMAND kart_inflate_tests)
@@ -198,15 +210,140 @@ if(WIN32)
         endforeach()
     endif()
 
+    # Kart asset names in KARTS[] order; the RCDATA ids in
+    # demo/kart_model_resources.h follow the same order. mine1 is in the archive
+    # but is not a kart, so it is not listed here.
+    set(KART_MODEL_NAMES
+        practice1
+        burst1 burst2 burst3 burst4 burst5
+        cotten1 cotten2 cotten3 cotten4 cotten5
+        marathon1 marathon2 marathon3 marathon4 marathon5
+        saber1 saber2 saber3 saber4 saber5
+        solid1 solid2 solid3 solid4 solid5)
+    set(KART_MODEL_MESH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/analysis/kart-assets/meshes")
+    set(KART_MODEL_PACK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/analysis/kart-assets/packed")
+
+    set(KART_HAVE_ALL_MODELS TRUE)
+    foreach(KART_MODEL_NAME IN LISTS KART_MODEL_NAMES)
+        if(NOT EXISTS "${KART_MODEL_MESH_DIR}/${KART_MODEL_NAME}.ktrk")
+            set(KART_HAVE_ALL_MODELS FALSE)
+        endif()
+    endforeach()
+
+    # Same KTKZ container as the track scenes, so the same packer and the same
+    # loader handle both. All 26 models together are 130 KB packed.
+    if(KART_HAVE_ALL_MODELS)
+        execute_process(
+            COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+                    -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/pack_track_scenes.ps1"
+                    -InputDirectory "analysis/kart-assets/meshes"
+                    -OutputDirectory "analysis/kart-assets/packed"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            RESULT_VARIABLE KART_MODEL_PACK_RESULT
+            OUTPUT_VARIABLE KART_MODEL_PACK_OUTPUT
+            ERROR_VARIABLE KART_MODEL_PACK_OUTPUT)
+        if(NOT KART_MODEL_PACK_RESULT EQUAL 0)
+            message(FATAL_ERROR
+                "Packing the kart models failed:\n${KART_MODEL_PACK_OUTPUT}")
+        endif()
+        foreach(KART_MODEL_NAME IN LISTS KART_MODEL_NAMES)
+            if(NOT EXISTS "${KART_MODEL_PACK_DIR}/${KART_MODEL_NAME}.ktkz")
+                set(KART_HAVE_ALL_MODELS FALSE)
+            endif()
+        endforeach()
+    endif()
+
+    # The skydome that ships beside each track.1s. Six of the thirteen do not
+    # export (unsupported class stamp), so this list is only the ones that do
+    # and demo/kart_skydome_resources.h maps them back onto TRACKS[].
+    set(KART_SKYDOME_CODES
+        ice_I01 ice_I02 ice_R01
+        village_I01 village_I02 village_R01 village_R03)
+    set(KART_SKYDOME_MESH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/analysis/track-assets/skydome")
+    set(KART_SKYDOME_PACK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/analysis/track-assets/packed-skydome")
+    set(KART_HAVE_ALL_SKYDOMES TRUE)
+    foreach(KART_SKYDOME_CODE IN LISTS KART_SKYDOME_CODES)
+        if(NOT EXISTS "${KART_SKYDOME_MESH_DIR}/track_${KART_SKYDOME_CODE}.skydome.ktrk")
+            set(KART_HAVE_ALL_SKYDOMES FALSE)
+        endif()
+    endforeach()
+    if(KART_HAVE_ALL_SKYDOMES)
+        execute_process(
+            COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+                    -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/pack_track_scenes.ps1"
+                    -InputDirectory "analysis/track-assets/skydome"
+                    -OutputDirectory "analysis/track-assets/packed-skydome"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            RESULT_VARIABLE KART_SKYDOME_PACK_RESULT
+            OUTPUT_VARIABLE KART_SKYDOME_PACK_OUTPUT
+            ERROR_VARIABLE KART_SKYDOME_PACK_OUTPUT)
+        if(NOT KART_SKYDOME_PACK_RESULT EQUAL 0)
+            message(FATAL_ERROR
+                "Packing the skydomes failed:\n${KART_SKYDOME_PACK_OUTPUT}")
+        endif()
+        foreach(KART_SKYDOME_CODE IN LISTS KART_SKYDOME_CODES)
+            if(NOT EXISTS "${KART_SKYDOME_PACK_DIR}/track_${KART_SKYDOME_CODE}.skydome.ktkz")
+                set(KART_HAVE_ALL_SKYDOMES FALSE)
+            endif()
+        endforeach()
+    endif()
+
+    # The tracks' texture assets, decoded out of the theme archives and packed
+    # into one shared KTEX table keyed by theme and texture name. The KTRK
+    # meshes already name a texture and carry the asset's UVs, so this is the
+    # only piece the textured renderer was missing.
+    set(KART_TRACK_TEXTURE_PACK
+        "${CMAKE_CURRENT_SOURCE_DIR}/analysis/track-assets/packed/track_textures.ktxz")
+    set(KART_HAVE_TRACK_TEXTURES FALSE)
+    if(KART_HAVE_ALL_SCENES)
+        find_package(Python3 COMPONENTS Interpreter QUIET)
+        if(Python3_Interpreter_FOUND)
+            execute_process(
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/pack_track_textures.py"
+                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                RESULT_VARIABLE KART_TEXTURE_PACK_RESULT
+                OUTPUT_VARIABLE KART_TEXTURE_PACK_OUTPUT
+                ERROR_VARIABLE KART_TEXTURE_PACK_OUTPUT)
+            if(NOT KART_TEXTURE_PACK_RESULT EQUAL 0)
+                message(WARNING
+                    "Packing the track textures failed; the demo will draw untextured:\n${KART_TEXTURE_PACK_OUTPUT}")
+            endif()
+        else()
+            message(STATUS "Python not found; reusing any existing track texture pack")
+        endif()
+        if(EXISTS "${KART_TRACK_TEXTURE_PACK}")
+            set(KART_HAVE_TRACK_TEXTURES TRUE)
+        endif()
+    endif()
+
     # One executable with both renderers behind the V key; it calls the scene
     # and collision queries unconditionally and only the resource loading is
     # compiled out when there are no embedded scenes.
     set(KART_DEMO_SOURCES
         demo/kart_win32.c
+        src/kart_course.c
+        src/kart_course_data.c
         src/kart_track_scene.c
+        src/kart_track_texture.c
         src/kart_track_collision.c
         ${KART_MINIMAP_SOURCES}
         ${KART_AUDIO_SOURCES})
+    set(KART_SKIDMARK_TEXTURE
+        "${CMAKE_CURRENT_SOURCE_DIR}/analysis/kart-assets/demo_effect/skidmark/skidmark.tga")
+    if(EXISTS "${KART_SKIDMARK_TEXTURE}")
+        configure_file(
+            demo/kart_skidmark.rc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skidmark.rc
+            @ONLY)
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skidmark.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_SKIDMARK_TEXTURE}")
+        list(APPEND KART_DEMO_SOURCES
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skidmark.rc)
+    else()
+        message(WARNING "Original skidmark.tga not found; skid marks will be untextured")
+    endif()
     if(KART_HAVE_ALL_SCENES)
         set(KART_TRACK_SCENE_RC_ENTRIES "")
         foreach(KART_TRACK_CODE IN LISTS KART_TRACK_CODES)
@@ -218,15 +355,97 @@ if(WIN32)
             demo/kart_track_scenes.rc.in
             ${CMAKE_CURRENT_BINARY_DIR}/kart_track_scenes.rc
             @ONLY)
+        # The .rc only names the packed files, so repacking leaves it untouched
+        # and the resource object goes stale: the executable keeps whatever
+        # scenes it was last linked with. Depending on the payloads makes a
+        # repack rebuild the resource.
+        set(KART_SCENE_PACK_FILES "")
+        foreach(KART_TRACK_CODE IN LISTS KART_TRACK_CODES)
+            list(APPEND KART_SCENE_PACK_FILES
+                "${KART_SCENE_PACK_DIR}/track_${KART_TRACK_CODE}.ktkz")
+        endforeach()
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_track_scenes.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_SCENE_PACK_FILES}")
         list(APPEND KART_DEMO_SOURCES
             ${CMAKE_CURRENT_BINARY_DIR}/kart_track_scenes.rc)
     else()
         message(STATUS "KTRK scene files not found; the demo will use bounds/grid fallback")
     endif()
+    if(KART_HAVE_ALL_MODELS)
+        set(KART_MODEL_RC_ENTRIES "")
+        foreach(KART_MODEL_NAME IN LISTS KART_MODEL_NAMES)
+            string(TOUPPER "${KART_MODEL_NAME}" KART_MODEL_NAME_UPPER)
+            string(APPEND KART_MODEL_RC_ENTRIES
+                "IDR_KART_MODEL_${KART_MODEL_NAME_UPPER} RCDATA \"${KART_MODEL_PACK_DIR}/${KART_MODEL_NAME}.ktkz\"\n")
+        endforeach()
+        configure_file(
+            demo/kart_models.rc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_models.rc
+            @ONLY)
+        set(KART_MODEL_PACK_FILES "")
+        foreach(KART_MODEL_NAME IN LISTS KART_MODEL_NAMES)
+            list(APPEND KART_MODEL_PACK_FILES
+                "${KART_MODEL_PACK_DIR}/${KART_MODEL_NAME}.ktkz")
+        endforeach()
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_models.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_MODEL_PACK_FILES}")
+        list(APPEND KART_DEMO_SOURCES
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_models.rc)
+    else()
+        message(STATUS "KTRK kart models not found; the demo will draw the box hull")
+    endif()
+    if(KART_HAVE_ALL_SKYDOMES)
+        set(KART_SKYDOME_RC_ENTRIES "")
+        set(KART_SKYDOME_PACK_FILES "")
+        foreach(KART_SKYDOME_CODE IN LISTS KART_SKYDOME_CODES)
+            string(TOUPPER "${KART_SKYDOME_CODE}" KART_SKYDOME_CODE_UPPER)
+            string(APPEND KART_SKYDOME_RC_ENTRIES
+                "IDR_SKYDOME_${KART_SKYDOME_CODE_UPPER} RCDATA \"${KART_SKYDOME_PACK_DIR}/track_${KART_SKYDOME_CODE}.skydome.ktkz\"\n")
+            list(APPEND KART_SKYDOME_PACK_FILES
+                "${KART_SKYDOME_PACK_DIR}/track_${KART_SKYDOME_CODE}.skydome.ktkz")
+        endforeach()
+        configure_file(
+            demo/kart_skydomes.rc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skydomes.rc
+            @ONLY)
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skydomes.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_SKYDOME_PACK_FILES}")
+        list(APPEND KART_DEMO_SOURCES
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skydomes.rc)
+    else()
+        message(STATUS "Skydome exports not found; the demo will draw an empty sky")
+    endif()
+    if(KART_HAVE_TRACK_TEXTURES)
+        configure_file(
+            demo/kart_track_textures.rc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_track_textures.rc
+            @ONLY)
+        # As with the scenes: the .rc only names the pack, so a repack has to
+        # invalidate the resource object or the executable keeps stale pixels.
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_track_textures.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_TRACK_TEXTURE_PACK}")
+        list(APPEND KART_DEMO_SOURCES
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_track_textures.rc)
+    else()
+        message(STATUS "Track texture pack not found; the demo will draw untextured")
+    endif()
     add_executable(kart WIN32 ${KART_DEMO_SOURCES})
     target_include_directories(kart PRIVATE include demo)
     if(KART_HAVE_ALL_SCENES)
         target_compile_definitions(kart PRIVATE KART_EMBED_TRACK_SCENES=1)
+    endif()
+    if(KART_HAVE_ALL_MODELS)
+        target_compile_definitions(kart PRIVATE KART_EMBED_KART_MODELS=1)
+    endif()
+    if(KART_HAVE_TRACK_TEXTURES)
+        target_compile_definitions(kart PRIVATE KART_EMBED_TRACK_TEXTURES=1)
+    endif()
+    if(KART_HAVE_ALL_SKYDOMES)
+        target_compile_definitions(kart PRIVATE KART_EMBED_SKYDOMES=1)
     endif()
     if(KART_HAVE_ALL_MINIMAPS)
         target_compile_definitions(kart PRIVATE KART_EMBED_MINIMAPS=1)
@@ -253,10 +472,23 @@ if(WIN32)
         add_executable(kart_binary_oracle tools/oracle/kart_binary_oracle.c)
     endif()
 
+    if(KART_HAVE_ALL_MODELS)
+        add_executable(kart_model_asset_tests
+            tests/test_kart_model_assets.c
+            src/kart_track_scene.c)
+        target_include_directories(kart_model_asset_tests PRIVATE include demo)
+        target_link_libraries(kart_model_asset_tests PRIVATE kart_dynamics)
+        add_test(
+            NAME kart_model_asset_tests
+            COMMAND kart_model_asset_tests "${KART_MODEL_PACK_DIR}")
+    endif()
+
     # End-to-end over the real exports, so it only exists once they are packed.
     if(KART_HAVE_ALL_SCENES)
         add_executable(kart_scene_asset_tests
             tests/test_track_scene_assets.c
+            src/kart_course.c
+            src/kart_course_data.c
             src/kart_track_scene.c
             src/kart_track_collision.c)
         target_link_libraries(kart_scene_asset_tests PRIVATE kart_dynamics)

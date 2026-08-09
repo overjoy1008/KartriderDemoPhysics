@@ -1,0 +1,73 @@
+TYPE 005994b8 the::GoCourse::RTTI_Type_Descriptor
+  COL 0058eb80 pointer 005716fc vftable 00571700
+    [0] 00571700 -> 00426a30 FUN_00426a30
+    [1] 00571704 -> 004269f0 FUN_004269f0
+    [2] 00571708 -> 004269b0 FUN_004269b0
+    [3] 0057170c -> 00426a10 FUN_00426a10
+    [4] 00571710 -> 004269d0 FUN_004269d0
+    [5] 00571714 -> 00479d90 FUN_00479d90
+    [6] 00571718 -> 00401f50 FUN_00401f50
+    [7] 0057171c -> 004337d0 FUN_004337d0
+    [8] 00571720 -> 00424a30 FUN_00424a30
+    [9] 00571724 -> 00493460 FUN_00493460
+    [10] 00571728 -> 004269a0 FUN_004269a0
+    [11] 0057172c -> 00424b20 FUN_00424b20
+    [12] 00571730 -> 00424b30 FUN_00424b30
+
+TYPE 00599a90 the::RefPointee<struct_GameInterface>::RTTI_Type_Descriptor
+
+TYPE 00599ac0 GameInterface::RTTI_Type_Descriptor
+  COL 0058f92c pointer 00572af0 vftable 00572af4
+    [0] 00572af4 -> 0044bcc0 FUN_0044bcc0
+    [1] 00572af8 -> 0044ab00 FUN_0044ab00
+    [2] 00572afc -> 0044acd0 FUN_0044acd0
+    [3] 00572b00 -> 0044ace0 FUN_0044ace0
+    [4] 00572b04 -> 0044afa0 FUN_0044afa0
+    [5] 00572b08 -> 0044aff0 FUN_0044aff0
+    [6] 00572b0c -> 0044b3e0 FUN_0044b3e0
+    [7] 00572b10 -> 0044b3f0 FUN_0044b3f0
+
+TYPE 00599b4c TrackService::RTTI_Type_Descriptor
+  COL 0058f9fc pointer 00572bf0 vftable 00572bf4
+    [0] 00572bf4 -> 00478aca <no-function>
+
+TYPE 00599b9c GameParam::RTTI_Type_Descriptor
+  COL 0058fe88 pointer 005737dc vftable 005737e0
+    [0] 005737e0 -> 0045e8a0 FUN_0045e8a0
+    [1] 005737e4 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [2] 005737e8 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [3] 005737ec -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [4] 005737f0 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [5] 005737f4 -> 00479d90 FUN_00479d90
+    [6] 005737f8 -> 00401f50 FUN_00401f50
+
+TYPE 00599c34 TimeChallengeParam::RTTI_Type_Descriptor
+  COL 0058fe04 pointer 0057379c vftable 005737a0
+    [0] 005737a0 -> 0045e750 FUN_0045e750
+    [1] 005737a4 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [2] 005737a8 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [3] 005737ac -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [4] 005737b0 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [5] 005737b4 -> 00479d90 FUN_00479d90
+    [6] 005737b8 -> 00401f50 FUN_00401f50
+
+TYPE 00599cbc ShadowAttackParam::RTTI_Type_Descriptor
+  COL 0058fe54 pointer 005737bc vftable 005737c0
+    [0] 005737c0 -> 0045e7f0 FUN_0045e7f0
+    [1] 005737c4 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [2] 005737c8 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [3] 005737cc -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [4] 005737d0 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [5] 005737d4 -> 00479d90 FUN_00479d90
+    [6] 005737d8 -> 00401f50 FUN_00401f50
+
+TYPE 00599eb8 ReadyChallengeParam::RTTI_Type_Descriptor
+  COL 0058ff30 pointer 00573924 vftable 00573928
+    [0] 00573928 -> 00460180 FUN_00460180
+    [1] 0057392c -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [2] 00573930 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [3] 00573934 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [4] 00573938 -> 004b4940 CFindReplaceDialog::DoDataExchange
+    [5] 0057393c -> 00479d90 FUN_00479d90
+    [6] 00573940 -> 00401f50 FUN_00401f50
+

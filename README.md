@@ -54,6 +54,29 @@ distribution copies; the `.app` bundles are the files to run directly.
 - **[Track asset pipeline](docs/TRACK_ASSET_PIPELINE.md)** documents the
   read-only RHO inventory, minimap/texture extraction, `track.1s` decoding,
   and C-friendly KTRK mesh preparation.
+- **[Original collision](docs/ORIGINAL_COLLISION.md)** is a decompilation-only
+  account of how the 2004 EXE collides: the 4-unit hashed triangle grid, the
+  `property/road` asset flag that decides what is collidable at all, the
+  per-wheel ray versus the oriented body box, and the single `0.65` face-normal
+  test that separates floor from wall. It records what could not be established
+  as well as what could.
+- **[Collision divergence](docs/COLLISION_DIVERGENCE.md)** put that account next
+  to what this simulator used to do, and **[collision port](docs/COLLISION_PORT.md)**
+  records closing the gap: the body is now the original's oriented box and
+  13-axis separating-axis test, the ground ray uses the original's 0.65 normal
+  threshold, face normals are reported unflipped, the scene mirror no longer
+  silently inverts them, and only the subtrees the asset tags `property/road`
+  are solid — roughly a quarter of each track's triangles, the rest being
+  scenery the original drives through.
+- **[Kart parameter tables](docs/KART_PARAMETERS.md)** lists every value the 26
+  karts hand to the physics: the five `parameter.xml` dynamics sets side by
+  side, which karts use each, and each kart's own body dimensions. All of it is
+  recovered, and it is what the `P` editor's **Kart defaults** restores.
+- **[Kart model catalogue](docs/KART_MODEL_CATALOG.md)** records, per kart, the
+  submesh breakdown of `model.1s`, the three different bounding boxes it yields
+  (full, body, wheels) and why only the body one reproduces the physics
+  constants, the wheel placement, and what the skins actually contain.
+  Re-run it with `python scripts/derive_kart_catalog.py`.
 - [Recovery notes](analysis/RECOVERY_NOTES.md) connect recovered formulas to
   executable addresses and supporting reports.
 - [Differential-oracle results](analysis/RECOVERY_NOTES.md#differential-oracle-results)
@@ -105,8 +128,10 @@ distribution copies; the `.app` bundles are the files to run directly.
   and all 78 dimension constants are reproduced exactly from the body mesh of
   its `model.1s`. See
   [kart asset verification](docs/KART_ASSET_VERIFICATION.md); re-run it with
-  `python scripts/derive_kart_constants.py`. The kart's drawn **shape** is not
-  from the assets — it is a box built from those dimensions.
+  `python scripts/derive_kart_constants.py`. All 26 **models** are embedded too,
+  so the drawn kart is now that `model.1s` rather than a box built from its
+  dimensions; `M` switches back to the box and `B` shows the bounding volumes.
+  See [the kart model catalogue](docs/KART_MODEL_CATALOG.md).
 - all 13 demo track mesh-AABB sizes, every one of them re-derived from that
   track's decoded `track.1s` mesh so the scene, walls, minimap and spawn share
   one source.
@@ -155,9 +180,10 @@ After a Windows build, launch `build/kart.exe`. It uses the following controls:
 | 3-second item boost | Ctrl or `D` | Command or `D` |
 | Switch camera (chase / top-down) | `C` | — |
 | Show or hide the motion vectors | `V` | — |
+| Cycle the drift gauge model | `G` | — |
 | Open the kart parameter editor | `P` | — |
 | Choose kart / track | `K` / `T` | `K` / `T` |
-| Toggle grounded-drag trigger | `G` | `G` |
+| Toggle grounded-drag trigger | `F` | `G` |
 | Save a screenshot | `S` | — |
 | Dismiss the `K` / `T` menu | `Esc` | `Esc` |
 | Reset (the countdown only reruns on a track change) | `R` | `R` |
@@ -236,10 +262,11 @@ than a mirror, so steering handedness is unchanged.
 - Ctrl or `D`: start the original 3-second item boost
 - `C`: switch between the chase camera and the top-down projection
 - `V`: show or hide the motion vectors
+- `G`: cycle the drift gauge model
 - `P`: open the kart parameter editor
 - `K`: open the 26-entry kart selection list
 - `T`: open the 14-entry track selection list
-- `G`: emulate the original ground-drag trigger enter/leave (`x4` / `x0.25`)
+- `F`: emulate the original ground-drag trigger enter/leave (`x4` / `x0.25`)
 - `S`: save a screenshot
 - `R`: reset
 
@@ -336,7 +363,75 @@ GO revs the booster — the idle loop plays and the kart takes on the boost look
 but no other booster works until the line drops.
 
 One simulator-side rule: releasing the accelerator ends a boost immediately
-rather than letting its timer run out. The original only expires the timer.
+rather than letting its timer run out. The original only expires the timer. The
+booster and rev samples follow the state the same way the drift loop does: a
+boost that is cut short stops its sample instead of playing out.
+
+### Drift gauge — inferred, not recovered
+
+> **Everything in this section is a hypothesis.** The original's gauge-charging
+> function is **not** in the recovered set: no address, no pinned constant, no
+> test. What *is* recovered is the rear-tire slip term the models are built out
+> of. Treat the gauge as a test bench for competing guesses, not as part of the
+> recovery. Nothing here feeds the physics — it only decides when a booster
+> becomes available.
+
+The starting observation is that the four things players report — speed, entry
+angle, escape force / feathering, and slope — may not be four terms in a
+charging formula but four ways of maximising one hidden quantity: how far the
+rear axle slides sideways. The engine already computes that, for the rear tire:
+
+```
+S_r = (-v_s + 0.5*w_z) / max(|v|, 5)          recovered, kart_dynamics.c
+```
+
+Multiplying by speed removes the divisor, so above 5 m/s the two forms agree:
+
+```
+dG/dt = Kg * |v| * |S_r|   ==   Kg * |-v_s + 0.5*w_z|      hypothesis
+```
+
+`G` cycles the three models the simulator implements, so they can be compared
+back to back:
+
+| Model | Charge rate | What it assumes |
+|---|---|---|
+| `INFINITE BOOSTER` | fills at once on any drift | the pre-gauge behaviour, kept for reference |
+| `SLIP INTEGRAL` | `Kg·\|v\|·\|S_r\|` | the charging function reads only the slip |
+| `SLIP x SUSPENSION` | `Kg·\|v\|·\|S_r\|·W` | it also reads the wheel contacts |
+
+`W` is the contact weight, and it is the *most* speculative part here:
+
+```
+W = 1 + Ks * clamp((left_load - right_load) / total * sign(v_s), 0, Ks_max)
+```
+
+with the loads being the paired suspension compressions, so a slide whose load
+has moved to its outside charges faster. There is no evidence in the recovered
+code that any such weight exists; it is only what the "slopes charge better"
+report would look like if the charging function read the contacts directly.
+
+**The experiment that separates the two.** Hold the same `|v|`, `v_s` and `w_z`
+on flat ground and on a bank. If the charge rate matches, the slope's effect is
+just its effect on `v_s` and `w_z`, and `SLIP INTEGRAL` is enough. If the bank
+charges faster with everything else matched, the charging function reads the
+contacts. The telemetry's `GAUGE` line prints the live `rate` and `W` for this.
+
+Charging is gated on `grounded && drift && |v| > 5`, all three of which are
+simulator-side choices. The remaining rules are arbitrary and exist only to make
+the models playable — they are **not** claims about the original:
+
+- The gauge holds visibly full for the rest of the drift; the booster is handed
+  over when the drift ends, so one drift yields at most one booster.
+- A drift that breaks part-way keeps its charge for the next one.
+- Two booster slots. Filling with both taken throws the booster away.
+- `Kg`, the full value, `Ks` and its clamp are all editable under `P`. The
+  defaults (`Kg 4.0`, full `200`, `Ks 1.0`, max `1.0`) are placeholders picked
+  for feel — no video or capture has been fitted to them yet. Fitting `Kg` to a
+  measured run is the obvious next step and has not been done.
+
+The implementation is `demo/kart_gauge.h`, kept out of `src/` deliberately so
+nothing inferred sits beside the recovered engine.
 
 ### Falling out of the world
 
@@ -413,6 +508,13 @@ lines are derived from the decoded `track.1s` meshes by
 `scripts/derive_track_constants.py`, and all 13 use the selected yellow KTRK
 triangles for ground and wall contact on Windows. The exact proprietary
 node-selection query is still not claimed as recovered.
+
+The **drift gauge is on the far side of that line**, and further out than
+anything else in this repository. No charging function was recovered — only the
+rear-tire slip term the models are assembled from — so its formulas, its
+coefficients, the one-booster-per-drift rule and the two slots are all inferred
+or invented, and none of them is pinned by a test. It lives in `demo/`, never in
+`src/`, and it changes nothing about how the kart moves.
 
 The start **direction** is the weakest link. A start line's position and its
 axis are readable from the stripe quad, but nothing in `track.1s` records which

@@ -8,7 +8,10 @@ extern "C" {
 #endif
 
 #define KART_WHEEL_COUNT 4
-#define KART_MAX_BODY_CONTACTS 16
+/* The original iterates every overlapping triangle with no cap. A flat surface
+   under the body can be dozens of triangles, so the buffer is sized to leave
+   room for a wall behind them rather than to bound the real contact count. */
+#define KART_MAX_BODY_CONTACTS 32
 #define KART_ITEM_BOOST_DURATION_MS 3000
 
 typedef struct KartGroundHit {
@@ -25,6 +28,10 @@ typedef bool (*KartGroundQueryFn)(
 
 typedef struct KartBodyContact {
     KartVec3 normal;
+    /* Triangle centroid, which is what the original reports at 0x00433310.
+       The linear resolver does not read it; it is here so the contact carries
+       the same information the original's did. */
+    KartVec3 point;
     float sweep_fraction;
     unsigned int surface_id;
 } KartBodyContact;

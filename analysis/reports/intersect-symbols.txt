@@ -1,0 +1,9 @@
+00571810  Label  s_GoCourse_00571810
+00571dbc  Label  s_GoTrack_00571dbc
+005994b8  Label  the::GoCourse::RTTI_Type_Descriptor
+00599554  Label  the::GoTrack::RTTI_Type_Descriptor
+00599b4c  Label  TrackService::RTTI_Type_Descriptor
+0059ad3c  Label  the::RefPointee<struct_the::IntersectVolume>::RTTI_Type_Descriptor
+0059ad74  Label  the::IntersectVolume::RTTI_Type_Descriptor
+0059ad98  Label  the::IntersectRect::RTTI_Type_Descriptor
+0059adb8  Label  the::IntersectAlphaRect::RTTI_Type_Descriptor

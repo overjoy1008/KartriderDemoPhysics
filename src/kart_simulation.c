@@ -370,9 +370,15 @@ KartSimulationStepResult kart_simulate_milliseconds(
     const bool boost_pressed = active_controls->boost_active;
 
     /* Item input caller at 0x00457ac0 first checks IsBoosting, then starts a
-       3000 ms timed boost. A held key cannot retrigger after expiry. */
+       3000 ms timed boost. A held key cannot retrigger after expiry.
+
+       Simulator-side rule: only the timed boost blocks a new one, so an item
+       boost can be started while the instant boost is still running and the two
+       overlap. Reading IsBoosting as covering both would swallow the press
+       instead. The forward-force multiplier is unchanged either way — it is
+       already keyed off "any boost active" and does not stack. */
     if (boost_pressed && !state->previous_boost_input &&
-        !kart_any_boost_active(&state->timed_boost, &state->instant_boost)) {
+        !state->timed_boost.active) {
         kart_timed_boost_start(
             &state->timed_boost,
             active_controls->forward_input,
@@ -396,9 +402,17 @@ KartSimulationStepResult kart_simulate_milliseconds(
     /* Releasing the accelerator ends the boost immediately instead of letting
        it run out its remaining time. This is a simulator-side rule; the
        original only expires the timer. */
-    if (active_controls->forward_input == 0.0f && state->timed_boost.active) {
-        state->timed_boost.remaining_ms = 0;
-        state->timed_boost.active = false;
+    if (active_controls->forward_input == 0.0f) {
+        if (state->timed_boost.active) {
+            state->timed_boost.remaining_ms = 0;
+            state->timed_boost.active = false;
+        }
+        /* The instant boost follows the same rule, so both boosts need the
+           throttle held to run and both stop the moment it is let go. */
+        if (state->instant_boost.active) {
+            state->instant_boost.active_timer = 0.0f;
+            state->instant_boost.active = false;
+        }
     }
     result.grounded = state->grounded;
     return result;

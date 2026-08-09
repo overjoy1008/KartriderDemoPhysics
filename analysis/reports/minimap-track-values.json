@@ -1,0 +1,132 @@
+﻿[
+    {
+        "Track":  "track_desert_I01",
+        "Offset":  476060,
+        "OriginX":  529.7672,
+        "OriginY":  598.147949,
+        "Scale":  0.3,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_desert_I02",
+        "Offset":  561506,
+        "OriginX":  390.977051,
+        "OriginY":  595.9359,
+        "Scale":  0.3,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_desert_R01",
+        "Offset":  904465,
+        "OriginX":  614.902832,
+        "OriginY":  461.68692,
+        "Scale":  0.3,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_forest_I01",
+        "Offset":  591530,
+        "OriginX":  468.612122,
+        "OriginY":  408.32428,
+        "Scale":  0.3,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_forest_I02",
+        "Offset":  1147031,
+        "OriginX":  481.403046,
+        "OriginY":  618.0281,
+        "Scale":  0.3,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_forest_R02",
+        "Offset":  1233692,
+        "OriginX":  571.3153,
+        "OriginY":  723.649048,
+        "Scale":  0.211053431,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_ice_I01",
+        "Offset":  1052302,
+        "OriginX":  562.5881,
+        "OriginY":  751.542236,
+        "Scale":  0.3,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_ice_I02",
+        "Offset":  493490,
+        "OriginX":  566.9641,
+        "OriginY":  487.197235,
+        "Scale":  0.3,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_ice_R01",
+        "Offset":  1798223,
+        "OriginX":  863.445557,
+        "OriginY":  897.8673,
+        "Scale":  0.160318315,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_village_I01",
+        "Offset":  694102,
+        "OriginX":  326.083923,
+        "OriginY":  484.866364,
+        "Scale":  0.3,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_village_I02",
+        "Offset":  820791,
+        "OriginX":  259.2857,
+        "OriginY":  356.454651,
+        "Scale":  0.3,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_village_R01",
+        "Offset":  910638,
+        "OriginX":  631.49884,
+        "OriginY":  744.7253,
+        "Scale":  0.144852176,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    },
+    {
+        "Track":  "track_village_R03",
+        "Offset":  1143459,
+        "OriginX":  573.462,
+        "OriginY":  769.314758,
+        "Scale":  0.1878337,
+        "Width":  256,
+        "Height":  256,
+        "Last":  4
+    }
+]

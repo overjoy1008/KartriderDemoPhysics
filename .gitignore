@@ -20,3 +20,4 @@
 # macOS Finder metadata (at any directory depth)
 .DS_Store
 **/.DS_Store
+__pycache__/

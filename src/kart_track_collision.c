@@ -2,15 +2,31 @@
 
 #include <math.h>
 
-/* Every mesh in the scene is solid, not just the road/wall named candidates:
-   scenery meshes are the rocks, ledges and tree trunks the kart would otherwise
-   drive through. What a face is used for comes from its normal, not its name.
+/* The two queries the original runs against its triangle set, reproduced here.
+   See docs/ORIGINAL_COLLISION.md for the decompilation they come from.
 
-   Whole meshes are rejected by their bounds first, so including scenery costs
-   far less than the triangle counts suggest. */
-#define KART_TRACK_ROAD_MIN_NORMAL_Z 0.20f
-#define KART_TRACK_WALL_MAX_NORMAL_Z 0.55f
-#define KART_TRACK_CONTACT_MARGIN 0.05f
+   Ground is a per-wheel ray (0x00432fc0) and the body is an oriented box
+   (0x00433310 -> 0x00434d40). They are separate mechanisms in the original and
+   they are separate here.
+
+   Only meshes the asset marks collidable are considered. The original builds
+   its collision grid from the subtrees carrying a `property/road` block and
+   from nothing else (0x00432390), so everything else is scenery it drives
+   through. The exporter bakes that tag into mesh flag bit 0. */
+
+/* _DAT_00571d48. The ray query skips any triangle whose normal is steeper than
+   this, so walls are invisible to the wheels; the response uses the same
+   number to tell a wall contact from a landing. */
+#define KART_TRACK_ROAD_MIN_NORMAL_Z 0.6499999761581421f
+/* 0x3f333333, the z half-extent 0x00430830 builds the body box with. Unlike the
+   other two extents it is not per-kart. */
+#define KART_BODY_HALF_HEIGHT 0.699999988079071f
+/* Two normals this close are the same surface. The original has no such test —
+   it simply iterates every overlapping triangle — but after the first contact
+   the resolver's approach guard makes repeats of one normal no-ops, so folding
+   them together changes nothing and stops a road from crowding a wall out of a
+   fixed-size buffer. */
+#define KART_TRACK_CONTACT_NORMAL_EPSILON 0.999f
 
 static KartVec3 add(KartVec3 a, KartVec3 b)
 {
@@ -50,7 +66,8 @@ static KartVec3 normalize(KartVec3 value)
 static void orientation_axes(
     KartQuat q,
     KartVec3 *right,
-    KartVec3 *forward)
+    KartVec3 *forward,
+    KartVec3 *up)
 {
     const float xx = q.x * q.x;
     const float yy = q.y * q.y;
@@ -70,6 +87,11 @@ static void orientation_axes(
         -2.0f * (xy - wz),
         -(1.0f - 2.0f * (xx + zz)),
         -2.0f * (yz + wx),
+    };
+    *up = (KartVec3){
+        2.0f * (xz + wy),
+        2.0f * (yz - wx),
+        1.0f - 2.0f * (xx + yy),
     };
 }
 
@@ -121,6 +143,32 @@ static bool boxes_overlap(
            a_min.z <= b_max.z && a_max.z >= b_min.z;
 }
 
+/* One triangle in world space, with the scene mirror compensated.
+
+   kart_track_scene_world_vertex negates X for every scene. Mirroring a single
+   axis reverses a triangle's winding, so a normal taken straight from the
+   mirrored corners points the opposite way to the one the original computed at
+   0x00432390. Swapping two corners puts the winding back.
+
+   Both queries go through here because both now report the face normal as it
+   is, rather than turning it toward the kart or toward the sky. Getting the
+   sign wrong would flip every floor into a ceiling. */
+static void read_triangle(
+    const KartTrackSceneMesh *mesh,
+    const KartDemoTrackSpec *track,
+    uint32_t index,
+    KartVec3 *a,
+    KartVec3 *b,
+    KartVec3 *c)
+{
+    const bool mirrored = kart_demo_track_mirror_x(track);
+    *a = kart_track_scene_world_vertex(&mesh->vertices[mesh->indices[index]], track);
+    *b = kart_track_scene_world_vertex(
+        &mesh->vertices[mesh->indices[index + (mirrored ? 2u : 1u)]], track);
+    *c = kart_track_scene_world_vertex(
+        &mesh->vertices[mesh->indices[index + (mirrored ? 1u : 2u)]], track);
+}
+
 static bool mesh_can_be_skipped(
     const KartTrackSceneMesh *mesh,
     const KartDemoTrackSpec *track,
@@ -130,6 +178,7 @@ static bool mesh_can_be_skipped(
     KartVec3 mesh_min;
     KartVec3 mesh_max;
     if (mesh->vertex_count == 0 || mesh->index_count < 3) return true;
+    if ((mesh->flags & KART_TRACK_SCENE_MESH_COLLIDABLE) == 0) return true;
     mesh_world_bounds(mesh, track, &mesh_min, &mesh_max);
     return !boxes_overlap(mesh_min, mesh_max, query_min, query_max);
 }
@@ -169,6 +218,18 @@ static bool segment_triangle_intersection(
     return dot(*normal, *normal) > 0.0f;
 }
 
+bool kart_track_segment_triangle_hit(
+    KartVec3 start,
+    KartVec3 delta,
+    KartVec3 a,
+    KartVec3 b,
+    KartVec3 c)
+{
+    float fraction;
+    KartVec3 normal;
+    return segment_triangle_intersection(start, delta, a, b, c, &fraction, &normal);
+}
+
 bool kart_track_scene_query_ground(
     const KartTrackScene *scene,
     const KartDemoTrackSpec *track,
@@ -198,20 +259,23 @@ bool kart_track_scene_query_ground(
         uint32_t index;
         if (mesh_can_be_skipped(mesh, track, query_min, query_max)) continue;
         for (index = 0; index + 2u < mesh->index_count; index += 3u) {
-            const KartVec3 a = kart_track_scene_world_vertex(
-                &mesh->vertices[mesh->indices[index]], track);
-            const KartVec3 b = kart_track_scene_world_vertex(
-                &mesh->vertices[mesh->indices[index + 1u]], track);
-            const KartVec3 c = kart_track_scene_world_vertex(
-                &mesh->vertices[mesh->indices[index + 2u]], track);
+            KartVec3 a;
+            KartVec3 b;
+            KartVec3 c;
             float fraction;
             KartVec3 normal;
+            read_triangle(mesh, track, index, &a, &b, &c);
+            /* 0x00432fc0 rejects on fabs(normal.z) and reports the face normal
+               as it is. It does not turn a downward-facing face upward, so a
+               face wound the wrong way pushes the suspension down rather than
+               holding the kart up — that is the original's behaviour and the
+               reason this is not "corrected" here. */
             if (segment_triangle_intersection(
                     ray_start, ray_delta, a, b, c, &fraction, &normal) &&
                 fabsf(normal.z) >= KART_TRACK_ROAD_MIN_NORMAL_Z &&
                 fraction < nearest) {
                 nearest = fraction;
-                nearest_normal = normal.z < 0.0f ? scale(normal, -1.0f) : normal;
+                nearest_normal = normal;
             }
         }
     }
@@ -222,28 +286,100 @@ bool kart_track_scene_query_ground(
     return true;
 }
 
-static bool point_in_triangle(
-    KartVec3 point,
-    KartVec3 a,
-    KartVec3 b,
-    KartVec3 c)
+/* One separating-axis test against an axis that is the cross product of a box
+   axis and a triangle edge. `p0`/`p1` are the two distinct projections of the
+   triangle's vertices onto that axis and `radius` is the box's extent along it;
+   the third vertex always projects onto one of the two, which is why the
+   original only ever computes two. */
+static bool axis_separates(float p0, float p1, float radius)
 {
-    const float epsilon = -1.0e-4f;
-    const KartVec3 v0 = subtract(b, a);
-    const KartVec3 v1 = subtract(c, a);
-    const KartVec3 v2 = subtract(point, a);
-    const float d00 = dot(v0, v0);
-    const float d01 = dot(v0, v1);
-    const float d11 = dot(v1, v1);
-    const float d20 = dot(v2, v0);
-    const float d21 = dot(v2, v1);
-    const float denominator = d00 * d11 - d01 * d01;
-    float v;
-    float w;
-    if (fabsf(denominator) < 1.0e-8f) return false;
-    v = (d11 * d20 - d01 * d21) / denominator;
-    w = (d00 * d21 - d01 * d20) / denominator;
-    return v >= epsilon && w >= epsilon && v + w <= 1.0f - epsilon;
+    const float low = p0 < p1 ? p0 : p1;
+    const float high = p0 < p1 ? p1 : p0;
+    return low > radius || high < -radius;
+}
+
+/* Does an axis-aligned box centred on the origin overlap the triangle?
+
+   This is the test at 0x00434d40: the nine box-axis-cross-edge axes first, then
+   the three box axes, then the triangle's own plane. It is Akenine-Moller's
+   published routine, which is what the original implements.
+
+   The box is axis-aligned because the caller has already rotated the triangle
+   into the box's frame, which is how the original gets an oriented box out of
+   an axis-aligned test. */
+static bool box_triangle_overlap(
+    KartVec3 half,
+    KartVec3 v0,
+    KartVec3 v1,
+    KartVec3 v2)
+{
+    const KartVec3 e0 = subtract(v1, v0);
+    const KartVec3 e1 = subtract(v2, v1);
+    const KartVec3 e2 = subtract(v0, v2);
+    const KartVec3 edges[3] = {e0, e1, e2};
+    const KartVec3 corners[3] = {v0, v1, v2};
+    /* Which two of the three corners each test compares. The third always
+       projects onto one of them, and which two those are changes with the edge:
+       0x00434d40 reads v0/v2 for the first two edges on the X and Y axes but
+       v0/v1 for the third, and shifts the Z axis the other way. Using one fixed
+       pair for all nine looks plausible and reports false separations. */
+    static const int first[3][3] = {{0, 0, 1}, {0, 0, 0}, {0, 0, 1}};
+    static const int second[3][3] = {{2, 2, 2}, {2, 2, 1}, {1, 1, 2}};
+    KartVec3 normal;
+    float plane_offset;
+    float plane_radius;
+    KartVec3 low;
+    KartVec3 high;
+    int i;
+
+    /* Nine cross-product axes. Crossing a unit basis vector with an edge makes
+       most terms vanish, which is why each test is two multiplies. */
+    for (i = 0; i < 3; ++i) {
+        const KartVec3 e = edges[i];
+        const float ax = fabsf(e.x);
+        const float ay = fabsf(e.y);
+        const float az = fabsf(e.z);
+        const KartVec3 px = corners[first[i][0]];
+        const KartVec3 qx = corners[second[i][0]];
+        const KartVec3 py = corners[first[i][1]];
+        const KartVec3 qy = corners[second[i][1]];
+        const KartVec3 pz = corners[first[i][2]];
+        const KartVec3 qz = corners[second[i][2]];
+        /* axis = X cross e */
+        if (axis_separates(
+                e.z * px.y - e.y * px.z,
+                e.z * qx.y - e.y * qx.z,
+                az * half.y + ay * half.z)) return false;
+        /* axis = Y cross e */
+        if (axis_separates(
+                -e.z * py.x + e.x * py.z,
+                -e.z * qy.x + e.x * qy.z,
+                az * half.x + ax * half.z)) return false;
+        /* axis = Z cross e */
+        if (axis_separates(
+                e.y * pz.x - e.x * pz.y,
+                e.y * qz.x - e.x * qz.y,
+                ay * half.x + ax * half.y)) return false;
+    }
+
+    /* The three box axes: a plain AABB overlap against the triangle's bounds. */
+    low.x = fminf(v0.x, fminf(v1.x, v2.x));
+    high.x = fmaxf(v0.x, fmaxf(v1.x, v2.x));
+    low.y = fminf(v0.y, fminf(v1.y, v2.y));
+    high.y = fmaxf(v0.y, fmaxf(v1.y, v2.y));
+    low.z = fminf(v0.z, fminf(v1.z, v2.z));
+    high.z = fmaxf(v0.z, fmaxf(v1.z, v2.z));
+    if (low.x > half.x || high.x < -half.x) return false;
+    if (low.y > half.y || high.y < -half.y) return false;
+    if (low.z > half.z || high.z < -half.z) return false;
+
+    /* The triangle's plane against the box. */
+    normal = cross(e0, e1);
+    plane_offset = -dot(normal, v0);
+    plane_radius = fabsf(normal.x) * half.x +
+                   fabsf(normal.y) * half.y +
+                   fabsf(normal.z) * half.z;
+    return fabsf(plane_offset) <= plane_radius;
 }
 
 static bool contact_is_duplicate(
@@ -253,7 +389,9 @@ static bool contact_is_duplicate(
 {
     unsigned int i;
     for (i = 0; i < count; ++i) {
-        if (dot(contacts[i].normal, normal) > 0.95f) return true;
+        if (dot(contacts[i].normal, normal) > KART_TRACK_CONTACT_NORMAL_EPSILON) {
+            return true;
+        }
     }
     return false;
 }
@@ -267,6 +405,9 @@ unsigned int kart_track_scene_query_body_collisions(
 {
     KartVec3 body_right;
     KartVec3 body_forward;
+    KartVec3 body_up;
+    KartVec3 centre;
+    KartVec3 half;
     KartVec3 query_min;
     KartVec3 query_max;
     float reach;
@@ -274,49 +415,64 @@ unsigned int kart_track_scene_query_body_collisions(
     unsigned int count = 0;
     if (scene == NULL || track == NULL || state == NULL ||
         contacts == NULL || capacity == 0) return 0;
-    orientation_axes(state->orientation, &body_right, &body_forward);
-    /* The widest the body can reach in any direction, plus the contact margin. */
-    reach = state->geometry.half_width + state->geometry.half_length +
-            KART_TRACK_CONTACT_MARGIN;
-    query_min = (KartVec3){
-        state->position.x - reach,
-        state->position.y - reach,
-        state->position.z - reach,
+    orientation_axes(state->orientation, &body_right, &body_forward, &body_up);
+
+    /* 0x00430830 builds the box from the kart's two plan-view half-extents and
+       a fixed half-height, centred one unit up the chassis axis from the
+       origin the wheels hang off. */
+    half = (KartVec3){
+        state->geometry.half_width,
+        state->geometry.half_length,
+        KART_BODY_HALF_HEIGHT,
     };
-    query_max = (KartVec3){
-        state->position.x + reach,
-        state->position.y + reach,
-        state->position.z + reach,
-    };
+    centre = add(state->position, body_up);
+
+    reach = sqrtf(dot(half, half));
+    query_min = (KartVec3){centre.x - reach, centre.y - reach, centre.z - reach};
+    query_max = (KartVec3){centre.x + reach, centre.y + reach, centre.z + reach};
+
     for (mesh_index = 0; mesh_index < scene->mesh_count && count < capacity; ++mesh_index) {
         const KartTrackSceneMesh *mesh = &scene->meshes[mesh_index];
         uint32_t index;
         if (mesh_can_be_skipped(mesh, track, query_min, query_max)) continue;
         for (index = 0; index + 2u < mesh->index_count && count < capacity; index += 3u) {
-            const KartVec3 a = kart_track_scene_world_vertex(
-                &mesh->vertices[mesh->indices[index]], track);
-            const KartVec3 b = kart_track_scene_world_vertex(
-                &mesh->vertices[mesh->indices[index + 1u]], track);
-            const KartVec3 c = kart_track_scene_world_vertex(
-                &mesh->vertices[mesh->indices[index + 2u]], track);
-            KartVec3 normal = normalize(cross(subtract(b, a), subtract(c, a)));
-            float distance;
-            float support;
-            KartVec3 projected;
+            KartVec3 a;
+            KartVec3 b;
+            KartVec3 c;
+            KartVec3 offset_a;
+            KartVec3 offset_b;
+            KartVec3 offset_c;
+            /* Into the box's frame: the rows of the rotation are the body axes. */
+            KartVec3 local_a;
+            KartVec3 local_b;
+            KartVec3 local_c;
+            KartVec3 normal;
+            read_triangle(mesh, track, index, &a, &b, &c);
+            offset_a = subtract(a, centre);
+            offset_b = subtract(b, centre);
+            offset_c = subtract(c, centre);
+            local_a = (KartVec3){
+                dot(offset_a, body_right),
+                dot(offset_a, body_forward),
+                dot(offset_a, body_up)};
+            local_b = (KartVec3){
+                dot(offset_b, body_right),
+                dot(offset_b, body_forward),
+                dot(offset_b, body_up)};
+            local_c = (KartVec3){
+                dot(offset_c, body_right),
+                dot(offset_c, body_forward),
+                dot(offset_c, body_up)};
+            if (!box_triangle_overlap(half, local_a, local_b, local_c)) continue;
+            /* The true face normal, with no flattening and no steepness filter:
+               a shallow face reaches the resolver's landing branch and a steep
+               one reaches its wall branch, which is the split the original
+               makes. */
+            normal = normalize(cross(subtract(b, a), subtract(c, a)));
             if (dot(normal, normal) == 0.0f ||
-                fabsf(normal.z) > KART_TRACK_WALL_MAX_NORMAL_Z) continue;
-            normal.z = 0.0f;
-            normal = normalize(normal);
-            distance = dot(subtract(state->position, a), normal);
-            if (distance < 0.0f) normal = scale(normal, -1.0f);
-            distance = fabsf(distance);
-            support = fabsf(dot(normal, body_right)) * state->geometry.half_width +
-                      fabsf(dot(normal, body_forward)) * state->geometry.half_length;
-            if (distance > support + KART_TRACK_CONTACT_MARGIN) continue;
-            projected = add(state->position, scale(normal, -distance));
-            if (!point_in_triangle(projected, a, b, c) ||
                 contact_is_duplicate(contacts, count, normal)) continue;
             contacts[count].normal = normal;
+            contacts[count].point = scale(add(add(a, b), c), 1.0f / 3.0f);
             contacts[count].sweep_fraction = 0.5f;
             contacts[count].surface_id = 4;
             ++count;

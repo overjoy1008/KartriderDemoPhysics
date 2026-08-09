@@ -1,0 +1,176 @@
+{
+  "Archive": "C:\\Program Files (x86)\\Nexon\\KartRider Demo\\Data\\effect.rho",
+  "ArchiveSize": 221440,
+  "Sha256": "76B249D76A7CA610CCDFEE54085CD76B65785E471C1CBF2724AC3362DD9C551D",
+  "EntryCount": 28,
+  "Entries": [
+    {
+      "Path": "booster/1.tga",
+      "Size": 32812,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "booster/2.tga",
+      "Size": 65580,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "booster/3.tga",
+      "Size": 131116,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "booster/effect.1s",
+      "Size": 4387,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "boosterwave/busterwav01.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "boosterwave/effect.1s",
+      "Size": 6728,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "boosterwave/\uBD80\uC2A4\uD130\uD71901.tga",
+      "Size": 65580,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "boosterwave/\uBD80\uC2A4\uD130\uD71903.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "boosterwave/\uBD80\uC2A4\uD130\uD719_x.tga",
+      "Size": 65580,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "crash/crash.1s",
+      "Size": 1020,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "crash/crash1.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "crash/crash2.tga",
+      "Size": 4140,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "crash/pang.tga",
+      "Size": 65580,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "drift/drift.tga",
+      "Size": 32812,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "dust/busterwav01.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "dust/desertdust.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "dust/effect.1s",
+      "Size": 4552,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "dust/forestdust.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "dust/waterspark.tga",
+      "Size": 4140,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "dust/\uBA3C\uC9C0.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "exhause/exhause.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "shockwave/effect.1s",
+      "Size": 21052,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "shockwave/smoke.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "skidmark/skidmark.tga",
+      "Size": 8236,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "smoke/effect.1s",
+      "Size": 4529,
+      "Kind": "model",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "smoke/smoke.tga",
+      "Size": 4140,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "trace/trace.tga",
+      "Size": 16428,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    },
+    {
+      "Path": "zetair/zetair.tga",
+      "Size": 65580,
+      "Kind": "texture",
+      "ExtractedSha256": null
+    }
+  ]
+}

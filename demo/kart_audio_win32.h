@@ -36,8 +36,9 @@ int kart_audio_play_loop(KartAudio *audio, int sound, float volume, float pitch)
    is the original's mode-0xC/0xE single-instance guard. */
 void kart_audio_play_once(KartAudio *audio, int sound, float volume);
 /* Same, but always starts a fresh voice so repeats layer over each other
-   instead of being dropped. Used for the boosters. */
-void kart_audio_play_overlapping(KartAudio *audio, int sound, float volume);
+   instead of being dropped. Used for the boosters. Returns the voice index, or
+   -1, so a caller that has to cut the sound short can keep hold of it. */
+int kart_audio_play_overlapping(KartAudio *audio, int sound, float volume);
 void kart_audio_stop_voice(KartAudio *audio, int voice);
 void kart_audio_set_voice(KartAudio *audio, int voice, float volume, float pitch);
 

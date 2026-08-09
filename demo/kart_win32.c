@@ -6,22 +6,36 @@
 #include "kart_countdown.h"
 #include "kart_demo_data.h"
 #include "kart_demo_win32_ui.h"
+#include "kart_gauge.h"
+#include "kart_gearbox.h"
 #include "kart_input.h"
 #include "kart_minimap_win32.h"
+#include "kart_model_resources.h"
+#include "kart_model_win32.h"
 #include "kart_params_win32.h"
 #include "kart_screenshot_win32.h"
 #include "kart_simulation.h"
+#include "kart_course.h"
 #include "kart_sound_win32.h"
 #include "kart_track_collision.h"
 #include "kart_track_scene.h"
+#include "kart_skydome_resources.h"
 #include "kart_track_scene_resources.h"
+#include "kart_track_texture.h"
+#include "kart_track_texture_resources.h"
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#define MAX_SKID_SEGMENTS 2048
-#define SKID_LIFETIME_MS 15000
+#define SKID_MARK_POOL_SIZE 50u
+#define SKID_MARK_MAX_CROSS_SECTIONS 44u
+#define SKID_MARK_SIDE_COUNT 2u
+#define SKID_MARK_WIDTH 0.28f
+#define SKID_MARK_SURFACE_BIAS 0.02f
+#define SKID_MARK_LOCAL_X 0.61f
+#define SKID_MARK_LOCAL_Y 0.5f
 
 /* Half-extents of the top-down view's window onto the world, in metres. */
 static const float VIEW_HALF_WIDTH = 55.0f;
@@ -34,17 +48,24 @@ typedef enum DemoViewMode {
     DEMO_VIEW_TOPDOWN = 1
 } DemoViewMode;
 
-typedef struct SkidSegment3D {
-    float left_x0;
-    float left_y0;
-    float left_x1;
-    float left_y1;
-    float right_x0;
-    float right_y0;
-    float right_x1;
-    float right_y1;
-    unsigned int created_ms;
-} SkidSegment3D;
+typedef enum DemoTrackRenderMode {
+    DEMO_TRACK_RENDER_ALPHA_85 = 0,
+    DEMO_TRACK_RENDER_DEPTH_ALPHA_190 = 1,
+    DEMO_TRACK_RENDER_TEXTURED = 2,
+    DEMO_TRACK_RENDER_MODE_COUNT = 3
+} DemoTrackRenderMode;
+
+typedef struct SkidMarkCrossSection {
+    KartVec3 edge[2];
+    float texture_v;
+} SkidMarkCrossSection;
+
+typedef struct SkidMarkStrip {
+    SkidMarkCrossSection sections[SKID_MARK_MAX_CROSS_SECTIONS];
+    unsigned int section_count;
+    unsigned int sequence;
+    bool building;
+} SkidMarkStrip;
 
 typedef struct Demo3DState {
     KartSimulationState kart;
@@ -52,18 +73,22 @@ typedef struct Demo3DState {
     const KartDemoTrackSpec *track_spec;
     DWORD previous_tick;
     unsigned int simulation_time_ms;
-    unsigned int skid_head;
-    unsigned int skid_count;
-    SkidSegment3D skid_segments[MAX_SKID_SEGMENTS];
-    float previous_skid_left_x;
-    float previous_skid_left_y;
-    float previous_skid_right_x;
-    float previous_skid_right_y;
+    SkidMarkStrip skid_marks[SKID_MARK_SIDE_COUNT][SKID_MARK_POOL_SIZE];
+    unsigned int skid_next[SKID_MARK_SIDE_COUNT];
+    unsigned int skid_sequence;
+    int skid_building[SKID_MARK_SIDE_COUNT];
+    KartTrackTextureImage skid_texture;
     DemoViewMode view_mode;
     bool view_key_was_down;
     bool vector_key_was_down;
     bool param_key_was_down;
+    bool gauge_key_was_down;
+    bool boost_press_allowed;
     bool show_vectors;
+    KartGaugeConfig gauge_config;
+    KartGaugeState gauge;
+    KartGearbox gearbox;
+    bool gear_key_was_down;
     /* Last step's telemetry, kept so the panel can show what the simulation
        actually did rather than only what its state ended up as. */
     KartSimulationStepResult last_step;
@@ -92,11 +117,59 @@ typedef struct Demo3DState {
     unsigned int countdown_remaining_ms;
     /* Counts down after GO so the START flash outlives the single cue frame. */
     DWORD start_notice_ms;
+    /* Completed WM_PAINT frames measured with the performance counter. */
+    LARGE_INTEGER fps_frequency;
+    LARGE_INTEGER fps_sample_start;
+    unsigned int fps_sample_frames;
+    double fps;
     /* Drift plus throttle held on the line: booster idle loop and boost look. */
     bool countdown_rev_active;
     bool forward_key_was_down;
     KartTrackScene scenes[KART_TRACK_SCENE_CAPACITY];
+    /* The skydome that ships beside each track, in the same order. Meshes with
+       no exported dome stay empty. */
+    KartTrackScene skydomes[KART_TRACK_SCENE_CAPACITY];
+    /* The recovered kart models, in KARTS[] order. Loaded once up front: all 26
+       together are about 340 KB of geometry, so there is nothing to gain from
+       loading them on demand when the driver presses K. */
+    KartTrackScene models[KART_MODEL_CAPACITY];
+    KartModelParts model_parts[KART_MODEL_CAPACITY];
+    bool show_model_bounds;
+    bool bounds_key_was_down;
+    /* Draws the course's gate quads over the track so the checkpoints the
+       progress code tests against can be seen. Off by default. */
+    bool show_gates;
+    bool gate_key_was_down;
+    /* The tracks' texture assets, one shared table for all 13. `textured`
+       picks the solid renderer that samples them over the wireframe, and
+       starts off: the mesh is what the rest of the demo is about. */
+    KartTrackTextureTable textures;
+    bool textures_ready;
+    DemoTrackRenderMode track_render_mode;
+    bool texture_key_was_down;
+    /* The kart's own skin, on its own key: it only applies in the textured
+       renderer, and the state colour is still the more readable of the two. */
+    bool kart_textured;
+    bool kart_texture_key_was_down;
+    /* The colortable index, and what the skin was last repainted from: the
+       repaint is in place, so the asset's own texels are kept to redo it. */
+    unsigned int kart_colour;
+    bool kart_colour_key_was_down;
+    const KartTrackTextureImage *painted_skin;
+    unsigned int painted_colour;
+    uint16_t *skin_texels;
+    size_t skin_texel_count;
     KartDemoMinimapSet minimaps;
+    /* The original's checkpoint graph for the selected track, rebuilt whenever
+       the track changes. `course_ready` is false for the synthetic flat track,
+       which has no course asset. */
+    KartCourse course;
+    KartCourseProgress progress;
+    bool course_ready;
+    KartVec3 previous_position;
+    /* 0x00458000 arms a respawn and only moves the kart 500 ms later, both for
+       a fall out of the world and for the original's own reset command. */
+    DWORD respawn_arm_ms;
 } Demo3DState;
 
 typedef struct Camera3D {
@@ -113,12 +186,11 @@ typedef struct ProjectedPoint {
     bool visible;
 } ProjectedPoint;
 
-static bool load_track_scene_resource(
+static bool load_scene_resource(
     HINSTANCE instance,
     int resource_id,
     KartTrackScene *scene)
 {
-#if defined(KART_EMBED_TRACK_SCENES)
     HRSRC resource = FindResourceA(
         instance, MAKEINTRESOURCEA(resource_id), RT_RCDATA);
     HGLOBAL loaded;
@@ -132,24 +204,176 @@ static bool load_track_scene_resource(
     data = loaded != NULL ? LockResource(loaded) : NULL;
     return data != NULL && size != 0 &&
            kart_track_scene_load_compressed(scene, data, (size_t)size);
-#else
-    (void)instance;
-    (void)resource_id;
-    (void)scene;
-    return false;
-#endif
 }
 
 static void load_track_scenes(HINSTANCE instance, Demo3DState *demo)
 {
+#if defined(KART_EMBED_TRACK_SCENES)
     unsigned int i;
     const unsigned int count = kart_demo_track_count();
     for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
         /* Id 0 marks a track with no mesh, such as the flat test track. */
         if (KART_TRACK_SCENE_RESOURCE_IDS[i] == 0) continue;
-        load_track_scene_resource(
+        load_scene_resource(
             instance, KART_TRACK_SCENE_RESOURCE_IDS[i], &demo->scenes[i]);
     }
+#else
+    (void)instance;
+    (void)demo;
+#endif
+}
+
+/* The domes are ordinary KTRK exports, so the same loader reads them. */
+static void load_skydomes(HINSTANCE instance, Demo3DState *demo)
+{
+#if defined(KART_EMBED_SKYDOMES)
+    unsigned int i;
+    const unsigned int count = kart_demo_track_count();
+    for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
+        if (KART_SKYDOME_RESOURCE_IDS[i] == 0) continue;
+        load_scene_resource(
+            instance, KART_SKYDOME_RESOURCE_IDS[i], &demo->skydomes[i]);
+    }
+#else
+    (void)instance;
+    (void)demo;
+#endif
+}
+
+/* The kart models ride in the same KTKZ containers as the track scenes, so the
+   same loader reads them; only what the parts mean differs. */
+static void load_kart_models(HINSTANCE instance, Demo3DState *demo)
+{
+#if defined(KART_EMBED_KART_MODELS)
+    unsigned int i;
+    const unsigned int count = kart_demo_kart_count();
+    for (i = 0; i < count && i < KART_MODEL_CAPACITY; ++i) {
+        if (!load_scene_resource(
+                instance, KART_MODEL_RESOURCE_IDS[i], &demo->models[i])) {
+            continue;
+        }
+        kart_model_parts_build(&demo->models[i], &demo->model_parts[i]);
+    }
+#else
+    (void)instance;
+    (void)demo;
+#endif
+}
+
+/* The texture table is one resource shared by every track, so it is loaded once
+   and looked up by the theme the track belongs to. */
+static void load_track_textures(HINSTANCE instance, Demo3DState *demo)
+{
+#if defined(KART_EMBED_TRACK_TEXTURES)
+    HRSRC resource = FindResourceA(
+        instance, MAKEINTRESOURCEA(IDR_TRACK_TEXTURES), RT_RCDATA);
+    HGLOBAL loaded;
+    const void *data;
+    DWORD size;
+    if (resource == NULL) {
+        return;
+    }
+    loaded = LoadResource(instance, resource);
+    size = SizeofResource(instance, resource);
+    data = loaded != NULL ? LockResource(loaded) : NULL;
+    demo->textures_ready = data != NULL && size != 0 &&
+        kart_track_texture_load_compressed(&demo->textures, data, (size_t)size);
+#else
+    (void)instance;
+    (void)demo;
+#endif
+}
+
+/* `effect.rho/skidmark/skidmark.tga`, loaded without image-library conversion
+   so the executable samples the exact 64x32 BGRA pixels shipped by the demo. */
+static void load_skidmark_texture(HINSTANCE instance, Demo3DState *demo)
+{
+    HRSRC resource = FindResourceA(
+        instance, MAKEINTRESOURCEA(IDR_SKIDMARK_TEXTURE), RT_RCDATA);
+    HGLOBAL loaded;
+    const unsigned char *bytes;
+    DWORD size;
+    uint32_t width;
+    uint32_t height;
+    size_t texel_count;
+    size_t mask_bytes;
+    uint32_t y;
+    if (resource == NULL) return;
+    loaded = LoadResource(instance, resource);
+    size = SizeofResource(instance, resource);
+    bytes = loaded != NULL ? (const unsigned char *)LockResource(loaded) : NULL;
+    if (bytes == NULL || size < 18u || bytes[2] != 2u || bytes[16] != 32u) return;
+    width = (uint32_t)bytes[12] | ((uint32_t)bytes[13] << 8);
+    height = (uint32_t)bytes[14] | ((uint32_t)bytes[15] << 8);
+    texel_count = (size_t)width * (size_t)height;
+    if (width != 64u || height != 32u || 18u + texel_count * 4u > (size_t)size) return;
+    mask_bytes = (texel_count + 7u) / 8u;
+    demo->skid_texture.texels = (uint16_t *)malloc(
+        texel_count * sizeof(*demo->skid_texture.texels));
+    demo->skid_texture.mask = (uint8_t *)calloc(mask_bytes, 1u);
+    demo->skid_texture.alpha = (uint8_t *)malloc(texel_count);
+    if (demo->skid_texture.texels == NULL || demo->skid_texture.mask == NULL ||
+        demo->skid_texture.alpha == NULL) {
+        free(demo->skid_texture.texels);
+        free(demo->skid_texture.mask);
+        free(demo->skid_texture.alpha);
+        memset(&demo->skid_texture, 0, sizeof(demo->skid_texture));
+        return;
+    }
+    demo->skid_texture.width = width;
+    demo->skid_texture.height = height;
+    demo->skid_texture.flags =
+        KART_TRACK_TEXTURE_MASKED | KART_TRACK_TEXTURE_ALPHA8 |
+        KART_TRACK_TEXTURE_BLEND_ALPHA8;
+    for (y = 0; y < height; ++y) {
+        const uint32_t source_y =
+            (bytes[17] & 0x20u) != 0u ? y : height - 1u - y;
+        uint32_t x;
+        for (x = 0; x < width; ++x) {
+            const size_t destination = (size_t)y * width + x;
+            const size_t source = 18u + ((size_t)source_y * width + x) * 4u;
+            const uint8_t b = bytes[source];
+            const uint8_t g = bytes[source + 1u];
+            const uint8_t r = bytes[source + 2u];
+            const uint8_t a = bytes[source + 3u];
+            demo->skid_texture.texels[destination] = (uint16_t)(
+                ((uint16_t)(r >> 3) << 11) |
+                ((uint16_t)(g >> 2) << 5) |
+                (uint16_t)(b >> 3));
+            demo->skid_texture.alpha[destination] = a;
+            if (a != 0u) {
+                demo->skid_texture.mask[destination >> 3] |=
+                    (uint8_t)(1u << (destination & 7u));
+            }
+        }
+    }
+}
+
+static void free_skidmark_texture(Demo3DState *demo)
+{
+    free(demo->skid_texture.texels);
+    free(demo->skid_texture.mask);
+    free(demo->skid_texture.alpha);
+    memset(&demo->skid_texture, 0, sizeof(demo->skid_texture));
+}
+
+/* The theme half of a texture key. Track asset names are "<theme>_<code>", the
+   same split scripts/pack_track_textures.py makes on the mesh file names. */
+static void track_theme(const KartDemoTrackSpec *track, char *out, size_t size)
+{
+    const char *name = track != NULL ? track->asset_name : NULL;
+    const char *separator = name != NULL ? strchr(name, '_') : NULL;
+    size_t length;
+    if (separator == NULL) {
+        out[0] = '\0';
+        return;
+    }
+    length = (size_t)(separator - name);
+    if (length >= size) {
+        length = size - 1u;
+    }
+    memcpy(out, name, length);
+    out[length] = '\0';
 }
 
 static void free_track_scenes(Demo3DState *demo)
@@ -157,7 +381,29 @@ static void free_track_scenes(Demo3DState *demo)
     unsigned int i;
     for (i = 0; i < KART_TRACK_SCENE_CAPACITY; ++i) {
         kart_track_scene_free(&demo->scenes[i]);
+        kart_track_scene_free(&demo->skydomes[i]);
     }
+    for (i = 0; i < KART_MODEL_CAPACITY; ++i) {
+        kart_track_scene_free(&demo->models[i]);
+    }
+}
+
+/* The model for the kart currently under the driver, or NULL when the models
+   were not embedded. */
+static const KartTrackScene *active_kart_model(
+    const Demo3DState *demo,
+    const KartModelParts **parts)
+{
+    unsigned int i;
+    const unsigned int count = kart_demo_kart_count();
+    for (i = 0; i < count && i < KART_MODEL_CAPACITY; ++i) {
+        if (kart_demo_kart_at(i) != demo->kart_spec) continue;
+        if (demo->models[i].mesh_count == 0) break;
+        if (parts != NULL) *parts = &demo->model_parts[i];
+        return &demo->models[i];
+    }
+    if (parts != NULL) *parts = NULL;
+    return NULL;
 }
 
 static const KartTrackScene *active_track_scene(const Demo3DState *demo)
@@ -167,6 +413,18 @@ static const KartTrackScene *active_track_scene(const Demo3DState *demo)
     for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
         if (kart_demo_track_at(i) == demo->track_spec) {
             return demo->scenes[i].mesh_count != 0 ? &demo->scenes[i] : NULL;
+        }
+    }
+    return NULL;
+}
+
+static const KartTrackScene *active_skydome(const Demo3DState *demo)
+{
+    unsigned int i;
+    const unsigned int count = kart_demo_track_count();
+    for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
+        if (kart_demo_track_at(i) == demo->track_spec) {
+            return demo->skydomes[i].mesh_count != 0 ? &demo->skydomes[i] : NULL;
         }
     }
     return NULL;
@@ -185,6 +443,27 @@ static KartVec3 vec_sub(KartVec3 a, KartVec3 b)
 static KartVec3 vec_scale(KartVec3 value, float amount)
 {
     return (KartVec3){value.x * amount, value.y * amount, value.z * amount};
+}
+
+static KartVec3 vec_rotate_z(KartVec3 value, float radians)
+{
+    const float cosine = cosf(radians);
+    const float sine = sinf(radians);
+    return (KartVec3){
+        cosine * value.x - sine * value.y,
+        sine * value.x + cosine * value.y,
+        value.z};
+}
+
+static KartQuat quat_pre_rotate_z(KartQuat value, float radians)
+{
+    const float half = radians * 0.5f;
+    const KartQuat turn = {cosf(half), 0.0f, 0.0f, sinf(half)};
+    return (KartQuat){
+        turn.w * value.w - turn.x * value.x - turn.y * value.y - turn.z * value.z,
+        turn.w * value.x + turn.x * value.w + turn.y * value.z - turn.z * value.y,
+        turn.w * value.y - turn.x * value.z + turn.y * value.w + turn.z * value.x,
+        turn.w * value.z + turn.x * value.y - turn.y * value.x + turn.z * value.w};
 }
 
 static float vec_dot(KartVec3 a, KartVec3 b)
@@ -287,13 +566,20 @@ static unsigned int query_track_walls(
     const float track_half_width = kart_demo_track_width(demo->track_spec) * 0.5f;
     const float track_half_height = kart_demo_track_length(demo->track_spec) * 0.5f;
     const KartTrackScene *scene = active_track_scene(demo);
-    unsigned int count = scene != NULL
-        ? kart_track_scene_query_body_collisions(
-            scene, demo->track_spec, state, contacts, capacity)
-        : 0;
+    if (scene != NULL) {
+        /* A decoded track collides against its own geometry and nothing else.
+           The original has no invisible box round the level; driving off the
+           edge is caught by the fall limit, not by a wall. */
+        return kart_track_scene_query_body_collisions(
+            scene, demo->track_spec, state, contacts, capacity);
+    }
+    /* Only the synthetic flat track reaches here. It has no mesh at all, so its
+       AABB is the only thing that can contain the kart. */
+    unsigned int count = 0;
 #define ADD_CONTACT(nx, ny) do { \
     if (count < capacity) { \
         contacts[count].normal = (KartVec3){(nx), (ny), 0.0f}; \
+        contacts[count].point = state->position; \
         contacts[count].sweep_fraction = 0.5f; \
         contacts[count].surface_id = 2; \
         count += 1; \
@@ -331,6 +617,33 @@ static int key_down(int virtual_key)
     return (GetAsyncKeyState(virtual_key) & 0x8000) != 0;
 }
 
+/* Rebuilds the checkpoint graph for the selected track. The flat reference
+   track has no scene and no course asset, so it simply has no checkpoints. */
+static void load_course(Demo3DState *demo)
+{
+    const KartCourseAsset *asset =
+        demo->track_spec != NULL
+            ? kart_course_find_asset(demo->track_spec->asset_name) : NULL;
+    kart_course_free(&demo->course);
+    memset(&demo->progress, 0, sizeof demo->progress);
+    demo->course_ready = asset != NULL && kart_course_build(&demo->course, asset);
+    if (demo->course_ready) {
+        /* 0x004247e0. Three laps is what the demo's own race is; nothing in
+           the track asset carries it. */
+        kart_course_set_lap_count(&demo->course, 3);
+    }
+}
+
+/* The ground snap 0x004260e0 finishes the start grid with: a ray from 10 above
+   the placed position, 100 down. */
+static void snap_to_ground(Demo3DState *demo, KartVec3 *position)
+{
+    KartGroundHit hit;
+    const KartVec3 above = {position->x, position->y, position->z + 10.0f};
+    const KartVec3 down = {0.0f, 0.0f, -100.0f};
+    if (query_track_ground(demo, above, down, &hit)) *position = hit.point;
+}
+
 static void reset_kart(Demo3DState *demo)
 {
     KartVec3 start_position;
@@ -343,16 +656,35 @@ static void reset_kart(Demo3DState *demo)
     }
     kart_simulation_init(
         &demo->kart, &demo->kart_spec->dynamics, &demo->kart_spec->geometry);
-    if (kart_demo_track_start_position(demo->track_spec, &start_position)) {
+    /* 0x00424530: the start grid, taken from the course itself. Slot 0 sits on
+       the course's own start pose, which the track asset fixes exactly -
+       including which way round the lap is driven, something the start-line
+       mesh alone never said. The measured start line is only the fallback for
+       the synthetic track, which has no course. */
+    if (demo->course_ready) {
+        kart_course_start_pose(
+            &demo->course, 0u, &start_position, &start_orientation);
+        snap_to_ground(demo, &start_position);
         demo->kart.position = start_position;
-    }
-    if (kart_demo_track_start_orientation(demo->track_spec, &start_orientation)) {
         demo->kart.orientation = start_orientation;
+        kart_course_progress_init(&demo->course, &demo->progress, start_position);
+    } else {
+        if (kart_demo_track_start_position(demo->track_spec, &start_position)) {
+            demo->kart.position = start_position;
+        }
+        if (kart_demo_track_start_orientation(demo->track_spec, &start_orientation)) {
+            demo->kart.orientation = start_orientation;
+        }
     }
+    demo->previous_position = demo->kart.position;
+    demo->respawn_arm_ms = 0;
     demo->previous_tick = GetTickCount();
     demo->simulation_time_ms = 0;
-    demo->skid_head = 0;
-    demo->skid_count = 0;
+    memset(demo->skid_marks, 0, sizeof(demo->skid_marks));
+    memset(demo->skid_next, 0, sizeof(demo->skid_next));
+    demo->skid_sequence = 0;
+    demo->skid_building[0] = -1;
+    demo->skid_building[1] = -1;
     demo->previous_skid_active = false;
     demo->boost_active = false;
     demo->previous_velocity = demo->kart.linear_velocity;
@@ -384,61 +716,132 @@ static bool drift_visual_active(const KartSimulationState *kart)
            kart->drift.slip_detected || kart->drift.linger_timer > 0.0f;
 }
 
+static unsigned int skid_mark_segment_count(const Demo3DState *demo)
+{
+    unsigned int count = 0;
+    unsigned int side;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        unsigned int mark;
+        for (mark = 0; mark < SKID_MARK_POOL_SIZE; ++mark) {
+            const unsigned int sections = demo->skid_marks[side][mark].section_count;
+            if (sections > 1u) count += sections - 1u;
+        }
+    }
+    return count;
+}
+
 static void update_skid_marks(Demo3DState *demo)
 {
+    static const float rear_wheel_x[SKID_MARK_SIDE_COUNT] = {-0.8f, 0.8f};
     KartVec3 right;
     KartVec3 forward;
     KartVec3 up;
-    float speed;
-    float rear_offset;
-    float side_offset;
-    float rear_x;
-    float rear_y;
-    float left_x;
-    float left_y;
-    float right_x;
-    float right_y;
+    const float local_x[SKID_MARK_SIDE_COUNT] = {
+        -SKID_MARK_LOCAL_X, SKID_MARK_LOCAL_X};
+    KartGroundHit hits[SKID_MARK_SIDE_COUNT];
+    bool contacts[SKID_MARK_SIDE_COUNT] = {false, false};
     bool active;
+    unsigned int side;
 
     orientation_axes(demo->kart.orientation, &right, &forward, &up);
-    (void)up;
-    speed = sqrtf(
-        demo->kart.linear_velocity.x * demo->kart.linear_velocity.x +
-        demo->kart.linear_velocity.y * demo->kart.linear_velocity.y);
-    rear_offset = demo->kart.geometry.half_length * 0.8f;
-    side_offset = demo->kart.geometry.half_width * 0.8f;
-    rear_x = demo->kart.position.x - forward.x * rear_offset;
-    rear_y = demo->kart.position.y - forward.y * rear_offset;
-    left_x = rear_x - right.x * side_offset;
-    left_y = rear_y - right.y * side_offset;
-    right_x = rear_x + right.x * side_offset;
-    right_y = rear_y + right.y * side_offset;
-    active = demo->kart.grounded && speed > 5.0f &&
-             drift_visual_active(&demo->kart);
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        KartVec3 ray_start = demo->kart.position;
+        const KartVec3 ray_delta = vec_scale(
+            up, -2.0f * demo->kart.geometry.suspension_range);
+        /* The original gates emission on wheel contacts 2 and 3. Reuse the
+           recovered wheel query's exact rear-wheel locations for that test. */
+        ray_start = vec_add(ray_start, vec_scale(
+            right, demo->kart.geometry.half_width * rear_wheel_x[side]));
+        ray_start = vec_add(ray_start, vec_scale(
+            forward, -demo->kart.geometry.half_length * 0.8f));
+        ray_start = vec_add(
+            ray_start, vec_scale(up, demo->kart.geometry.suspension_range));
+        contacts[side] = query_track_ground(
+            demo, ray_start, ray_delta, &hits[side]);
+    }
+    active = drift_visual_active(&demo->kart) && contacts[0] && contacts[1];
 
-    if (active && demo->previous_skid_active) {
-        SkidSegment3D *segment = &demo->skid_segments[demo->skid_head];
-        *segment = (SkidSegment3D){
-            .left_x0 = demo->previous_skid_left_x,
-            .left_y0 = demo->previous_skid_left_y,
-            .left_x1 = left_x,
-            .left_y1 = left_y,
-            .right_x0 = demo->previous_skid_right_x,
-            .right_y0 = demo->previous_skid_right_y,
-            .right_x1 = right_x,
-            .right_y1 = right_y,
-            .created_ms = demo->simulation_time_ms,
-        };
-        demo->skid_head = (demo->skid_head + 1) % MAX_SKID_SEGMENTS;
-        if (demo->skid_count < MAX_SKID_SEGMENTS) {
-            demo->skid_count += 1;
+    if (!active) {
+        for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+            if (demo->skid_building[side] >= 0) {
+                demo->skid_marks[side][demo->skid_building[side]].building = false;
+                demo->skid_building[side] = -1;
+            }
         }
+        demo->previous_skid_active = false;
+        return;
     }
 
-    demo->previous_skid_left_x = left_x;
-    demo->previous_skid_left_y = left_y;
-    demo->previous_skid_right_x = right_x;
-    demo->previous_skid_right_y = right_y;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        SkidMarkStrip *strip;
+        KartVec3 centre = demo->kart.position;
+        KartVec3 lateral;
+        SkidMarkCrossSection *section;
+        if (demo->skid_building[side] < 0) {
+            const unsigned int index = demo->skid_next[side];
+            strip = &demo->skid_marks[side][index];
+            memset(strip, 0, sizeof(*strip));
+            strip->sequence = ++demo->skid_sequence;
+            strip->building = true;
+            demo->skid_building[side] = (int)index;
+            demo->skid_next[side] = (index + 1u) % SKID_MARK_POOL_SIZE;
+        } else {
+            strip = &demo->skid_marks[side][demo->skid_building[side]];
+        }
+        if (strip->section_count >= SKID_MARK_MAX_CROSS_SECTIONS) {
+            const unsigned int index = demo->skid_next[side];
+            strip->building = false;
+            strip = &demo->skid_marks[side][index];
+            memset(strip, 0, sizeof(*strip));
+            strip->sequence = ++demo->skid_sequence;
+            strip->building = true;
+            demo->skid_building[side] = (int)index;
+            demo->skid_next[side] = (index + 1u) % SKID_MARK_POOL_SIZE;
+        }
+        centre = vec_add(centre, vec_scale(right, local_x[side]));
+        centre = vec_add(centre, vec_scale(forward, -SKID_MARK_LOCAL_Y));
+        centre = vec_sub(centre, vec_scale(
+            hits[side].normal,
+            vec_dot(vec_sub(centre, hits[side].point), hits[side].normal)));
+        /* KartRider.exe 0x00428D30 builds the second frame used by SkidMark
+           from -linearVelocity and chassis column 2. 0x00470110/0x00470470
+           then transforms (-1,0,0) by that frame, dots it with the same axis
+           from the chassis frame, clamps the dot to 0.7, and finally applies
+           width * 0.5. Keeping this velocity frame is what prevents steering
+           angle from directly turning every ribbon cross-section. */
+        if (vec_dot(demo->kart.linear_velocity, demo->kart.linear_velocity) == 0.0f) {
+            lateral = vec_scale(right, -1.0f);
+        } else {
+            const KartVec3 backward = vec_normalize(
+                vec_scale(demo->kart.linear_velocity, -1.0f));
+            lateral = vec_cross(up, backward);
+        }
+        {
+            float frame_dot = vec_dot(lateral, vec_scale(right, -1.0f));
+            if (frame_dot < 0.7f) frame_dot = 0.7f;
+            lateral = vec_scale(
+                lateral, frame_dot * SKID_MARK_WIDTH * 0.5f);
+        }
+        section = &strip->sections[strip->section_count];
+        section->edge[0] = vec_add(
+            vec_sub(centre, lateral),
+            vec_scale(hits[side].normal, SKID_MARK_SURFACE_BIAS));
+        section->edge[1] = vec_add(
+            vec_add(centre, lateral),
+            vec_scale(hits[side].normal, SKID_MARK_SURFACE_BIAS));
+        if (strip->section_count != 0u) {
+            const SkidMarkCrossSection *previous =
+                &strip->sections[strip->section_count - 1u];
+            const KartVec3 centre_previous = vec_scale(
+                vec_add(previous->edge[0], previous->edge[1]), 0.5f);
+            const KartVec3 centre_current = vec_scale(
+                vec_add(section->edge[0], section->edge[1]), 0.5f);
+            const KartVec3 delta = vec_sub(centre_current, centre_previous);
+            section->texture_v = previous->texture_v +
+                sqrtf(vec_dot(delta, delta));
+        }
+        strip->section_count += 1u;
+    }
     demo->previous_skid_active = active;
 }
 
@@ -525,7 +928,8 @@ static void draw_track_scene_pass(
 
     for (mesh_index = 0; mesh_index < scene->mesh_count; ++mesh_index) {
         const KartTrackSceneMesh *mesh = &scene->meshes[mesh_index];
-        const bool candidate = (mesh->flags & 3u) != 0;
+        const bool candidate =
+            (mesh->flags & KART_TRACK_SCENE_MESH_COLLIDABLE) != 0;
         const uint32_t triangle_count = mesh->index_count / 3u;
         const uint32_t stride = candidate ? 1u : 5u;
         uint32_t triangle;
@@ -594,6 +998,406 @@ static LONG clamp_device_coordinate(LONG value)
     if (value < -limit) return -limit;
     if (value > limit) return limit;
     return value;
+}
+
+/* --- the textured pass ---------------------------------------------------
+
+   The wireframe and tinted-face passes draw through GDI, which has no depth
+   buffer; they get away with it because they are line art over a translucent
+   wash. Sampling the tracks' own textures needs a real one, so this pass
+   rasterizes into the frame's DIB directly with a 1/z buffer.
+
+   Nothing here is shaded. A KTRK mesh carries positions, UVs and the texture
+   name track.1s gave its material, and no normals at all, so a texel is written
+   exactly as the asset stored it; any lighting term would be invention. Meshes
+   whose texture the demo's archives never shipped keep the floor/wall tint the
+   untextured pass uses, so they still read as surfaces and still occlude. */
+
+typedef struct SoftwareTarget {
+    /* 32-bit BGRX, top row first, one uint32 per pixel. */
+    uint32_t *pixels;
+    /* 1/z, so a larger value is nearer and an untouched pixel is 0. */
+    float *depth;
+    int width;
+    int height;
+    bool depth_only;
+    bool shade_depth_equal;
+} SoftwareTarget;
+
+/* Camera space: x right, y up, z forward. */
+typedef struct RasterVertex {
+    float x;
+    float y;
+    float z;
+    float u;
+    float v;
+} RasterVertex;
+
+typedef struct ScreenVertex {
+    float x;
+    float y;
+    float inverse_z;
+    /* u/z and v/z, which is what interpolates linearly in screen space. */
+    float u_over_z;
+    float v_over_z;
+} ScreenVertex;
+
+static int clip_raster_near(
+    const RasterVertex *input,
+    int count,
+    float near_depth,
+    RasterVertex *output)
+{
+    int out_count = 0;
+    int i;
+    for (i = 0; i < count; ++i) {
+        const RasterVertex current = input[i];
+        const RasterVertex next = input[(i + 1) % count];
+        const float depth_current = current.z - near_depth;
+        const float depth_next = next.z - near_depth;
+        if (depth_current >= 0.0f) {
+            output[out_count++] = current;
+        }
+        if ((depth_current >= 0.0f) != (depth_next >= 0.0f)) {
+            const float t = depth_current / (depth_current - depth_next);
+            RasterVertex split;
+            split.x = current.x + (next.x - current.x) * t;
+            split.y = current.y + (next.y - current.y) * t;
+            split.z = current.z + (next.z - current.z) * t;
+            split.u = current.u + (next.u - current.u) * t;
+            split.v = current.v + (next.v - current.v) * t;
+            output[out_count++] = split;
+        }
+    }
+    return out_count;
+}
+
+static ScreenVertex project_raster_vertex(
+    RECT client,
+    Camera3D camera,
+    RasterVertex vertex)
+{
+    /* The same projection project_point applies, kept here in camera space so
+       the reciprocal is computed once per vertex. */
+    const float inverse_z = 1.0f / vertex.z;
+    ScreenVertex out;
+    out.x = (float)(client.right + client.left) * 0.5f +
+            camera.focal_length * vertex.x * inverse_z;
+    out.y = (float)(client.bottom + client.top) * 0.52f -
+            camera.focal_length * vertex.y * inverse_z;
+    out.inverse_z = inverse_z;
+    out.u_over_z = vertex.u * inverse_z;
+    out.v_over_z = vertex.v * inverse_z;
+    return out;
+}
+
+static uint32_t rgb565_to_bgrx(uint16_t texel)
+{
+    const uint32_t r = (uint32_t)((texel >> 11) & 0x1Fu);
+    const uint32_t g = (uint32_t)((texel >> 5) & 0x3Fu);
+    const uint32_t b = (uint32_t)(texel & 0x1Fu);
+    const uint32_t red = (r << 3) | (r >> 2);
+    const uint32_t green = (g << 2) | (g >> 4);
+    const uint32_t blue = (b << 3) | (b >> 2);
+    return (red << 16) | (green << 8) | blue;
+}
+
+static void raster_triangle(
+    SoftwareTarget *target,
+    ScreenVertex a,
+    ScreenVertex b,
+    ScreenVertex c,
+    const KartTrackTextureImage *image,
+    uint32_t flat_colour,
+    unsigned int flat_alpha)
+{
+    const float area =
+        (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    float inverse_area;
+    int minimum_x;
+    int maximum_x;
+    int minimum_y;
+    int maximum_y;
+    int x;
+    int y;
+    /* The exports do not agree on winding between submeshes, so both are drawn
+       and the sign is folded into the barycentric weights instead. */
+    if (area > -0.0001f && area < 0.0001f) {
+        return;
+    }
+    inverse_area = 1.0f / area;
+
+    minimum_x = (int)floorf(a.x < b.x ? (a.x < c.x ? a.x : c.x) : (b.x < c.x ? b.x : c.x));
+    maximum_x = (int)ceilf(a.x > b.x ? (a.x > c.x ? a.x : c.x) : (b.x > c.x ? b.x : c.x));
+    minimum_y = (int)floorf(a.y < b.y ? (a.y < c.y ? a.y : c.y) : (b.y < c.y ? b.y : c.y));
+    maximum_y = (int)ceilf(a.y > b.y ? (a.y > c.y ? a.y : c.y) : (b.y > c.y ? b.y : c.y));
+    if (minimum_x < 0) minimum_x = 0;
+    if (minimum_y < 0) minimum_y = 0;
+    if (maximum_x > target->width - 1) maximum_x = target->width - 1;
+    if (maximum_y > target->height - 1) maximum_y = target->height - 1;
+
+    for (y = minimum_y; y <= maximum_y; ++y) {
+        const float py = (float)y + 0.5f;
+        uint32_t *row = target->pixels + (size_t)y * (size_t)target->width;
+        float *depth_row = target->depth != NULL
+            ? target->depth + (size_t)y * (size_t)target->width
+            : NULL;
+        for (x = minimum_x; x <= maximum_x; ++x) {
+            const float px = (float)x + 0.5f;
+            const float w0 =
+                ((b.x - px) * (c.y - py) - (b.y - py) * (c.x - px)) * inverse_area;
+            const float w1 =
+                ((c.x - px) * (a.y - py) - (c.y - py) * (a.x - px)) * inverse_area;
+            const float w2 = 1.0f - w0 - w1;
+            float inverse_z;
+            uint32_t colour;
+            if (w0 < 0.0f || w1 < 0.0f || w2 < 0.0f) {
+                continue;
+            }
+            inverse_z =
+                w0 * a.inverse_z + w1 * b.inverse_z + w2 * c.inverse_z;
+            if (inverse_z <= 0.0f) {
+                continue;
+            }
+            if (depth_row != NULL) {
+                if (target->shade_depth_equal) {
+                    if (fabsf(inverse_z - depth_row[x]) > 0.000001f) continue;
+                } else if (inverse_z <= depth_row[x]) {
+                    continue;
+                }
+            }
+            if (target->depth_only) {
+                if (depth_row != NULL) depth_row[x] = inverse_z;
+                continue;
+            }
+            colour = flat_colour;
+            if (image != NULL) {
+                const float u = (w0 * a.u_over_z + w1 * b.u_over_z +
+                                 w2 * c.u_over_z) / inverse_z;
+                const float v = (w0 * a.v_over_z + w1 * b.v_over_z +
+                                 w2 * c.v_over_z) / inverse_z;
+                /* The UVs tile well past 0..1, and the packer only ever emits
+                   power-of-two sizes, so the wrap is a mask. */
+                const int width_mask = (int)image->width - 1;
+                const int height_mask = (int)image->height - 1;
+                const int tx = (int)floorf(u * (float)image->width) & width_mask;
+                const int ty = (int)floorf(v * (float)image->height) & height_mask;
+                const size_t texel = (size_t)ty * (size_t)image->width + (size_t)tx;
+                if ((image->flags & KART_TRACK_TEXTURE_MASKED) != 0u &&
+                    (image->mask[texel >> 3] & (1u << (texel & 7u))) == 0u) {
+                    continue;
+                }
+                colour = rgb565_to_bgrx(image->texels[texel]);
+                if ((image->flags & KART_TRACK_TEXTURE_BLEND_ALPHA8) != 0u &&
+                    image->alpha != NULL && image->alpha[texel] < 255u) {
+                    const uint32_t alpha = image->alpha[texel];
+                    const uint32_t inverse_alpha = 255u - alpha;
+                    const uint32_t destination = row[x];
+                    const uint32_t red =
+                        (((colour >> 16) & 0xffu) * alpha +
+                         ((destination >> 16) & 0xffu) * inverse_alpha) / 255u;
+                    const uint32_t green =
+                        (((colour >> 8) & 0xffu) * alpha +
+                         ((destination >> 8) & 0xffu) * inverse_alpha) / 255u;
+                    const uint32_t blue =
+                        ((colour & 0xffu) * alpha +
+                         (destination & 0xffu) * inverse_alpha) / 255u;
+                    colour = (red << 16) | (green << 8) | blue;
+                }
+            } else if (flat_alpha < 255u) {
+                const uint32_t inverse_alpha = 255u - flat_alpha;
+                const uint32_t destination = row[x];
+                const uint32_t red =
+                    (((colour >> 16) & 0xffu) * flat_alpha +
+                     ((destination >> 16) & 0xffu) * inverse_alpha) / 255u;
+                const uint32_t green =
+                    (((colour >> 8) & 0xffu) * flat_alpha +
+                     ((destination >> 8) & 0xffu) * inverse_alpha) / 255u;
+                const uint32_t blue =
+                    ((colour & 0xffu) * flat_alpha +
+                     (destination & 0xffu) * inverse_alpha) / 255u;
+                colour = (red << 16) | (green << 8) | blue;
+            }
+            if (depth_row != NULL && !target->shade_depth_equal) {
+                depth_row[x] = inverse_z;
+            }
+            row[x] = colour;
+        }
+    }
+}
+
+/* The depth buffer for one frame, cleared and handed back. It is kept across
+   frames because it is the one big allocation the renderer needs and the window
+   only rarely changes size. Returns NULL if it cannot be sized. */
+static float *frame_depth_buffer(int width, int height)
+{
+    static float *buffer = NULL;
+    static size_t capacity = 0;
+    const size_t needed = (size_t)width * (size_t)height;
+    if (width <= 0 || height <= 0) {
+        return NULL;
+    }
+    if (needed > capacity) {
+        float *grown = (float *)realloc(buffer, needed * sizeof(*buffer));
+        if (grown == NULL) {
+            return NULL;
+        }
+        buffer = grown;
+        capacity = needed;
+    }
+    memset(buffer, 0, needed * sizeof(*buffer));
+    return buffer;
+}
+
+/* One world-space triangle through the same pipeline, which is what everything
+   that is not track geometry needs: the kart's faces, the boost flame, a skid
+   mark's quad. `image` NULL fills with `colour` (0x00RRGGBB); otherwise `uv`
+   supplies the three texture coordinates and `colour` is ignored. */
+static void raster_world_triangle(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    KartVec3 a,
+    KartVec3 b,
+    KartVec3 c,
+    const float *uv,
+    const KartTrackTextureImage *image,
+    uint32_t colour)
+{
+    const float near_depth = 0.2f;
+    const KartVec3 world[3] = {a, b, c};
+    RasterVertex source[3];
+    RasterVertex clipped[8];
+    ScreenVertex screen[8];
+    int clipped_count;
+    int corner;
+    for (corner = 0; corner < 3; ++corner) {
+        const KartVec3 relative = vec_sub(world[corner], camera.position);
+        source[corner].x = vec_dot(relative, camera.right);
+        source[corner].y = vec_dot(relative, camera.up);
+        source[corner].z = vec_dot(relative, camera.forward);
+        source[corner].u = uv != NULL ? uv[corner * 2] : 0.0f;
+        source[corner].v = uv != NULL ? uv[corner * 2 + 1] : 0.0f;
+    }
+    clipped_count = clip_raster_near(source, 3, near_depth, clipped);
+    if (clipped_count < 3) {
+        return;
+    }
+    for (corner = 0; corner < clipped_count; ++corner) {
+        screen[corner] = project_raster_vertex(client, camera, clipped[corner]);
+    }
+    for (corner = 1; corner < clipped_count - 1; ++corner) {
+        raster_triangle(
+            target, screen[0], screen[corner], screen[corner + 1], image, colour,
+            255u);
+    }
+}
+
+static void raster_flat_triangle(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    KartVec3 a,
+    KartVec3 b,
+    KartVec3 c,
+    uint32_t colour)
+{
+    raster_world_triangle(target, client, camera, a, b, c, NULL, NULL, colour);
+}
+
+static uint32_t colorref_to_bgrx(COLORREF colour)
+{
+    return ((uint32_t)GetRValue(colour) << 16) |
+           ((uint32_t)GetGValue(colour) << 8) |
+           (uint32_t)GetBValue(colour);
+}
+
+/* Rasterizes the whole scene. `theme` keys the texture lookup; passing an empty
+   table simply draws every mesh with its floor/wall tint. */
+static void draw_track_scene_textured(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    const KartDemoTrackSpec *track,
+    const KartTrackScene *scene,
+    const KartTrackTextureTable *textures,
+    const char *theme,
+    float draw_radius,
+    unsigned int flat_alpha)
+{
+    /* The dome is thousands of units across and has to be drawn whole, so a
+       radius of zero means no distance cull at all. */
+    const float draw_radius_squared =
+        draw_radius > 0.0f ? draw_radius * draw_radius : 0.0f;
+    const float near_depth = 0.2f;
+    uint32_t mesh_index;
+
+    for (mesh_index = 0; mesh_index < scene->mesh_count; ++mesh_index) {
+        const KartTrackSceneMesh *mesh = &scene->meshes[mesh_index];
+        const KartTrackTextureImage *image =
+            kart_track_texture_find(textures, theme, mesh->texture);
+        const uint32_t triangle_count = mesh->index_count / 3u;
+        uint32_t triangle;
+        for (triangle = 0; triangle < triangle_count; ++triangle) {
+            const uint32_t base = triangle * 3u;
+            RasterVertex source[3];
+            RasterVertex clipped[8];
+            ScreenVertex screen[8];
+            float center_x = 0.0f;
+            float center_y = 0.0f;
+            KartVec3 world[3];
+            uint32_t flat_colour;
+            int clipped_count;
+            int corner;
+            for (corner = 0; corner < 3; ++corner) {
+                const KartTrackSceneVertex *vertex =
+                    &mesh->vertices[mesh->indices[base + (uint32_t)corner]];
+                const KartVec3 point =
+                    kart_track_scene_world_vertex(vertex, track);
+                const KartVec3 relative = vec_sub(point, camera.position);
+                world[corner] = point;
+                center_x += point.x;
+                center_y += point.y;
+                source[corner].x = vec_dot(relative, camera.right);
+                source[corner].y = vec_dot(relative, camera.up);
+                source[corner].z = vec_dot(relative, camera.forward);
+                source[corner].u = vertex->u;
+                source[corner].v = vertex->v;
+            }
+            center_x = center_x / 3.0f - camera.position.x;
+            center_y = center_y / 3.0f - camera.position.y;
+            if (draw_radius_squared > 0.0f &&
+                center_x * center_x + center_y * center_y >
+                    draw_radius_squared) {
+                continue;
+            }
+            clipped_count =
+                clip_raster_near(source, 3, near_depth, clipped);
+            if (clipped_count < 3) {
+                continue;
+            }
+            if (image == NULL) {
+                /* Same split as fill_track_scene_faces, and the same
+                   thresholds kart_track_collision.c uses. */
+                const KartVec3 normal = vec_normalize(vec_cross(
+                    vec_sub(world[1], world[0]),
+                    vec_sub(world[2], world[0])));
+                const float normal_z = normal.z < 0.0f ? -normal.z : normal.z;
+                flat_colour = normal_z >= 0.20f ? 0x00C4B078u : 0x006096D2u;
+            } else {
+                flat_colour = 0;
+            }
+            for (corner = 0; corner < clipped_count; ++corner) {
+                screen[corner] =
+                    project_raster_vertex(client, camera, clipped[corner]);
+            }
+            for (corner = 1; corner < clipped_count - 1; ++corner) {
+                raster_triangle(
+                    target, screen[0], screen[corner], screen[corner + 1],
+                    image, flat_colour, flat_alpha);
+            }
+        }
+    }
 }
 
 /* Fills the faces the physics treats as solid. Drawn opaque here and blended in
@@ -688,13 +1492,12 @@ static void draw_track_scene_faces(
     RECT client,
     Camera3D camera,
     const KartDemoTrackSpec *track,
-    const KartTrackScene *scene)
+    const KartTrackScene *scene,
+    BYTE alpha)
 {
     const int width = client.right - client.left;
     const int height = client.bottom - client.top;
-    /* Roughly one third opacity: enough to read the surface, light enough that
-       the wireframe and the grid behind it stay legible. */
-    BLENDFUNCTION blend = {AC_SRC_OVER, 0, 85, 0};
+    BLENDFUNCTION blend = {AC_SRC_OVER, 0, alpha, 0};
     HDC layer;
     HBITMAP bitmap;
     HGDIOBJ old_bitmap;
@@ -732,7 +1535,7 @@ static void draw_track_scene(
     if (scene == NULL) {
         return;
     }
-    draw_track_scene_faces(dc, client, camera, track, scene);
+    draw_track_scene_faces(dc, client, camera, track, scene, 85u);
     scenery_pen = CreatePen(PS_SOLID, 1, RGB(93, 125, 95));
     road_pen = CreatePen(PS_SOLID, 2, RGB(205, 194, 159));
     old_pen = SelectObject(dc, scenery_pen);
@@ -815,10 +1618,12 @@ static void draw_track(
     DeleteObject(wall_pen);
 }
 
+static COLORREF kart_model_base_colour(unsigned int colour_index);
+
 static void draw_track_minimap(
     HDC dc,
     RECT client,
-    const Demo3DState *demo)
+    Demo3DState *demo)
 {
     const int panel_width = 220;
     const int panel_height = 248;
@@ -852,30 +1657,41 @@ static void draw_track_minimap(
         panel.right - 15,
         panel.bottom - 16,
     };
-    const KartDemoMinimap *minimap = kart_demo_minimap_for_track(
+    KartDemoMinimap *minimap = kart_demo_minimap_for_track(
         &demo->minimaps, demo->track_spec);
     KartVec3 right;
     KartVec3 forward;
     KartVec3 up;
     POINT kart_point;
     POINT kart_triangle[3];
+    const COLORREF marker_colour = kart_model_base_colour(demo->kart_colour);
     HBRUSH panel_brush = CreateSolidBrush(RGB(15, 19, 26));
-    HBRUSH kart_brush = CreateSolidBrush(RGB(255, 180, 45));
+    HBRUSH kart_brush = CreateSolidBrush(marker_colour);
     HPEN panel_pen = CreatePen(PS_SOLID, 1, RGB(54, 64, 73));
     HPEN grid_pen = CreatePen(PS_SOLID, 1, RGB(86, 98, 108));
     HPEN wall_pen = CreatePen(PS_SOLID, 3, RGB(75, 220, 255));
-    HPEN kart_pen = CreatePen(PS_SOLID, 1, RGB(255, 235, 175));
+    HPEN kart_pen = CreatePen(PS_SOLID, 1, marker_colour);
     HGDIOBJ old_brush = SelectObject(dc, panel_brush);
     HGDIOBJ old_pen = SelectObject(dc, panel_pen);
     int division;
     static const char label[] = "TRACK MAP";
     char kart_size[96];
 
-    Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
     if (minimap != NULL) {
+        /* The minimap texture itself supplies the verified 0.3 blend.  Do not
+           put an opaque simulator
+           panel behind it; retain only the header fill and outer outline. */
+        RECT header = {panel.left, panel.top, panel.right, image_rect.top};
+        FillRect(dc, &header, panel_brush);
+        SelectObject(dc, GetStockObject(NULL_BRUSH));
+        Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
         boundary = image_rect;
-        kart_demo_draw_minimap_bitmap(dc, image_rect, minimap);
+        kart_demo_draw_original_minimap_camera(
+            dc, image_rect, minimap, demo->track_spec, demo->kart.position,
+            demo->kart.orientation, demo->simulation_time_ms, marker_colour);
     } else {
+        SelectObject(dc, panel_brush);
+        Rectangle(dc, panel.left, panel.top, panel.right, panel.bottom);
         SelectObject(dc, grid_pen);
         for (division = 1; division < 4; ++division) {
             const int x = boundary.left +
@@ -893,32 +1709,38 @@ static void draw_track_minimap(
     Rectangle(dc, boundary.left, boundary.top, boundary.right, boundary.bottom);
 
     orientation_axes(demo->kart.orientation, &right, &forward, &up);
-    (void)right;
     (void)up;
-    if (minimap != NULL) {
-        kart_point = kart_demo_minimap_kart_point(
-            image_rect, minimap, demo->track_spec, demo->kart.position);
-    } else {
+    if (minimap == NULL) {
+        static const float marker_vertices[3][2] = {
+            {16.587f, -16.396f}, {0.274f, 21.517f}, {-16.587f, -16.396f},
+        };
+        float heading_length;
+        int marker_index;
         kart_point = kart_demo_minimap_bounds_point(
             boundary, demo->track_spec, demo->kart.position);
+        forward = kart_demo_minimap_direction(demo->track_spec, forward);
+        forward.x = -forward.x;
+        forward.z = 0.0f;
+        heading_length = sqrtf(forward.x * forward.x + forward.y * forward.y);
+        if (heading_length > 0.0f) {
+            forward.x /= heading_length;
+            forward.y /= heading_length;
+        }
+        right = (KartVec3){forward.y, -forward.x, 0.0f};
+        for (marker_index = 0; marker_index < 3; ++marker_index) {
+            kart_triangle[marker_index] = (POINT){
+                kart_point.x + (LONG)(KART_DEMO_MINIMAP_MARKER_SCALE *
+                    (right.x * marker_vertices[marker_index][0] +
+                     forward.x * marker_vertices[marker_index][1])),
+                kart_point.y + (LONG)(KART_DEMO_MINIMAP_MARKER_SCALE *
+                    (right.y * marker_vertices[marker_index][0] +
+                     forward.y * marker_vertices[marker_index][1])),
+            };
+        }
+        SelectObject(dc, kart_brush);
+        SelectObject(dc, kart_pen);
+        Polygon(dc, kart_triangle, 3);
     }
-    right = kart_demo_minimap_direction(demo->track_spec, right);
-    forward = kart_demo_minimap_direction(demo->track_spec, forward);
-    kart_triangle[0] = (POINT){
-        kart_point.x + (LONG)(forward.x * 9.0f),
-        kart_point.y + (LONG)(forward.y * 9.0f),
-    };
-    kart_triangle[1] = (POINT){
-        kart_point.x - (LONG)(forward.x * 6.0f) + (LONG)(right.x * 5.0f),
-        kart_point.y - (LONG)(forward.y * 6.0f) + (LONG)(right.y * 5.0f),
-    };
-    kart_triangle[2] = (POINT){
-        kart_point.x - (LONG)(forward.x * 6.0f) - (LONG)(right.x * 5.0f),
-        kart_point.y - (LONG)(forward.y * 6.0f) - (LONG)(right.y * 5.0f),
-    };
-    SelectObject(dc, kart_brush);
-    SelectObject(dc, kart_pen);
-    Polygon(dc, kart_triangle, 3);
 
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, RGB(180, 205, 215));
@@ -949,50 +1771,27 @@ static void draw_skid_marks(
     Camera3D camera,
     const Demo3DState *demo)
 {
-    HPEN fresh_pen = CreatePen(PS_SOLID, 4, RGB(8, 10, 12));
-    HPEN middle_pen = CreatePen(PS_SOLID, 3, RGB(23, 26, 29));
-    HPEN old_pen_color = CreatePen(PS_SOLID, 2, RGB(43, 47, 51));
-    HPEN selected_pen = NULL;
-    HGDIOBJ original_pen = NULL;
-    unsigned int i;
-
-    for (i = 0; i < demo->skid_count; ++i) {
-        const unsigned int oldest =
-            (demo->skid_head + MAX_SKID_SEGMENTS - demo->skid_count) %
-            MAX_SKID_SEGMENTS;
-        const SkidSegment3D *segment =
-            &demo->skid_segments[(oldest + i) % MAX_SKID_SEGMENTS];
-        const unsigned int age = demo->simulation_time_ms - segment->created_ms;
-        HPEN wanted_pen;
-        if (age > SKID_LIFETIME_MS) {
-            continue;
-        }
-        wanted_pen = age < 4000
-            ? fresh_pen
-            : (age < 9000 ? middle_pen : old_pen_color);
-        if (wanted_pen != selected_pen) {
-            if (selected_pen == NULL) {
-                original_pen = SelectObject(dc, wanted_pen);
-            } else {
-                SelectObject(dc, wanted_pen);
+    HPEN pen = CreatePen(PS_SOLID, 4, RGB(8, 10, 12));
+    HGDIOBJ old_pen = SelectObject(dc, pen);
+    unsigned int side;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        unsigned int mark;
+        for (mark = 0; mark < SKID_MARK_POOL_SIZE; ++mark) {
+            const SkidMarkStrip *strip = &demo->skid_marks[side][mark];
+            unsigned int section;
+            for (section = 1; section < strip->section_count; ++section) {
+                const KartVec3 a = vec_scale(
+                    vec_add(strip->sections[section - 1u].edge[0],
+                            strip->sections[section - 1u].edge[1]), 0.5f);
+                const KartVec3 b = vec_scale(
+                    vec_add(strip->sections[section].edge[0],
+                            strip->sections[section].edge[1]), 0.5f);
+                draw_line_3d(dc, client, camera, a, b);
             }
-            selected_pen = wanted_pen;
         }
-        draw_line_3d(
-            dc, client, camera,
-            (KartVec3){segment->left_x0, segment->left_y0, 0.025f},
-            (KartVec3){segment->left_x1, segment->left_y1, 0.025f});
-        draw_line_3d(
-            dc, client, camera,
-            (KartVec3){segment->right_x0, segment->right_y0, 0.025f},
-            (KartVec3){segment->right_x1, segment->right_y1, 0.025f});
     }
-    if (selected_pen != NULL) {
-        SelectObject(dc, original_pen);
-    }
-    DeleteObject(fresh_pen);
-    DeleteObject(middle_pen);
-    DeleteObject(old_pen_color);
+    SelectObject(dc, old_pen);
+    DeleteObject(pen);
 }
 
 static void draw_boost_effect(
@@ -1044,6 +1843,38 @@ static void draw_boost_effect(
     SelectObject(dc, old_pen);
     DeleteObject(flame_brush);
     DeleteObject(flame_pen);
+}
+
+/* The flame triangle the GDI pass builds, through the rasterizer. Kept beside
+   it so the two stay the same shape. */
+static void raster_boost_effect(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    const Demo3DState *demo)
+{
+    KartVec3 right;
+    KartVec3 forward;
+    KartVec3 up;
+    KartVec3 rear;
+    KartVec3 flame[3];
+
+    if (!demo->boost_active) {
+        return;
+    }
+    orientation_axes(demo->kart.orientation, &right, &forward, &up);
+    rear = vec_add(
+        demo->kart.position,
+        vec_add(
+            vec_scale(forward, -demo->kart.geometry.half_length),
+            vec_scale(up, 0.35f)));
+    flame[0] = vec_add(rear, vec_scale(right, demo->kart.geometry.half_width * 0.42f));
+    flame[1] = vec_add(rear, vec_scale(right, -demo->kart.geometry.half_width * 0.42f));
+    flame[2] = vec_add(
+        rear,
+        vec_add(vec_scale(forward, -2.8f), vec_scale(up, -0.08f)));
+    raster_flat_triangle(
+        target, client, camera, flame[0], flame[1], flame[2], 0x00FFC623u);
 }
 
 static void draw_motion_vectors(
@@ -1144,13 +1975,386 @@ static KartVec3 kart_vertex(
     return result;
 }
 
-static void draw_kart(
+/* Model space to world.
+
+   The model's own axes are not the simulation's, and nothing in the assets
+   labels them. Three independent details agree that the model's -y is the
+   front, so that is the end put along the simulation's +forward:
+
+     - the 9-vertex 8-triangle disc at y -0.36 is a steering wheel, and its
+       mean normal is (0, +0.65, +0.76): it faces up and toward +y, which is
+       where the driver has to be sitting
+     - the wheels at +y are the larger pair, and a kart carries its bigger
+       wheels at the back
+     - the body is 0.69 tall at the +y end against 0.50 at the -y end, the
+       usual low-nose, high-tail profile
+
+   Turning it round is a rotation, not a mirror, so x is negated with y. Getting
+   that wrong would be invisible on these near-symmetric hulls right up until
+   the moment it made a left-hand detail come out on the right. */
+static KartVec3 kart_model_vertex(
+    const KartSimulationState *kart,
+    KartVec3 right,
+    KartVec3 forward,
+    KartVec3 up,
+    const KartTrackSceneVertex *vertex)
+{
+    return kart_vertex(
+        kart, right, forward, up, -vertex->x, -vertex->y, vertex->z);
+}
+
+/* One triangle of the model, ready to sort. `uv` is the asset's own texture
+   coordinate per corner, which only the textured path reads. */
+typedef struct KartModelFace {
+    float depth;
+    float shade;
+    bool wheel;
+    KartVec3 vertices[3];
+    float uv[6];
+} KartModelFace;
+
+/* cotten5 is the heaviest model at 645 triangles. */
+#define KART_MODEL_MAX_FACES 1024
+
+static int compare_model_faces(const void *left, const void *right)
+{
+    const KartModelFace *a = (const KartModelFace *)left;
+    const KartModelFace *b = (const KartModelFace *)right;
+    /* Far to near: the painter's order for a convex-ish hull with no z-buffer. */
+    if (a->depth > b->depth) return -1;
+    if (a->depth < b->depth) return 1;
+    return 0;
+}
+
+static COLORREF scale_color(COLORREF color, float shade)
+{
+    const float r = (float)GetRValue(color) * shade;
+    const float g = (float)GetGValue(color) * shade;
+    const float b = (float)GetBValue(color) * shade;
+    return RGB(
+        (BYTE)(r > 255.0f ? 255.0f : r),
+        (BYTE)(g > 255.0f ? 255.0f : g),
+        (BYTE)(b > 255.0f ? 255.0f : b));
+}
+
+/* Fixed world-space key light, so the shading reads as the kart turning under a
+   light rather than the light turning with the kart. */
+static const KartVec3 KART_MODEL_LIGHT = {0.38f, -0.52f, 0.76f};
+
+/* Dark enough to read as tyres, light enough that the shading on them is still
+   visible against the track fill. */
+#define KART_MODEL_WHEEL_COLOR RGB(96, 100, 112)
+
+/* The kart's paint.
+
+   0x00417160 repaints the skin when the kart is built: it walks the atlas texel
+   by texel looking for two key colours and fills a rectangle at each hit.
+
+     key `cyan`  (DAT_005b1930) -> rect (x-5, y-8)..(x+5, y+9), filled with the
+                                   colortable entry's `base`
+     key `blue`  (DAT_005b1924) -> rect (x, y)..(x+0x2d, y+0x14), filled from a
+                                   different slot - that one is the number plate
+
+   So the colour the driver picks lands on the cyan-anchored patch, not on the
+   900-texel blue block at the back. `kartColor` in riderData.1s is the index.
+
+   The values are the demo's own, read from Data/etc.rho's colortable.xml; a
+   copy of that file is at analysis/kart-assets/demo_etc/colortable.xml. The
+   names come from riderData.1s's editor enum. */
+#define KART_SKIN_KEY_CYAN 0x07FFu    /* (0, 255, 255) in RGB565 */
+#define KART_SKIN_KEY_BLUE 0x001Fu    /* (0, 0, 255) */
+#define KART_SKIN_KEY_MAGENTA 0xF81Fu /* (255, 0, 255), the atlas filler */
+
+static const struct {
+    const char *name;
+    unsigned char base[3];
+    unsigned char high[3];
+} KART_COLOURSETS[] = {
+    {"red",    {232,  39,   6}, {255, 186,   0}},
+    {"yellow", {255, 186,   0}, {255, 255,   0}},
+    {"orange", {255, 130,   0}, {255, 186,  82}},
+    {"green",  { 58, 174,  25}, {210, 255,   0}},
+    {"teal",   {  0, 199, 206}, {255, 255, 255}},
+    {"blue",   { 19, 121, 219}, {  0, 252, 255}},
+    {"purple", {140,  56, 239}, {255, 255, 255}},
+    {"black",  { 40,  40,  40}, {150, 150, 150}},
+    {"pink",   {248,   1, 122}, {255, 190, 190}},
+    {"white",  {243, 243, 243}, {255, 255, 255}},
+};
+#define KART_COLOURSET_COUNT \
+    (unsigned int)(sizeof(KART_COLOURSETS) / sizeof(KART_COLOURSETS[0]))
+/* riderData.1s ships 8 = pink on this profile. */
+#define KART_COLOURSET_DEFAULT 8u
+#define KART_COLOUR_MENU_BASE 3000u
+
+static COLORREF kart_model_base_colour(unsigned int colour_index)
+{
+    if (colour_index >= KART_COLOURSET_COUNT) colour_index = 0u;
+    return RGB(
+        KART_COLOURSETS[colour_index].base[0],
+        KART_COLOURSETS[colour_index].base[1],
+        KART_COLOURSETS[colour_index].base[2]);
+}
+
+static unsigned int kart_demo_popup_select_colour(
+    HWND window,
+    unsigned int current)
+{
+    HMENU menu = CreatePopupMenu();
+    RECT window_rect;
+    unsigned int i;
+    UINT command;
+    if (menu == NULL) return current;
+    AppendMenuA(menu, MF_STRING | MF_DISABLED, 0, "SELECT KART COLOUR");
+    AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
+    for (i = 0; i < KART_COLOURSET_COUNT; ++i) {
+        UINT flags = MF_STRING;
+        char label[96];
+        if (i == current) flags |= MF_CHECKED;
+        snprintf(
+            label, sizeof(label), "%s  Base #%02X%02X%02X",
+            KART_COLOURSETS[i].name,
+            KART_COLOURSETS[i].base[0],
+            KART_COLOURSETS[i].base[1],
+            KART_COLOURSETS[i].base[2]);
+        AppendMenuA(menu, flags, KART_COLOUR_MENU_BASE + i, label);
+    }
+    GetWindowRect(window, &window_rect);
+    SetForegroundWindow(window);
+    command = TrackPopupMenu(
+        menu,
+        TPM_RETURNCMD | TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RIGHTBUTTON,
+        window_rect.left + 520,
+        window_rect.top + 72,
+        0,
+        window,
+        NULL);
+    DestroyMenu(menu);
+    PostMessage(window, WM_NULL, 0, 0);
+    if (command >= KART_COLOUR_MENU_BASE &&
+        command < KART_COLOUR_MENU_BASE + KART_COLOURSET_COUNT) {
+        return command - KART_COLOUR_MENU_BASE;
+    }
+    return current;
+}
+
+static COLORREF kart_model_body_color(
+    const KartSimulationState *kart,
+    bool boost_active,
+    unsigned int colour_index)
+{
+    return boost_active
+        ? RGB(255, 165, 35)
+        : (drift_visual_active(kart)
+            ? RGB(65, 205, 255)
+            : kart_model_base_colour(colour_index));
+}
+
+/* Builds the model's world-space faces with their shade. Shared by the GDI
+   painter's-order path and the rasterized one, which only differ in how they
+   resolve occlusion. Returns how many faces were written. */
+static size_t collect_kart_model_faces(
+    Camera3D camera,
+    const KartSimulationState *kart,
+    const KartTrackScene *model,
+    const KartModelParts *parts,
+    KartModelFace *faces,
+    size_t capacity)
+{
+    KartVec3 body_right;
+    KartVec3 body_forward;
+    KartVec3 body_up;
+    size_t face_count = 0;
+    uint32_t mesh_index;
+
+    orientation_axes(kart->orientation, &body_right, &body_forward, &body_up);
+
+    for (mesh_index = 0; mesh_index < model->mesh_count; ++mesh_index) {
+        const KartTrackSceneMesh *mesh = &model->meshes[mesh_index];
+        const bool wheel = kart_model_is_wheel(parts, mesh_index);
+        const uint32_t triangle_count = mesh->index_count / 3u;
+        uint32_t triangle;
+        for (triangle = 0; triangle < triangle_count; ++triangle) {
+            const uint32_t base = triangle * 3u;
+            KartModelFace *face;
+            KartVec3 normal;
+            KartVec3 centre;
+            float facing;
+            if (face_count == capacity) break;
+            face = &faces[face_count];
+            face->wheel = wheel;
+            {
+                unsigned int corner;
+                for (corner = 0; corner < 3u; ++corner) {
+                    const KartTrackSceneVertex *vertex =
+                        &mesh->vertices[mesh->indices[base + corner]];
+                    face->vertices[corner] = kart_model_vertex(
+                        kart, body_right, body_forward, body_up, vertex);
+                    face->uv[corner * 2u] = vertex->u;
+                    face->uv[corner * 2u + 1u] = vertex->v;
+                }
+            }
+            centre = vec_scale(
+                vec_add(vec_add(face->vertices[0], face->vertices[1]),
+                        face->vertices[2]),
+                1.0f / 3.0f);
+            face->depth = vec_dot(
+                vec_sub(centre, camera.position), camera.forward);
+            if (face->depth <= 0.25f) continue;
+            normal = vec_normalize(vec_cross(
+                vec_sub(face->vertices[1], face->vertices[0]),
+                vec_sub(face->vertices[2], face->vertices[0])));
+            /* The exports do not agree on winding between submeshes, so the
+               normal is folded to whichever side faces the camera instead of
+               being used to cull. Nothing here is a closed hull anyway. */
+            facing = vec_dot(normal, KART_MODEL_LIGHT);
+            if (facing < 0.0f) facing = -facing;
+            face->shade = 0.42f + 0.58f * facing;
+            ++face_count;
+        }
+    }
+    return face_count;
+}
+
+static void draw_kart_model(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartSimulationState *kart,
+    const KartTrackScene *model,
+    const KartModelParts *parts,
+    bool boost_active,
+    unsigned int colour_index)
+{
+    const COLORREF body_color =
+        kart_model_body_color(kart, boost_active, colour_index);
+    const COLORREF wheel_color = KART_MODEL_WHEEL_COLOR;
+    static KartModelFace faces[KART_MODEL_MAX_FACES];
+    HGDIOBJ old_pen;
+    HGDIOBJ old_brush;
+    size_t i;
+    const size_t face_count = collect_kart_model_faces(
+        camera, kart, model, parts, faces, KART_MODEL_MAX_FACES);
+    if (face_count == 0) {
+        return;
+    }
+    qsort(faces, face_count, sizeof(faces[0]), compare_model_faces);
+
+    old_pen = SelectObject(dc, GetStockObject(NULL_PEN));
+    old_brush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+    for (i = 0; i < face_count; ++i) {
+        const KartModelFace *face = &faces[i];
+        KartVec3 clipped[8];
+        POINT points[8];
+        HBRUSH brush;
+        HGDIOBJ previous;
+        int clipped_count = clip_to_near_plane(
+            face->vertices, 3, camera, 0.25f, clipped);
+        int point;
+        if (clipped_count < 3) continue;
+        for (point = 0; point < clipped_count; ++point) {
+            const ProjectedPoint projected =
+                project_point(client, camera, clipped[point]);
+            points[point].x = clamp_device_coordinate(projected.point.x);
+            points[point].y = clamp_device_coordinate(projected.point.y);
+        }
+        brush = CreateSolidBrush(scale_color(
+            face->wheel ? wheel_color : body_color, face->shade));
+        previous = SelectObject(dc, brush);
+        Polygon(dc, points, clipped_count);
+        SelectObject(dc, previous);
+        DeleteObject(brush);
+    }
+    SelectObject(dc, old_brush);
+    SelectObject(dc, old_pen);
+}
+
+/* One of the three model-space boxes, as a wireframe in the kart's frame. */
+static void draw_kart_model_box(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartSimulationState *kart,
+    const KartModelBox *box,
+    COLORREF color)
+{
+    static const unsigned int edges[12][2] = {
+        {0,1},{1,2},{2,3},{3,0}, {4,5},{5,6},{6,7},{7,4},
+        {0,4},{1,5},{2,6},{3,7},
+    };
+    KartVec3 body_right;
+    KartVec3 body_forward;
+    KartVec3 body_up;
+    ProjectedPoint projected[8];
+    HPEN pen;
+    HGDIOBJ old_pen;
+    unsigned int i;
+    if (!box->valid) {
+        return;
+    }
+    orientation_axes(kart->orientation, &body_right, &body_forward, &body_up);
+    for (i = 0; i < 8; ++i) {
+        /* 0-3 walk the bottom face in order and 4-7 the top, which is what the
+           edge table above expects. Deriving the corners from the bits of i
+           instead would put 1 and 2 diagonally opposite and draw an X across
+           each face. */
+        static const unsigned char corners[8][3] = {
+            {0,0,0}, {1,0,0}, {1,1,0}, {0,1,0},
+            {0,0,1}, {1,0,1}, {1,1,1}, {0,1,1},
+        };
+        const KartTrackSceneVertex corner = {
+            corners[i][0] ? box->maximum[0] : box->minimum[0],
+            corners[i][1] ? box->maximum[1] : box->minimum[1],
+            corners[i][2] ? box->maximum[2] : box->minimum[2],
+            0.0f,
+            0.0f,
+        };
+        projected[i] = project_point(
+            client, camera,
+            kart_model_vertex(
+                kart, body_right, body_forward, body_up, &corner));
+    }
+    pen = CreatePen(PS_SOLID, 1, color);
+    old_pen = SelectObject(dc, pen);
+    for (i = 0; i < 12; ++i) {
+        const unsigned int a = edges[i][0];
+        const unsigned int b = edges[i][1];
+        if (!projected[a].visible || !projected[b].visible) continue;
+        MoveToEx(dc, projected[a].point.x, projected[a].point.y, NULL);
+        LineTo(dc, projected[b].point.x, projected[b].point.y);
+    }
+    SelectObject(dc, old_pen);
+    DeleteObject(pen);
+}
+
+/* full yellow, body green, wheels magenta - the same three volumes the
+   catalogue tabulates, drawn so the wheels-wider-than-body gap is visible. */
+static void draw_kart_model_bounds(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartSimulationState *kart,
+    const KartModelParts *parts)
+{
+    if (parts == NULL || !parts->valid) {
+        return;
+    }
+    draw_kart_model_box(
+        dc, client, camera, kart, &parts->full, RGB(235, 215, 90));
+    draw_kart_model_box(
+        dc, client, camera, kart, &parts->wheels, RGB(225, 105, 220));
+    draw_kart_model_box(
+        dc, client, camera, kart, &parts->body, RGB(110, 235, 140));
+}
+
+static void draw_kart_box(
     HDC dc,
     RECT client,
     Camera3D camera,
     const KartSimulationState *kart,
     const KartDemoKartSpec *spec,
-    bool boost_active)
+    bool boost_active,
+    unsigned int colour_index)
 {
     static const unsigned int edges[12][2] = {
         {0,1},{1,2},{2,3},{3,0}, {4,5},{5,6},{6,7},{7,4},
@@ -1189,10 +2393,10 @@ static void draw_kart(
 
     body_brush = CreateSolidBrush(
         boost_active
-            ? RGB(65, 205, 255)
+            ? RGB(255, 165, 35)
             : (drift_visual_active(kart)
-                ? RGB(255, 165, 35)
-                : RGB(235, 65, 80)));
+                ? RGB(65, 205, 255)
+                : kart_model_base_colour(colour_index)));
     body_pen = CreatePen(PS_SOLID, 2, RGB(255, 230, 220));
     old_brush = SelectObject(dc, body_brush);
     old_pen = SelectObject(dc, body_pen);
@@ -1215,6 +2419,297 @@ static void draw_kart(
     SelectObject(dc, old_pen);
     DeleteObject(body_brush);
     DeleteObject(body_pen);
+}
+
+/* Draws the recovered mesh, then the boxes over it.
+
+   The box is only the fallback for a build without embedded models: it is what
+   the demo drew before the models were recovered, and it is the shape the
+   physics actually reasons about. */
+static void draw_kart(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const Demo3DState *demo)
+{
+    const KartModelParts *parts = NULL;
+    const KartTrackScene *model = active_kart_model(demo, &parts);
+    if (model != NULL && parts != NULL && parts->valid) {
+        draw_kart_model(
+            dc, client, camera, &demo->kart, model, parts, demo->boost_active,
+            demo->kart_colour);
+    } else {
+        draw_kart_box(
+            dc, client, camera, &demo->kart, demo->kart_spec,
+            demo->boost_active, demo->kart_colour);
+    }
+    if (demo->show_model_bounds) {
+        draw_kart_model_bounds(dc, client, camera, &demo->kart, parts);
+    }
+}
+
+/* Rebuilds the active kart's skin for the chosen colour, the way 0x00417160
+   does. Three things happen to the atlas:
+
+   1. The body. 0x004a6eb0 composites "0" and "1" (the two PNGs beside model.1s)
+      and tints by luminance: a texel of "0" darker than 0x80 in every channel
+      takes `base`, otherwise `high`. Every kart's 0.png is 256x128 of
+      (255, 255, 255, alpha 0) with two opaque white texels and no dark texel at
+      all, so the tint is uniformly `high` and "1" is alpha-composited over it.
+      Pure magenta in "1" is the colour key and comes out transparent.
+   2. The number. Each `cyan` texel anchors a 10x17 rectangle - one digit of the
+      100x17 number.png - blended in with `base` through the digit's alpha
+      (0x00416ff0). The demo builds every kart with digit 0.
+   3. The plate. Each `blue` texel is the top-left of a 45x20 rectangle that
+      plate.png is copied straight into.
+
+   This simulator-side display override uses `base` over the whole body as
+   requested. The racing number already uses `base`; the 900-texel blue block
+   at the back is the plate and takes no colour at all.
+
+   The table's images are shared, so this starts from a copy of the asset's own
+   texels rather than from whatever the last colour left behind. */
+static void paint_kart_skin(Demo3DState *demo)
+{
+    /* The table is the demo's own; find() is const only because callers that
+       sample it have no business writing to it. */
+    KartTrackTextureImage *image = (KartTrackTextureImage *)
+        kart_track_texture_find(
+            &demo->textures, "kart", demo->kart_spec->asset_name);
+    const KartTrackTextureImage *plate =
+        kart_track_texture_find(&demo->textures, "kart", "@plate");
+    const KartTrackTextureImage *number =
+        kart_track_texture_find(&demo->textures, "kart", "@number");
+    const unsigned char *base_rgb;
+    const int width = image != NULL ? (int)image->width : 0;
+    const int height = image != NULL ? (int)image->height : 0;
+    size_t texel;
+    int x;
+    int y;
+
+    if (image == NULL || image->alpha == NULL) {
+        demo->painted_skin = NULL;
+        return;
+    }
+    if (demo->painted_skin == image &&
+        demo->painted_colour == demo->kart_colour) {
+        return;
+    }
+    if (demo->painted_skin != image) {
+        const size_t count = (size_t)width * (size_t)height;
+        uint16_t *copy = (uint16_t *)realloc(
+            demo->skin_texels, count * sizeof(*copy));
+        if (copy == NULL) {
+            return;
+        }
+        memcpy(copy, image->texels, count * sizeof(*copy));
+        demo->skin_texels = copy;
+        demo->skin_texel_count = count;
+    }
+    base_rgb = KART_COLOURSETS[demo->kart_colour].base;
+
+    /* 1. body: "1" over a solid `base`, magenta keyed out. */
+    for (texel = 0; texel < demo->skin_texel_count; ++texel) {
+        const uint16_t source = demo->skin_texels[texel];
+        const unsigned int alpha = image->alpha[texel];
+        unsigned int channel[3];
+        unsigned int i;
+        if (source == KART_SKIN_KEY_MAGENTA) {
+            image->mask[texel >> 3] &= (uint8_t)~(1u << (texel & 7u));
+            continue;
+        }
+        channel[0] = (unsigned int)((source >> 11) & 0x1Fu) << 3;
+        channel[1] = (unsigned int)((source >> 5) & 0x3Fu) << 2;
+        channel[2] = (unsigned int)(source & 0x1Fu) << 3;
+        for (i = 0; i < 3u; ++i) {
+            const unsigned int blended =
+                ((255u - alpha) * base_rgb[i] + channel[i] * alpha) / 255u;
+            channel[i] = blended > 255u ? 255u : blended;
+        }
+        image->texels[texel] = (uint16_t)(
+            ((channel[0] >> 3) << 11) | ((channel[1] >> 2) << 5) |
+            (channel[2] >> 3));
+        image->mask[texel >> 3] |= (uint8_t)(1u << (texel & 7u));
+    }
+
+    /* 2 and 3: the two stamps, placed off the key texels.
+
+       The scan reads the image it is writing into, which is what 0x00417160
+       does - it walks the composited image in place. That is not incidental:
+       the plate's key is a solid 45x20 block of blue, so the first hit at its
+       top-left corner overwrites all 900 of them and the scan finds no more.
+       Reading a frozen copy instead stamps the plate 900 times. */
+    for (y = 0; y < height; ++y) {
+        for (x = 0; x < width; ++x) {
+            const uint16_t key =
+                image->texels[(size_t)y * (size_t)width + (size_t)x];
+            int stamp_x;
+            int stamp_y;
+            if (key == KART_SKIN_KEY_CYAN && number != NULL &&
+                number->alpha != NULL) {
+                /* Digit 0 of the strip, blended in with `base`. */
+                for (stamp_y = 0; stamp_y < 17; ++stamp_y) {
+                    const int target_y = y - 8 + stamp_y;
+                    if (target_y < 0 || target_y >= height) continue;
+                    for (stamp_x = 0; stamp_x < 10; ++stamp_x) {
+                        const int target_x = x - 5 + stamp_x;
+                        const size_t from = (size_t)stamp_y *
+                            (size_t)number->width + (size_t)stamp_x;
+                        const size_t to =
+                            (size_t)target_y * (size_t)width + (size_t)target_x;
+                        const unsigned int alpha = number->alpha[from];
+                        unsigned int i;
+                        unsigned int channel[3];
+                        if (target_x < 0 || target_x >= width) continue;
+                        if ((int)number->width <= stamp_x ||
+                            (int)number->height <= stamp_y) continue;
+                        channel[0] = (unsigned int)((image->texels[to] >> 11) & 0x1Fu) << 3;
+                        channel[1] = (unsigned int)((image->texels[to] >> 5) & 0x3Fu) << 2;
+                        channel[2] = (unsigned int)(image->texels[to] & 0x1Fu) << 3;
+                        for (i = 0; i < 3u; ++i) {
+                            channel[i] = (channel[i] * (255u - alpha) +
+                                          (unsigned int)base_rgb[i] * alpha) / 255u;
+                        }
+                        image->texels[to] = (uint16_t)(
+                            ((channel[0] >> 3) << 11) |
+                            ((channel[1] >> 2) << 5) | (channel[2] >> 3));
+                        image->mask[to >> 3] |= (uint8_t)(1u << (to & 7u));
+                    }
+                }
+            } else if (key == KART_SKIN_KEY_BLUE && plate != NULL) {
+                for (stamp_y = 0; stamp_y < (int)plate->height; ++stamp_y) {
+                    const int target_y = y + stamp_y;
+                    if (target_y < 0 || target_y >= height) continue;
+                    for (stamp_x = 0; stamp_x < (int)plate->width; ++stamp_x) {
+                        const int target_x = x + stamp_x;
+                        const size_t to =
+                            (size_t)target_y * (size_t)width + (size_t)target_x;
+                        if (target_x < 0 || target_x >= width) continue;
+                        image->texels[to] = plate->texels[
+                            (size_t)stamp_y * (size_t)plate->width +
+                            (size_t)stamp_x];
+                        image->mask[to >> 3] |= (uint8_t)(1u << (to & 7u));
+                    }
+                }
+            }
+        }
+    }
+    demo->painted_skin = image;
+    demo->painted_colour = demo->kart_colour;
+}
+
+/* The kart, its skid marks and the boost flame through the rasterizer instead
+   of GDI, so the track's depth buffer decides what is in front of what. Without
+   this the kart shows through a wall the moment the track rises between it and
+   the camera. Drawn after the track, testing and writing the same buffer. */
+static void raster_kart(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    const Demo3DState *demo)
+{
+    static KartModelFace faces[KART_MODEL_MAX_FACES];
+    const KartModelParts *parts = NULL;
+    const KartTrackScene *model = active_kart_model(demo, &parts);
+    const COLORREF body_color =
+        kart_model_body_color(
+            &demo->kart, demo->boost_active, demo->kart_colour);
+    /* The kart's own skin. A kart mesh names no material - the exporter finds
+       none on a ReToonRigid node - so the lookup is by the kart's asset name
+       under the "kart" theme, which is where the packer put its 1.png. */
+    const KartTrackTextureImage *skin =
+        demo->kart_textured
+            ? kart_track_texture_find(
+                  &demo->textures, "kart", demo->kart_spec->asset_name)
+            : NULL;
+    size_t face_count;
+    size_t i;
+
+    if (model == NULL || parts == NULL || !parts->valid) {
+        return;
+    }
+    face_count = collect_kart_model_faces(
+        camera, &demo->kart, model, parts, faces, KART_MODEL_MAX_FACES);
+    /* No sort: the depth buffer resolves the order the qsort stood in for. */
+    for (i = 0; i < face_count; ++i) {
+        const KartModelFace *face = &faces[i];
+        raster_world_triangle(
+            target, client, camera,
+            face->vertices[0], face->vertices[1], face->vertices[2],
+            skin != NULL ? face->uv : NULL, skin,
+            colorref_to_bgrx(scale_color(
+                face->wheel ? KART_MODEL_WHEEL_COLOR : body_color,
+                face->shade)));
+    }
+}
+
+static void raster_skid_marks(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    const Demo3DState *demo)
+{
+    const KartTrackTextureImage *texture =
+        demo->skid_texture.texels != NULL ? &demo->skid_texture : NULL;
+    unsigned int side;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        unsigned int mark;
+        for (mark = 0; mark < SKID_MARK_POOL_SIZE; ++mark) {
+            const SkidMarkStrip *strip = &demo->skid_marks[side][mark];
+            unsigned int section;
+            for (section = 1; section < strip->section_count; ++section) {
+                const SkidMarkCrossSection *a = &strip->sections[section - 1u];
+                const SkidMarkCrossSection *b = &strip->sections[section];
+                const float uv0[6] = {
+                    0.0f, a->texture_v, 0.0f, b->texture_v,
+                    0.499999f, b->texture_v};
+                const float uv1[6] = {
+                    0.0f, a->texture_v, 0.499999f, b->texture_v,
+                    0.499999f, a->texture_v};
+                raster_world_triangle(
+                    target, client, camera,
+                    a->edge[0], b->edge[0], b->edge[1],
+                    texture != NULL ? uv0 : NULL, texture, 0x00141414u);
+                raster_world_triangle(
+                    target, client, camera,
+                    a->edge[0], b->edge[1], a->edge[1],
+                    texture != NULL ? uv1 : NULL, texture, 0x00141414u);
+            }
+        }
+    }
+}
+
+/* Draws every gate of the course graph as the quad it is: the two triangles
+   kart_course_gate_crossing tests the trail segment against, outlined edge by
+   edge. The final gate, the one the lap counter checks, is drawn apart. */
+static void draw_course_gates(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartCourse *course)
+{
+    HPEN gate_pen = CreatePen(PS_SOLID, 2, RGB(90, 220, 255));
+    HPEN final_pen = CreatePen(PS_SOLID, 2, RGB(255, 205, 80));
+    HGDIOBJ old_pen = SelectObject(dc, gate_pen);
+    unsigned int gate_index;
+
+    for (gate_index = 0; gate_index < course->gate_count; ++gate_index) {
+        const KartCourseGate *gate = &course->gates[gate_index];
+        unsigned int triangle;
+        SelectObject(dc, gate->is_final ? final_pen : gate_pen);
+        for (triangle = 0; triangle < 2u; ++triangle) {
+            unsigned int corner;
+            for (corner = 0; corner < 3u; ++corner) {
+                draw_line_3d(
+                    dc, client, camera,
+                    gate->face[triangle][corner],
+                    gate->face[triangle][(corner + 1u) % 3u]);
+            }
+        }
+    }
+    SelectObject(dc, old_pen);
+    DeleteObject(gate_pen);
+    DeleteObject(final_pen);
 }
 
 /* World to screen for the top-down view. World +Y points up the screen and
@@ -1251,16 +2746,60 @@ static KartVec3 kart_forward(KartQuat q)
     };
 }
 
-static void draw_scene_topdown(HDC buffer, RECT client, const Demo3DState *demo)
+static void raster_skid_marks_topdown(
+    SoftwareTarget *target,
+    RECT client,
+    float camera_x,
+    float camera_y,
+    const Demo3DState *demo)
+{
+    const KartTrackTextureImage *texture =
+        demo->skid_texture.texels != NULL ? &demo->skid_texture : NULL;
+    unsigned int side;
+    for (side = 0; side < SKID_MARK_SIDE_COUNT; ++side) {
+        unsigned int mark;
+        for (mark = 0; mark < SKID_MARK_POOL_SIZE; ++mark) {
+            const SkidMarkStrip *strip = &demo->skid_marks[side][mark];
+            unsigned int section;
+            for (section = 1; section < strip->section_count; ++section) {
+                const SkidMarkCrossSection *a = &strip->sections[section - 1u];
+                const SkidMarkCrossSection *b = &strip->sections[section];
+                const POINT p00 = world_to_screen(
+                    client, camera_x, camera_y, a->edge[0].x, a->edge[0].y);
+                const POINT p01 = world_to_screen(
+                    client, camera_x, camera_y, a->edge[1].x, a->edge[1].y);
+                const POINT p10 = world_to_screen(
+                    client, camera_x, camera_y, b->edge[0].x, b->edge[0].y);
+                const POINT p11 = world_to_screen(
+                    client, camera_x, camera_y, b->edge[1].x, b->edge[1].y);
+                const ScreenVertex v00 = {
+                    (float)p00.x, (float)p00.y, 1.0f, 0.0f, a->texture_v};
+                const ScreenVertex v01 = {
+                    (float)p01.x, (float)p01.y, 1.0f, 0.499999f, a->texture_v};
+                const ScreenVertex v10 = {
+                    (float)p10.x, (float)p10.y, 1.0f, 0.0f, b->texture_v};
+                const ScreenVertex v11 = {
+                    (float)p11.x, (float)p11.y, 1.0f, 0.499999f, b->texture_v};
+                raster_triangle(
+                    target, v00, v10, v11, texture, 0x00141414u, 255u);
+                raster_triangle(
+                    target, v00, v11, v01, texture, 0x00141414u, 255u);
+            }
+        }
+    }
+}
+
+static void draw_scene_topdown(
+    HDC buffer,
+    RECT client,
+    const Demo3DState *demo,
+    void *frame_pixels)
 {
     HBRUSH track_brush;
     HPEN wall_pen;
     HPEN grid_pen;
     HPEN heading_pen;
     HPEN velocity_pen;
-    HPEN skid_fresh_pen;
-    HPEN skid_middle_pen;
-    HPEN skid_old_pen;
     HBRUSH kart_brush;
     HGDIOBJ old_brush;
     HGDIOBJ old_pen;
@@ -1328,57 +2867,16 @@ static void draw_scene_topdown(HDC buffer, RECT client, const Demo3DState *demo)
     SelectObject(buffer, old_pen);
     DeleteObject(grid_pen);
 
-    skid_fresh_pen = CreatePen(PS_SOLID, 3, RGB(12, 14, 16));
-    skid_middle_pen = CreatePen(PS_SOLID, 3, RGB(25, 28, 31));
-    skid_old_pen = CreatePen(PS_SOLID, 2, RGB(39, 44, 48));
-    {
-        unsigned int i;
-        HPEN selected_pen = NULL;
-        for (i = 0; i < demo->skid_count; ++i) {
-            const unsigned int oldest =
-                (demo->skid_head + MAX_SKID_SEGMENTS - demo->skid_count) %
-                MAX_SKID_SEGMENTS;
-            const SkidSegment3D *segment =
-                &demo->skid_segments[(oldest + i) % MAX_SKID_SEGMENTS];
-            const unsigned int age =
-                demo->simulation_time_ms - segment->created_ms;
-            HPEN wanted_pen;
-            POINT a;
-            POINT b;
-            if (age > SKID_LIFETIME_MS) {
-                continue;
-            }
-            wanted_pen = age < 4000
-                ? skid_fresh_pen
-                : (age < 9000 ? skid_middle_pen : skid_old_pen);
-            if (wanted_pen != selected_pen) {
-                if (selected_pen == NULL) {
-                    old_pen = SelectObject(buffer, wanted_pen);
-                } else {
-                    SelectObject(buffer, wanted_pen);
-                }
-                selected_pen = wanted_pen;
-            }
-            a = world_to_screen(
-                client, camera_x, camera_y, segment->left_x0, segment->left_y0);
-            b = world_to_screen(
-                client, camera_x, camera_y, segment->left_x1, segment->left_y1);
-            MoveToEx(buffer, a.x, a.y, NULL);
-            LineTo(buffer, b.x, b.y);
-            a = world_to_screen(
-                client, camera_x, camera_y, segment->right_x0, segment->right_y0);
-            b = world_to_screen(
-                client, camera_x, camera_y, segment->right_x1, segment->right_y1);
-            MoveToEx(buffer, a.x, a.y, NULL);
-            LineTo(buffer, b.x, b.y);
-        }
-        if (selected_pen != NULL) {
-            SelectObject(buffer, old_pen);
-        }
+    if (frame_pixels != NULL && demo->skid_texture.texels != NULL) {
+        SoftwareTarget frame;
+        memset(&frame, 0, sizeof(frame));
+        frame.pixels = (uint32_t *)frame_pixels;
+        frame.width = client.right;
+        frame.height = client.bottom;
+        GdiFlush();
+        raster_skid_marks_topdown(
+            &frame, client, camera_x, camera_y, demo);
     }
-    DeleteObject(skid_fresh_pen);
-    DeleteObject(skid_middle_pen);
-    DeleteObject(skid_old_pen);
 
     center = world_to_screen(
         client, camera_x, camera_y,
@@ -1450,9 +2948,9 @@ static void draw_scene_topdown(HDC buffer, RECT client, const Demo3DState *demo)
 
     kart_brush = CreateSolidBrush(
         demo->boost_active
-            ? RGB(65, 205, 255)
+            ? RGB(255, 170, 45)
             : (drift_visual_active(&demo->kart)
-                ? RGB(255, 170, 45)
+                ? RGB(65, 205, 255)
                 : RGB(255, 80, 95)));
     old_brush = SelectObject(buffer, kart_brush);
     Polygon(buffer, kart_points, 4);
@@ -1558,7 +3056,7 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
 {
     const KartSimulationState *kart = &demo->kart;
     const int line_height = 15;
-    const int rows = 13;
+    const int rows = 14;
     const int panel_width = 396;
     const int margin = 16;
     RECT panel = {
@@ -1678,6 +3176,13 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
         kart->grounded_drag_scale, kart->config.air_friction,
         kart->config.drag_factor, kart->config.mass);
     TELEMETRY_LINE(
+        demo->gauge.rate > 0.0f ? RGB(255, 210, 90) : RGB(200, 212, 220),
+        "GAUGE   %-17s %5.1f%%  rate %6.2f  W %4.2f",
+        kart_gauge_model_name(demo->gauge.model),
+        demo->gauge_config.full_value > 0.0f
+            ? demo->gauge.value / demo->gauge_config.full_value * 100.0f : 0.0f,
+        demo->gauge.rate, demo->gauge.contact_weight);
+    TELEMETRY_LINE(
         demo->last_step.body_contacts != 0 ? RGB(255, 140, 120)
                                            : RGB(150, 165, 180),
         "STEP    sub %2u  wheels %u  body %u  wall %4.1f  gnd %4.1f",
@@ -1695,7 +3200,7 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
     DeleteObject(font);
 }
 
-static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
+static void draw_scene(HWND window, HDC target, Demo3DState *demo)
 {
     const bool topdown = demo->view_mode == DEMO_VIEW_TOPDOWN;
     RECT client;
@@ -1703,6 +3208,11 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     HBITMAP bitmap;
     HGDIOBJ old_bitmap;
     HBRUSH sky;
+    /* The frame is a DIB section rather than a compatible bitmap so the
+       textured pass can write pixels straight into it while GDI keeps drawing
+       everything else onto the same surface. */
+    BITMAPINFO frame_info;
+    void *frame_pixels = NULL;
     Camera3D camera;
     KartVec3 body_right;
     KartVec3 body_forward;
@@ -1717,7 +3227,21 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
 
     GetClientRect(window, &client);
     buffer = CreateCompatibleDC(target);
-    bitmap = CreateCompatibleBitmap(target, client.right, client.bottom);
+    memset(&frame_info, 0, sizeof(frame_info));
+    frame_info.bmiHeader.biSize = sizeof(frame_info.bmiHeader);
+    frame_info.bmiHeader.biWidth = client.right;
+    /* Negative height puts row 0 at the top, which is the order the rasterizer
+       indexes with. */
+    frame_info.bmiHeader.biHeight = -client.bottom;
+    frame_info.bmiHeader.biPlanes = 1;
+    frame_info.bmiHeader.biBitCount = 32;
+    frame_info.bmiHeader.biCompression = BI_RGB;
+    bitmap = CreateDIBSection(
+        target, &frame_info, DIB_RGB_COLORS, &frame_pixels, NULL, 0);
+    if (bitmap == NULL) {
+        bitmap = CreateCompatibleBitmap(target, client.right, client.bottom);
+        frame_pixels = NULL;
+    }
     old_bitmap = SelectObject(buffer, bitmap);
     sky = CreateSolidBrush(topdown ? RGB(22, 25, 31) : RGB(19, 24, 33));
     FillRect(buffer, &client, sky);
@@ -1725,16 +3249,115 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
 
     camera = make_chase_camera(&demo->camera_pose, client);
     if (topdown) {
-        draw_scene_topdown(buffer, client, demo);
+        draw_scene_topdown(buffer, client, demo, frame_pixels);
     } else {
-        draw_track(buffer, client, camera, demo->track_spec);
-        draw_track_scene(
-            buffer, client, camera, demo->track_spec, active_track_scene(demo));
-        draw_skid_marks(buffer, client, camera, demo);
-        draw_boost_effect(buffer, client, camera, demo);
-        draw_kart(
-            buffer, client, camera, &demo->kart, demo->kart_spec,
-            demo->boost_active);
+        const KartTrackScene *scene = active_track_scene(demo);
+        const bool depth_fill =
+            demo->track_render_mode == DEMO_TRACK_RENDER_DEPTH_ALPHA_190 &&
+            scene != NULL && frame_pixels != NULL;
+        const bool textured =
+            demo->track_render_mode == DEMO_TRACK_RENDER_TEXTURED &&
+            scene != NULL && frame_pixels != NULL;
+        /* The kart's skin is a separate switch, so Z alone rasterizes just the
+           kart over the wireframe track. Its depth buffer is then empty, which
+           is right: the wireframe is line art with no depth to test against. */
+        const bool kart_only =
+            !depth_fill && !textured && demo->kart_textured && frame_pixels != NULL;
+        const bool skid_only =
+            !textured && !kart_only && frame_pixels != NULL &&
+            demo->skid_texture.texels != NULL;
+        bool rasterized = false;
+        bool skid_rasterized = false;
+        bool wireframe_base_drawn = false;
+        if (depth_fill || textured || kart_only || skid_only) {
+            SoftwareTarget frame;
+            char theme[32];
+            memset(&frame, 0, sizeof(frame));
+            frame.pixels = (uint32_t *)frame_pixels;
+            frame.depth = frame_depth_buffer(client.right, client.bottom);
+            frame.width = client.right;
+            frame.height = client.bottom;
+            if (kart_only || skid_only) {
+                /* Everything the kart is drawn over has to be on the DIB first,
+                   because the rasterizer writes pixels GDI will not touch
+                   again. Gates included, so they read as annotation under it. */
+                draw_track(buffer, client, camera, demo->track_spec);
+                draw_track_scene(
+                    buffer, client, camera, demo->track_spec, scene);
+                if (demo->show_gates && demo->course_ready) {
+                    draw_course_gates(buffer, client, camera, &demo->course);
+                }
+                wireframe_base_drawn = true;
+            }
+            /* GDI batches, so everything drawn so far has to have landed in the
+               DIB before anything writes to it behind GDI's back. */
+            GdiFlush();
+            if (frame.depth != NULL && (kart_only || skid_only)) {
+                raster_skid_marks(&frame, client, camera, demo);
+                skid_rasterized = true;
+            }
+            if (kart_only || skid_only) {
+                draw_boost_effect(buffer, client, camera, demo);
+                GdiFlush();
+            }
+            if (frame.depth != NULL && kart_only) {
+                rasterized = true;
+                raster_kart(&frame, client, camera, demo);
+            } else if (frame.depth != NULL && (depth_fill || textured)) {
+                const KartTrackScene *dome = active_skydome(demo);
+                rasterized = true;
+                track_theme(demo->track_spec, theme, sizeof(theme));
+                /* The dome first and with no distance cull: it is thousands of
+                   units across and encloses the whole track, so it is drawn
+                   where the asset puts it and the depth buffer keeps everything
+                   else in front of it. */
+                if (textured && dome != NULL) {
+                    draw_track_scene_textured(
+                        &frame, client, camera, demo->track_spec, dome,
+                        &demo->textures, theme, 0.0f, 255u);
+                }
+                if (depth_fill) {
+                    frame.depth_only = true;
+                    draw_track_scene_textured(
+                        &frame, client, camera, demo->track_spec, scene,
+                        NULL, NULL, 210.0f, 255u);
+                    frame.depth_only = false;
+                    frame.shade_depth_equal = true;
+                }
+                draw_track_scene_textured(
+                    &frame, client, camera, demo->track_spec, scene,
+                    textured ? &demo->textures : NULL,
+                    textured ? theme : NULL, 210.0f,
+                    depth_fill ? 190u : 255u);
+                frame.shade_depth_equal = false;
+                /* Everything that used to be painted over the track goes
+                   through the same depth buffer now. */
+                raster_skid_marks(&frame, client, camera, demo);
+                raster_boost_effect(&frame, client, camera, demo);
+                raster_kart(&frame, client, camera, demo);
+            }
+        }
+        if (!rasterized && !wireframe_base_drawn) {
+            draw_track(buffer, client, camera, demo->track_spec);
+            draw_track_scene(
+                buffer, client, camera, demo->track_spec, scene);
+        }
+        if (demo->show_gates && demo->course_ready && !wireframe_base_drawn) {
+            draw_course_gates(buffer, client, camera, &demo->course);
+        }
+        if (!rasterized) {
+            if (!skid_rasterized) {
+                draw_skid_marks(buffer, client, camera, demo);
+            }
+            draw_boost_effect(buffer, client, camera, demo);
+            draw_kart(buffer, client, camera, demo);
+        } else if (demo->show_model_bounds) {
+            /* The bounds are wireframe annotation rather than geometry, so they
+               stay on the GDI overlay in both modes. */
+            const KartModelParts *parts = NULL;
+            (void)active_kart_model(demo, &parts);
+            draw_kart_model_bounds(buffer, client, camera, &demo->kart, parts);
+        }
         if (demo->show_vectors) {
             draw_motion_vectors(
                 buffer, client, camera, &demo->kart, demo->acceleration);
@@ -1759,19 +3382,49 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     snprintf(
         status,
         sizeof(status),
-        "speed %.2f m/s | slip %.1f deg | vf %.1f vs %.1f | AUTO %s",
+        "FPS %5.1f | speed %.2f m/s | slip %.1f deg | vf %.1f vs %.1f | AUTO %s",
+        demo->fps,
         speed,
         slip_angle,
         forward_speed,
         lateral_speed,
         demo->kart.drift.slip_detected ? "ON" : "off");
     TextOutA(buffer, 16, 12, status, (int)strlen(status));
+    {
+        static const char driving[] =
+            "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  "
+            "P: parameters  K: kart  T: track  F: drag trigger  "
+            "S: screenshot  R: reset";
+        TextOutA(buffer, 16, 32, driving, (int)(sizeof(driving) - 1));
+    }
+    /* The view toggles, on their own line: there are enough of them now that
+       keeping them with the driving keys ran the line off the window. */
     snprintf(
         help,
         sizeof(help),
-        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  V: %s vectors  P: parameters  K: kart list  T: track list  G: drag trigger  S: screenshot  R: reset",
+        "X: %s  Z: %s kart skin  L: colour %u [%s]  N: %s checkpoints  B: %s bounds  V: %s vectors",
+        demo->track_render_mode == DEMO_TRACK_RENDER_ALPHA_85
+            ? "depth fill"
+            : (demo->track_render_mode == DEMO_TRACK_RENDER_DEPTH_ALPHA_190
+                ? "textured" : "alpha 85"),
+        demo->kart_textured ? "hide" : "show",
+        demo->kart_colour,
+        KART_COLOURSETS[demo->kart_colour].name,
+        demo->show_gates ? "hide" : "show",
+        demo->show_model_bounds ? "hide" : "show",
         demo->show_vectors ? "hide" : "show");
-    TextOutA(buffer, 16, 32, help, (int)strlen(help));
+    TextOutA(buffer, 16, 52, help, (int)strlen(help));
+    /* The inferred layers, kept on their own line so they read as what they
+       are rather than as part of the recovered demo. */
+    snprintf(
+        help,
+        sizeof(help),
+        "(experimental)  E: gear model [%s]  G: gauge model [%s]",
+        demo->gearbox.mode == KART_GEAR_MULTI ? "multi" : "single",
+        kart_gauge_model_name(demo->gauge.model));
+    SetTextColor(buffer, RGB(190, 165, 240));
+    TextOutA(buffer, 16, 72, help, (int)strlen(help));
+    SetTextColor(buffer, RGB(235, 240, 245));
     snprintf(
         status,
         sizeof(status),
@@ -1789,7 +3442,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     SetTextColor(
         buffer,
         demo->kart.drift.slip_detected ? RGB(255, 185, 55) : RGB(180, 195, 205));
-    kart_demo_text_out_utf8(buffer, 16, 52, status);
+    kart_demo_text_out_utf8(buffer, 16, 92, status);
     snprintf(
         status,
         sizeof(status),
@@ -1800,16 +3453,43 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         demo->kart.instant_boost.opportunity_timer,
         demo->kart.instant_boost.active ? "ON" : "off",
         demo->kart.grounded_drag_scale,
-        demo->skid_count);
+        skid_mark_segment_count(demo));
     SetTextColor(
         buffer,
         demo->boost_active ? RGB(75, 225, 255) :
         (drift_visual_active(&demo->kart) ? RGB(255, 185, 55) : RGB(180, 195, 205)));
-    TextOutA(buffer, 16, 72, status, (int)strlen(status));
+    TextOutA(buffer, 16, 112, status, (int)strlen(status));
+    if (demo->course_ready) {
+        /* The original's own progress record, field for field: the node the
+           kart is in, how far into it, the accumulated start-gate crossings
+           that gate the lap counter, and the wrong-way flag. */
+        snprintf(
+            status,
+            sizeof(status),
+            "LAP %u | node %u/%u %.0fm | advance %d%s%s",
+            demo->progress.lap,
+            demo->progress.node_id,
+            demo->course.node_count,
+            demo->progress.node_distance,
+            demo->progress.advance,
+            demo->progress.best_lap_ms != 0 ? " | best " : "",
+            demo->progress.wrong_way ? " | WRONG WAY" : "");
+        SetTextColor(
+            buffer,
+            demo->progress.wrong_way ? RGB(255, 120, 120) : RGB(180, 195, 205));
+        TextOutA(buffer, 16, 132, status, (int)strlen(status));
+        if (demo->progress.best_lap_ms != 0) {
+            char best[32];
+            snprintf(best, sizeof(best), "%.2fs",
+                     (float)demo->progress.best_lap_ms * 0.001f);
+            TextOutA(buffer, 16 + 7 * (int)strlen(status), 132, best,
+                     (int)strlen(best));
+        }
+    }
     if (demo->respawn_notice_ms != 0) {
-        static const char notice[] = "FELL THROUGH THE TRACK - RESPAWNED";
+        static const char notice[] = "RESPAWNING ONTO THE COURSE";
         SetTextColor(buffer, RGB(255, 120, 120));
-        TextOutA(buffer, 16, 92, notice, (int)strlen(notice));
+        TextOutA(buffer, 16, 152, notice, (int)strlen(notice));
     }
     /* 3, 2, 1 as the deadline approaches, then START; the recovered cues fire at
        the same thresholds. */
@@ -1820,11 +3500,26 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         char notice[96];
         snprintf(notice, sizeof(notice), "SAVED %s", demo->shot_name);
         SetTextColor(buffer, RGB(140, 235, 255));
-        TextOutA(buffer, 16, 112, notice, (int)strlen(notice));
+        TextOutA(buffer, 16, 172, notice, (int)strlen(notice));
     }
     draw_telemetry(buffer, client, demo);
+    kart_demo_draw_gauge(
+        buffer, client,
+        demo->gauge_config.full_value > 0.0f
+            ? demo->gauge.value / demo->gauge_config.full_value : 0.0f,
+        demo->gauge.boosters, demo->gauge.rate > 0.0f,
+        kart_gauge_model_name(demo->gauge.model));
     kart_demo_draw_wheel_load(
         buffer, client, demo->kart.wheels.compression, demo->kart.grounded);
+    kart_demo_draw_tachometer(
+        buffer, client,
+        demo->gearbox.mode == KART_GEAR_MULTI
+            ? demo->gearbox.pitch : demo->sound.driver.motor_pitch,
+        demo->sound.driver.motor_volume,
+        /* The uncapped recovered ramp is only a reference for SINGLE. */
+        demo->gearbox.mode == KART_GEAR_MULTI
+            ? 0.0f : speed * KART_SOUND_MOTOR_SLOPE + KART_SOUND_MOTOR_BASE,
+        demo->gearbox.mode == KART_GEAR_MULTI ? demo->gearbox.gear : 0);
     kart_demo_draw_speedometer(
         buffer, client, speedometer_kmh, demo->boost_active);
     if (topdown) {
@@ -1856,6 +3551,23 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     SelectObject(buffer, old_bitmap);
     DeleteObject(bitmap);
     DeleteDC(buffer);
+    if (demo->fps_frequency.QuadPart > 0) {
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        ++demo->fps_sample_frames;
+        if (demo->fps_sample_start.QuadPart == 0) {
+            demo->fps_sample_start = now;
+            demo->fps_sample_frames = 0;
+        } else {
+            const LONGLONG ticks = now.QuadPart - demo->fps_sample_start.QuadPart;
+            if (ticks * 2 >= demo->fps_frequency.QuadPart) {
+                demo->fps = (double)demo->fps_sample_frames *
+                    (double)demo->fps_frequency.QuadPart / (double)ticks;
+                demo->fps_sample_start = now;
+                demo->fps_sample_frames = 0;
+            }
+        }
+    }
 }
 
 static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
@@ -1868,8 +3580,19 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)demo);
         g_input_window = window;
         load_track_scenes(create->hInstance, demo);
+        load_skydomes(create->hInstance, demo);
+        load_kart_models(create->hInstance, demo);
+        load_track_textures(create->hInstance, demo);
+        load_skidmark_texture(create->hInstance, demo);
+        demo->kart_colour = KART_COLOURSET_DEFAULT;
+        demo->kart_textured = true;
+        QueryPerformanceFrequency(&demo->fps_frequency);
         kart_demo_sound_start(create->hInstance, &demo->sound);
         kart_demo_minimap_set_load(create->hInstance, &demo->minimaps);
+        if (demo->track_spec == NULL) {
+            demo->track_spec = kart_demo_find_track("village_R01");
+        }
+        load_course(demo);
         reset_kart(demo);
         SetTimer(window, 1, 16, NULL);
         return 0;
@@ -1914,15 +3637,77 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         controls.steering_input = demo->steering.value;
         controls.reverse_steering = false;
         controls.drift_input = key_down(VK_SHIFT) || key_down('W');
-        controls.boost_active = key_down(VK_CONTROL) || key_down('D');
+        {
+            /* The gauge models spend a charge on the press that starts a
+               booster; the infinite model lets every press through. */
+            const bool boost_down = key_down(VK_CONTROL) || key_down('D');
+            if (!boost_down) {
+                demo->boost_press_allowed = false;
+            } else if (!demo->boost_press_allowed &&
+                       !demo->kart.timed_boost.active &&
+                       controls.forward_input != 0.0f) {
+                /* The engine only starts an item boost while accelerating, so
+                   the charge is spent at that moment rather than on a press
+                   that cannot fire. */
+                demo->boost_press_allowed = kart_gauge_take_booster(&demo->gauge);
+            }
+            controls.boost_active = boost_down && demo->boost_press_allowed;
+        }
         {
             const bool kart_key_down = key_down('K') != 0;
             const bool track_key_down = key_down('T') != 0;
-            const bool drag_key_down = key_down('G') != 0;
+            const bool drag_key_down = key_down('F') != 0;
+            const bool gear_key_down = key_down('E') != 0;
+            const bool gauge_key_down = key_down('G') != 0;
+            if (gear_key_down && !demo->gear_key_was_down) {
+                demo->gearbox.mode =
+                    demo->gearbox.mode == KART_GEAR_SINGLE
+                        ? KART_GEAR_MULTI : KART_GEAR_SINGLE;
+                demo->gearbox.gear = 1;
+            }
+            demo->gear_key_was_down = gear_key_down;
+            if (gauge_key_down && !demo->gauge_key_was_down) {
+                /* Cycles infinite booster -> slip integral -> slip x
+                   suspension, so the three can be compared back to back. */
+                demo->gauge.model = (KartGaugeModel)
+                    ((demo->gauge.model + 1) % KART_GAUGE_MODEL_COUNT);
+            }
+            demo->gauge_key_was_down = gauge_key_down;
             const bool shot_key_down = key_down('S') != 0;
             const bool view_key_down = key_down('C') != 0;
             const bool vector_key_down = key_down('V') != 0;
             const bool param_key_down = key_down('P') != 0;
+            const bool gate_key_down = key_down('N') != 0;
+            const bool bounds_key_down = key_down('B') != 0;
+            const bool texture_key_down = key_down('X') != 0;
+            const bool kart_texture_key_down = key_down('Z') != 0;
+            if (texture_key_down && !demo->texture_key_was_down) {
+                demo->track_render_mode = (DemoTrackRenderMode)(
+                    (demo->track_render_mode + 1) % DEMO_TRACK_RENDER_MODE_COUNT);
+            }
+            demo->texture_key_was_down = texture_key_down;
+            const bool kart_colour_key_down = key_down('L') != 0;
+            if (kart_texture_key_down && !demo->kart_texture_key_was_down) {
+                demo->kart_textured = !demo->kart_textured;
+            }
+            demo->kart_texture_key_was_down = kart_texture_key_down;
+            if (kart_colour_key_down && !demo->kart_colour_key_was_down) {
+                demo->kart_colour = kart_demo_popup_select_colour(
+                    window, demo->kart_colour);
+                demo->previous_tick = GetTickCount();
+            }
+            demo->kart_colour_key_was_down = kart_colour_key_down;
+            /* Cheap once the skin is painted: it returns immediately unless the
+               kart or the colour changed. */
+            paint_kart_skin(demo);
+            if (gate_key_down && !demo->gate_key_was_down) {
+                demo->show_gates = !demo->show_gates;
+            }
+            demo->gate_key_was_down = gate_key_down;
+            if (bounds_key_down && !demo->bounds_key_was_down) {
+                demo->show_model_bounds = !demo->show_model_bounds;
+            }
+            demo->bounds_key_was_down = bounds_key_down;
             if (vector_key_down && !demo->vector_key_was_down) {
                 demo->show_vectors = !demo->show_vectors;
             }
@@ -1930,7 +3715,8 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             if (param_key_down && !demo->param_key_was_down) {
                 kart_demo_params_open(
                     (HINSTANCE)GetWindowLongPtr(window, GWLP_HINSTANCE),
-                    window, &demo->kart.config, &demo->kart_spec->dynamics);
+                    window, &demo->kart.config, &demo->kart_spec->dynamics,
+                    &demo->gauge_config);
             }
             demo->param_key_was_down = param_key_down;
             if (view_key_down && !demo->view_key_was_down) {
@@ -1961,6 +3747,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                     demo->track_spec = selected;
                     /* A new track is a new race, so the lights run again. */
                     demo->countdown.armed = false;
+                    load_course(demo);
                     reset_kart(demo);
                 }
                 demo->previous_tick = GetTickCount();
@@ -2029,9 +3816,20 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                 controls.boost_active = false;
             }
         }
-        if (key_down('R')) {
-            reset_kart(demo);
-        } else if (elapsed != 0) {
+        /* The original has no teleport-to-the-line key. Its reset command and
+           a fall out of the world both go through the same path at 0x00458000:
+           arm a timer, and 500 ms later put the kart back on the node it is
+           already in (0x00424640). R does that here; without a course to
+           respawn onto, it falls back to the start line. */
+        if (key_down('R') && demo->respawn_arm_ms == 0) {
+            if (demo->course_ready) {
+                demo->respawn_arm_ms = now;
+                demo->respawn_notice_ms = 2000;
+            } else {
+                reset_kart(demo);
+            }
+        }
+        if (elapsed != 0) {
             step = kart_simulate_milliseconds(&demo->kart, &controls, &world, elapsed);
             /* Telemetry: the step's own report, and the acceleration it came
                out with, differenced over the same clock the step used. */
@@ -2040,12 +3838,80 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                 vec_sub(demo->kart.linear_velocity, demo->previous_velocity),
                 1000.0f / (float)elapsed);
             demo->previous_velocity = demo->kart.linear_velocity;
+            {
+                /* The gauge integrates the same rear-axle slip the tire model
+                   uses, so it needs the body-axis split of the velocity. */
+                KartVec3 body_right;
+                KartVec3 body_forward;
+                KartVec3 body_up;
+                orientation_axes(
+                    demo->kart.orientation, &body_right, &body_forward,
+                    &body_up);
+                kart_gauge_update(
+                    &demo->gauge, &demo->gauge_config, &demo->kart,
+                    vec_dot(demo->kart.linear_velocity, body_forward),
+                    vec_dot(demo->kart.linear_velocity, body_right),
+                    drift_visual_active(&demo->kart),
+                    (float)elapsed * 0.001f);
+            }
+            /* 0x00426470 walks the kart's position trail one segment at a
+               time; one simulation step is one such segment. */
+            if (demo->course_ready) {
+                KartVec3 warp_destination;
+                float warp_yaw;
+                if (kart_course_warp_next(
+                        &demo->course,
+                        demo->previous_position, demo->kart.position,
+                        &warp_destination, &warp_yaw)) {
+                    demo->kart.position = warp_destination;
+                    demo->kart.linear_velocity =
+                        vec_rotate_z(demo->kart.linear_velocity, warp_yaw);
+                    demo->kart.angular_velocity =
+                        vec_rotate_z(demo->kart.angular_velocity, warp_yaw);
+                    demo->kart.orientation =
+                        quat_pre_rotate_z(demo->kart.orientation, warp_yaw);
+                    demo->previous_position = warp_destination;
+                } else {
+                    kart_course_progress_step(
+                        &demo->course, &demo->progress, demo->previous_position,
+                        demo->kart.position, demo->kart.orientation,
+                        demo->kart.linear_velocity, demo->simulation_time_ms);
+                }
+            }
+            demo->previous_position = demo->kart.position;
         }
+        /* Falling out of the world arms the same respawn the reset command
+           does, rather than teleporting on the spot. */
         if (demo->kart.position.z <
-            kart_demo_track_fall_limit(demo->track_spec)) {
-            reset_kart(demo);
-            demo->respawn_notice_ms = 1500;
-        } else if (demo->respawn_notice_ms > elapsed) {
+                kart_demo_track_fall_limit(demo->track_spec) &&
+            demo->respawn_arm_ms == 0) {
+            if (demo->course_ready) {
+                demo->respawn_arm_ms = now;
+                demo->respawn_notice_ms = 2000;
+            } else {
+                reset_kart(demo);
+                demo->respawn_notice_ms = 1500;
+            }
+        }
+        if (demo->respawn_arm_ms != 0 && now - demo->respawn_arm_ms >= 500) {
+            KartVec3 respawn_position;
+            KartQuat respawn_orientation;
+            if (kart_course_respawn_pose(
+                    &demo->course, &demo->progress, &respawn_position,
+                    &respawn_orientation)) {
+                /* 0x00428c40 writes the pose and zeroes the velocities with
+                   it, which is why the kart lands stopped. */
+                demo->kart.position = respawn_position;
+                demo->kart.orientation = respawn_orientation;
+                demo->kart.linear_velocity = (KartVec3){0.0f, 0.0f, 0.0f};
+                demo->kart.angular_velocity = (KartVec3){0.0f, 0.0f, 0.0f};
+                demo->previous_position = respawn_position;
+                demo->previous_velocity = demo->kart.linear_velocity;
+                kart_chase_camera_follow_reset(&demo->camera_follow);
+            }
+            demo->respawn_arm_ms = 0;
+        }
+        if (demo->respawn_notice_ms > elapsed) {
             demo->respawn_notice_ms -= elapsed;
         } else {
             demo->respawn_notice_ms = 0;
@@ -2081,6 +3947,21 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         kart_demo_sound_update(
             &demo->sound, &demo->kart,
             step.wall_impact_speed, step.ground_impact_speed, now);
+        {
+            /* The gearbox only re-pitches the engine loop the sound driver
+               already opened, so SINGLE leaves the recovered note untouched and
+               MULTI replaces it with its own sawtooth. */
+            const KartVec3 v = demo->kart.linear_velocity;
+            kart_gearbox_update(
+                &demo->gearbox, sqrtf(v.x * v.x + v.y * v.y + v.z * v.z),
+                (float)elapsed * 0.001f);
+            if (demo->gearbox.mode == KART_GEAR_MULTI &&
+                demo->sound.audio != NULL && demo->sound.motor_voice >= 0) {
+                kart_audio_set_voice(
+                    demo->sound.audio, demo->sound.motor_voice,
+                    demo->sound.driver.motor_volume, demo->gearbox.pitch);
+            }
+        }
         update_skid_marks(demo);
         InvalidateRect(window, NULL, FALSE);
         return 0;
@@ -2099,6 +3980,10 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         if (demo != NULL) {
             kart_demo_sound_stop(&demo->sound);
             free_track_scenes(demo);
+            kart_track_texture_free(&demo->textures);
+            free_skidmark_texture(demo);
+            free(demo->skin_texels);
+            demo->skin_texels = NULL;
             kart_demo_minimap_set_free(&demo->minimaps);
         }
         PostQuitMessage(0);
@@ -2119,6 +4004,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE previous, LPSTR command_line, i
     (void)command_line;
     (void)show;
 
+    demo.gauge_config = kart_gauge_default_config();
+    demo.gauge.model = KART_GAUGE_SLIP;
     window_class.lpfnWndProc = window_proc;
     window_class.hInstance = instance;
     window_class.lpszClassName = CLASS_NAME;

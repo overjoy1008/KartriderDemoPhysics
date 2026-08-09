@@ -1,0 +1,3 @@
+#include "kart_track_texture_resources.h"
+
+IDR_SKIDMARK_TEXTURE RCDATA "@KART_SKIDMARK_TEXTURE@"

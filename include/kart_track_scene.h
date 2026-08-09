@@ -5,6 +5,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* KTRK 2 differs from 1 only in what a mesh's flags mean: bit 0 used to be a
+   guess from the node's name and is now the asset's own `property/road` tag.
+   Loading refuses version 1 so a stale export fails here rather than reporting
+   that nothing in the track is solid. */
+#define KART_TRACK_SCENE_VERSION 2u
+
+/* Bit 0 of KartTrackSceneMesh.flags: this geometry is in the collision set the
+   original builds, which is the only geometry it ever collides against. */
+#define KART_TRACK_SCENE_MESH_COLLIDABLE 1u
+
 typedef struct KartTrackSceneVertex {
     float x;
     float y;
