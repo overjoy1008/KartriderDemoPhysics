@@ -19,6 +19,7 @@
 #include "kart_sound_win32.h"
 #include "kart_track_collision.h"
 #include "kart_track_scene.h"
+#include "kart_skydome_resources.h"
 #include "kart_track_scene_resources.h"
 #include "kart_track_texture.h"
 #include "kart_track_texture_resources.h"
@@ -110,6 +111,9 @@ typedef struct Demo3DState {
     bool countdown_rev_active;
     bool forward_key_was_down;
     KartTrackScene scenes[KART_TRACK_SCENE_CAPACITY];
+    /* The skydome that ships beside each track, in the same order. Meshes with
+       no exported dome stay empty. */
+    KartTrackScene skydomes[KART_TRACK_SCENE_CAPACITY];
     /* The recovered kart models, in KARTS[] order. Loaded once up front: all 26
        together are about 340 KB of geometry, so there is nothing to gain from
        loading them on demand when the driver presses K. */
@@ -122,11 +126,24 @@ typedef struct Demo3DState {
     bool show_gates;
     bool gate_key_was_down;
     /* The tracks' texture assets, one shared table for all 13. `textured`
-       picks the solid renderer that samples them over the wireframe. */
+       picks the solid renderer that samples them over the wireframe, and
+       starts off: the mesh is what the rest of the demo is about. */
     KartTrackTextureTable textures;
     bool textures_ready;
     bool textured;
     bool texture_key_was_down;
+    /* The kart's own skin, on its own key: it only applies in the textured
+       renderer, and the state colour is still the more readable of the two. */
+    bool kart_textured;
+    bool kart_texture_key_was_down;
+    /* The colortable index, and what the skin was last repainted from: the
+       repaint is in place, so the asset's own texels are kept to redo it. */
+    unsigned int kart_colour;
+    bool kart_colour_key_was_down;
+    const KartTrackTextureImage *painted_skin;
+    unsigned int painted_colour;
+    uint16_t *skin_texels;
+    size_t skin_texel_count;
     KartDemoMinimapSet minimaps;
     /* The original's checkpoint graph for the selected track, rebuilt whenever
        the track changes. `course_ready` is false for the synthetic flat track,
@@ -184,6 +201,23 @@ static void load_track_scenes(HINSTANCE instance, Demo3DState *demo)
         if (KART_TRACK_SCENE_RESOURCE_IDS[i] == 0) continue;
         load_scene_resource(
             instance, KART_TRACK_SCENE_RESOURCE_IDS[i], &demo->scenes[i]);
+    }
+#else
+    (void)instance;
+    (void)demo;
+#endif
+}
+
+/* The domes are ordinary KTRK exports, so the same loader reads them. */
+static void load_skydomes(HINSTANCE instance, Demo3DState *demo)
+{
+#if defined(KART_EMBED_SKYDOMES)
+    unsigned int i;
+    const unsigned int count = kart_demo_track_count();
+    for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
+        if (KART_SKYDOME_RESOURCE_IDS[i] == 0) continue;
+        load_scene_resource(
+            instance, KART_SKYDOME_RESOURCE_IDS[i], &demo->skydomes[i]);
     }
 #else
     (void)instance;
@@ -259,6 +293,7 @@ static void free_track_scenes(Demo3DState *demo)
     unsigned int i;
     for (i = 0; i < KART_TRACK_SCENE_CAPACITY; ++i) {
         kart_track_scene_free(&demo->scenes[i]);
+        kart_track_scene_free(&demo->skydomes[i]);
     }
     for (i = 0; i < KART_MODEL_CAPACITY; ++i) {
         kart_track_scene_free(&demo->models[i]);
@@ -290,6 +325,18 @@ static const KartTrackScene *active_track_scene(const Demo3DState *demo)
     for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
         if (kart_demo_track_at(i) == demo->track_spec) {
             return demo->scenes[i].mesh_count != 0 ? &demo->scenes[i] : NULL;
+        }
+    }
+    return NULL;
+}
+
+static const KartTrackScene *active_skydome(const Demo3DState *demo)
+{
+    unsigned int i;
+    const unsigned int count = kart_demo_track_count();
+    for (i = 0; i < count && i < KART_TRACK_SCENE_CAPACITY; ++i) {
+        if (kart_demo_track_at(i) == demo->track_spec) {
+            return demo->skydomes[i].mesh_count != 0 ? &demo->skydomes[i] : NULL;
         }
     }
     return NULL;
@@ -972,6 +1019,68 @@ static float *frame_depth_buffer(int width, int height)
     return buffer;
 }
 
+/* One world-space triangle through the same pipeline, which is what everything
+   that is not track geometry needs: the kart's faces, the boost flame, a skid
+   mark's quad. `image` NULL fills with `colour` (0x00RRGGBB); otherwise `uv`
+   supplies the three texture coordinates and `colour` is ignored. */
+static void raster_world_triangle(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    KartVec3 a,
+    KartVec3 b,
+    KartVec3 c,
+    const float *uv,
+    const KartTrackTextureImage *image,
+    uint32_t colour)
+{
+    const float near_depth = 0.2f;
+    const KartVec3 world[3] = {a, b, c};
+    RasterVertex source[3];
+    RasterVertex clipped[8];
+    ScreenVertex screen[8];
+    int clipped_count;
+    int corner;
+    for (corner = 0; corner < 3; ++corner) {
+        const KartVec3 relative = vec_sub(world[corner], camera.position);
+        source[corner].x = vec_dot(relative, camera.right);
+        source[corner].y = vec_dot(relative, camera.up);
+        source[corner].z = vec_dot(relative, camera.forward);
+        source[corner].u = uv != NULL ? uv[corner * 2] : 0.0f;
+        source[corner].v = uv != NULL ? uv[corner * 2 + 1] : 0.0f;
+    }
+    clipped_count = clip_raster_near(source, 3, near_depth, clipped);
+    if (clipped_count < 3) {
+        return;
+    }
+    for (corner = 0; corner < clipped_count; ++corner) {
+        screen[corner] = project_raster_vertex(client, camera, clipped[corner]);
+    }
+    for (corner = 1; corner < clipped_count - 1; ++corner) {
+        raster_triangle(
+            target, screen[0], screen[corner], screen[corner + 1], image, colour);
+    }
+}
+
+static void raster_flat_triangle(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    KartVec3 a,
+    KartVec3 b,
+    KartVec3 c,
+    uint32_t colour)
+{
+    raster_world_triangle(target, client, camera, a, b, c, NULL, NULL, colour);
+}
+
+static uint32_t colorref_to_bgrx(COLORREF colour)
+{
+    return ((uint32_t)GetRValue(colour) << 16) |
+           ((uint32_t)GetGValue(colour) << 8) |
+           (uint32_t)GetBValue(colour);
+}
+
 /* Rasterizes the whole scene. `theme` keys the texture lookup; passing an empty
    table simply draws every mesh with its floor/wall tint. */
 static void draw_track_scene_textured(
@@ -981,9 +1090,13 @@ static void draw_track_scene_textured(
     const KartDemoTrackSpec *track,
     const KartTrackScene *scene,
     const KartTrackTextureTable *textures,
-    const char *theme)
+    const char *theme,
+    float draw_radius)
 {
-    const float draw_radius_squared = 210.0f * 210.0f;
+    /* The dome is thousands of units across and has to be drawn whole, so a
+       radius of zero means no distance cull at all. */
+    const float draw_radius_squared =
+        draw_radius > 0.0f ? draw_radius * draw_radius : 0.0f;
     const float near_depth = 0.2f;
     uint32_t mesh_index;
 
@@ -1021,8 +1134,9 @@ static void draw_track_scene_textured(
             }
             center_x = center_x / 3.0f - camera.position.x;
             center_y = center_y / 3.0f - camera.position.y;
-            if (center_x * center_x + center_y * center_y >
-                draw_radius_squared) {
+            if (draw_radius_squared > 0.0f &&
+                center_x * center_x + center_y * center_y >
+                    draw_radius_squared) {
                 continue;
             }
             clipped_count =
@@ -1504,6 +1618,38 @@ static void draw_boost_effect(
     DeleteObject(flame_pen);
 }
 
+/* The flame triangle the GDI pass builds, through the rasterizer. Kept beside
+   it so the two stay the same shape. */
+static void raster_boost_effect(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    const Demo3DState *demo)
+{
+    KartVec3 right;
+    KartVec3 forward;
+    KartVec3 up;
+    KartVec3 rear;
+    KartVec3 flame[3];
+
+    if (!demo->boost_active) {
+        return;
+    }
+    orientation_axes(demo->kart.orientation, &right, &forward, &up);
+    rear = vec_add(
+        demo->kart.position,
+        vec_add(
+            vec_scale(forward, -demo->kart.geometry.half_length),
+            vec_scale(up, 0.35f)));
+    flame[0] = vec_add(rear, vec_scale(right, demo->kart.geometry.half_width * 0.42f));
+    flame[1] = vec_add(rear, vec_scale(right, -demo->kart.geometry.half_width * 0.42f));
+    flame[2] = vec_add(
+        rear,
+        vec_add(vec_scale(forward, -2.8f), vec_scale(up, -0.08f)));
+    raster_flat_triangle(
+        target, client, camera, flame[0], flame[1], flame[2], 0x00FFC623u);
+}
+
 static void draw_motion_vectors(
     HDC dc,
     RECT client,
@@ -1630,12 +1776,14 @@ static KartVec3 kart_model_vertex(
         kart, right, forward, up, -vertex->x, -vertex->y, vertex->z);
 }
 
-/* One triangle of the model, ready to sort. */
+/* One triangle of the model, ready to sort. `uv` is the asset's own texture
+   coordinate per corner, which only the textured path reads. */
 typedef struct KartModelFace {
     float depth;
     float shade;
     bool wheel;
     KartVec3 vertices[3];
+    float uv[6];
 } KartModelFace;
 
 /* cotten5 is the heaviest model at 645 triangles. */
@@ -1662,41 +1810,81 @@ static COLORREF scale_color(COLORREF color, float shade)
         (BYTE)(b > 255.0f ? 255.0f : b));
 }
 
-/* Draws the recovered mesh: every submesh, depth sorted, flat shaded.
+/* Fixed world-space key light, so the shading reads as the kart turning under a
+   light rather than the light turning with the kart. */
+static const KartVec3 KART_MODEL_LIGHT = {0.38f, -0.52f, 0.76f};
 
-   The paint is the demo's state colour rather than the original skin. That is
-   not a shortcut waiting to be finished - the skins carry no colour to use.
-   All 26 are achromatic apart from a 900-texel marker patch, so a textured
-   kart would come out grey. See docs/KART_MODEL_CATALOG.md. */
-static void draw_kart_model(
-    HDC dc,
-    RECT client,
+/* Dark enough to read as tyres, light enough that the shading on them is still
+   visible against the track fill. */
+#define KART_MODEL_WHEEL_COLOR RGB(96, 100, 112)
+
+/* The kart's paint.
+
+   0x00417160 repaints the skin when the kart is built: it walks the atlas texel
+   by texel looking for two key colours and fills a rectangle at each hit.
+
+     key `cyan`  (DAT_005b1930) -> rect (x-5, y-8)..(x+5, y+9), filled with the
+                                   colortable entry's `base`
+     key `blue`  (DAT_005b1924) -> rect (x, y)..(x+0x2d, y+0x14), filled from a
+                                   different slot - that one is the number plate
+
+   So the colour the driver picks lands on the cyan-anchored patch, not on the
+   900-texel blue block at the back. `kartColor` in riderData.1s is the index.
+
+   The values are the demo's own, read from Data/etc.rho's colortable.xml; a
+   copy of that file is at analysis/kart-assets/demo_etc/colortable.xml. The
+   names come from riderData.1s's editor enum. */
+#define KART_SKIN_KEY_CYAN 0x07FFu    /* (0, 255, 255) in RGB565 */
+#define KART_SKIN_KEY_BLUE 0x001Fu    /* (0, 0, 255) */
+#define KART_SKIN_KEY_MAGENTA 0xF81Fu /* (255, 0, 255), the atlas filler */
+
+static const struct {
+    const char *name;
+    unsigned char base[3];
+    unsigned char high[3];
+} KART_COLOURSETS[] = {
+    {"red",    {232,  39,   6}, {255, 186,   0}},
+    {"yellow", {255, 186,   0}, {255, 255,   0}},
+    {"orange", {255, 130,   0}, {255, 186,  82}},
+    {"green",  { 58, 174,  25}, {210, 255,   0}},
+    {"teal",   {  0, 199, 206}, {255, 255, 255}},
+    {"blue",   { 19, 121, 219}, {  0, 252, 255}},
+    {"purple", {140,  56, 239}, {255, 255, 255}},
+    {"black",  { 40,  40,  40}, {150, 150, 150}},
+    {"pink",   {248,   1, 122}, {255, 190, 190}},
+    {"white",  {243, 243, 243}, {255, 255, 255}},
+};
+#define KART_COLOURSET_COUNT \
+    (unsigned int)(sizeof(KART_COLOURSETS) / sizeof(KART_COLOURSETS[0]))
+/* riderData.1s ships 8 = pink on this profile. */
+#define KART_COLOURSET_DEFAULT 8u
+
+static COLORREF kart_model_body_color(
+    const KartSimulationState *kart,
+    bool boost_active)
+{
+    return boost_active
+        ? RGB(255, 165, 35)
+        : (drift_visual_active(kart)
+            ? RGB(65, 205, 255)
+            : RGB(235, 65, 80));
+}
+
+/* Builds the model's world-space faces with their shade. Shared by the GDI
+   painter's-order path and the rasterized one, which only differ in how they
+   resolve occlusion. Returns how many faces were written. */
+static size_t collect_kart_model_faces(
     Camera3D camera,
     const KartSimulationState *kart,
     const KartTrackScene *model,
     const KartModelParts *parts,
-    bool boost_active)
+    KartModelFace *faces,
+    size_t capacity)
 {
-    /* Fixed world-space key light, so the shading reads as the kart turning
-       under a light rather than the light turning with the kart. */
-    const KartVec3 light = {0.38f, -0.52f, 0.76f};
-    const COLORREF body_color =
-        boost_active
-            ? RGB(255, 165, 35)
-            : (drift_visual_active(kart)
-                ? RGB(65, 205, 255)
-                : RGB(235, 65, 80));
-    /* Dark enough to read as tyres, light enough that the shading on them is
-       still visible against the track fill. */
-    const COLORREF wheel_color = RGB(96, 100, 112);
-    static KartModelFace faces[KART_MODEL_MAX_FACES];
     KartVec3 body_right;
     KartVec3 body_forward;
     KartVec3 body_up;
-    HGDIOBJ old_pen;
-    HGDIOBJ old_brush;
     size_t face_count = 0;
-    size_t i;
     uint32_t mesh_index;
 
     orientation_axes(kart->orientation, &body_right, &body_forward, &body_up);
@@ -1712,18 +1900,20 @@ static void draw_kart_model(
             KartVec3 normal;
             KartVec3 centre;
             float facing;
-            if (face_count == KART_MODEL_MAX_FACES) break;
+            if (face_count == capacity) break;
             face = &faces[face_count];
             face->wheel = wheel;
-            face->vertices[0] = kart_model_vertex(
-                kart, body_right, body_forward, body_up,
-                &mesh->vertices[mesh->indices[base]]);
-            face->vertices[1] = kart_model_vertex(
-                kart, body_right, body_forward, body_up,
-                &mesh->vertices[mesh->indices[base + 1u]]);
-            face->vertices[2] = kart_model_vertex(
-                kart, body_right, body_forward, body_up,
-                &mesh->vertices[mesh->indices[base + 2u]]);
+            {
+                unsigned int corner;
+                for (corner = 0; corner < 3u; ++corner) {
+                    const KartTrackSceneVertex *vertex =
+                        &mesh->vertices[mesh->indices[base + corner]];
+                    face->vertices[corner] = kart_model_vertex(
+                        kart, body_right, body_forward, body_up, vertex);
+                    face->uv[corner * 2u] = vertex->u;
+                    face->uv[corner * 2u + 1u] = vertex->v;
+                }
+            }
             centre = vec_scale(
                 vec_add(vec_add(face->vertices[0], face->vertices[1]),
                         face->vertices[2]),
@@ -1737,12 +1927,32 @@ static void draw_kart_model(
             /* The exports do not agree on winding between submeshes, so the
                normal is folded to whichever side faces the camera instead of
                being used to cull. Nothing here is a closed hull anyway. */
-            facing = vec_dot(normal, light);
+            facing = vec_dot(normal, KART_MODEL_LIGHT);
             if (facing < 0.0f) facing = -facing;
             face->shade = 0.42f + 0.58f * facing;
             ++face_count;
         }
     }
+    return face_count;
+}
+
+static void draw_kart_model(
+    HDC dc,
+    RECT client,
+    Camera3D camera,
+    const KartSimulationState *kart,
+    const KartTrackScene *model,
+    const KartModelParts *parts,
+    bool boost_active)
+{
+    const COLORREF body_color = kart_model_body_color(kart, boost_active);
+    const COLORREF wheel_color = KART_MODEL_WHEEL_COLOR;
+    static KartModelFace faces[KART_MODEL_MAX_FACES];
+    HGDIOBJ old_pen;
+    HGDIOBJ old_brush;
+    size_t i;
+    const size_t face_count = collect_kart_model_faces(
+        camera, kart, model, parts, faces, KART_MODEL_MAX_FACES);
     if (face_count == 0) {
         return;
     }
@@ -1951,6 +2161,258 @@ static void draw_kart(
     }
     if (demo->show_model_bounds) {
         draw_kart_model_bounds(dc, client, camera, &demo->kart, parts);
+    }
+}
+
+/* Rebuilds the active kart's skin for the chosen colour, the way 0x00417160
+   does. Three things happen to the atlas:
+
+   1. The body. 0x004a6eb0 composites "0" and "1" (the two PNGs beside model.1s)
+      and tints by luminance: a texel of "0" darker than 0x80 in every channel
+      takes `base`, otherwise `high`. Every kart's 0.png is 256x128 of
+      (255, 255, 255, alpha 0) with two opaque white texels and no dark texel at
+      all, so the tint is uniformly `high` and "1" is alpha-composited over it.
+      Pure magenta in "1" is the colour key and comes out transparent.
+   2. The number. Each `cyan` texel anchors a 10x17 rectangle - one digit of the
+      100x17 number.png - blended in with `base` through the digit's alpha
+      (0x00416ff0). The demo builds every kart with digit 0.
+   3. The plate. Each `blue` texel is the top-left of a 45x20 rectangle that
+      plate.png is copied straight into.
+
+   So the paint the driver picks reads as `high` over the whole body and `base`
+   on the racing number; the 900-texel blue block at the back is the plate and
+   takes no colour at all.
+
+   The table's images are shared, so this starts from a copy of the asset's own
+   texels rather than from whatever the last colour left behind. */
+static void paint_kart_skin(Demo3DState *demo)
+{
+    /* The table is the demo's own; find() is const only because callers that
+       sample it have no business writing to it. */
+    KartTrackTextureImage *image = (KartTrackTextureImage *)
+        kart_track_texture_find(
+            &demo->textures, "kart", demo->kart_spec->asset_name);
+    const KartTrackTextureImage *plate =
+        kart_track_texture_find(&demo->textures, "kart", "@plate");
+    const KartTrackTextureImage *number =
+        kart_track_texture_find(&demo->textures, "kart", "@number");
+    const unsigned char *base_rgb;
+    const unsigned char *high_rgb;
+    const int width = image != NULL ? (int)image->width : 0;
+    const int height = image != NULL ? (int)image->height : 0;
+    size_t texel;
+    int x;
+    int y;
+
+    if (image == NULL || image->alpha == NULL) {
+        demo->painted_skin = NULL;
+        return;
+    }
+    if (demo->painted_skin == image &&
+        demo->painted_colour == demo->kart_colour) {
+        return;
+    }
+    if (demo->painted_skin != image) {
+        const size_t count = (size_t)width * (size_t)height;
+        uint16_t *copy = (uint16_t *)realloc(
+            demo->skin_texels, count * sizeof(*copy));
+        if (copy == NULL) {
+            return;
+        }
+        memcpy(copy, image->texels, count * sizeof(*copy));
+        demo->skin_texels = copy;
+        demo->skin_texel_count = count;
+    }
+    base_rgb = KART_COLOURSETS[demo->kart_colour].base;
+    high_rgb = KART_COLOURSETS[demo->kart_colour].high;
+
+    /* 1. body: "1" over a solid `high`, magenta keyed out. */
+    for (texel = 0; texel < demo->skin_texel_count; ++texel) {
+        const uint16_t source = demo->skin_texels[texel];
+        const unsigned int alpha = image->alpha[texel];
+        unsigned int channel[3];
+        unsigned int i;
+        if (source == KART_SKIN_KEY_MAGENTA) {
+            image->mask[texel >> 3] &= (uint8_t)~(1u << (texel & 7u));
+            continue;
+        }
+        channel[0] = (unsigned int)((source >> 11) & 0x1Fu) << 3;
+        channel[1] = (unsigned int)((source >> 5) & 0x3Fu) << 2;
+        channel[2] = (unsigned int)(source & 0x1Fu) << 3;
+        for (i = 0; i < 3u; ++i) {
+            const unsigned int blended =
+                ((255u - alpha) * high_rgb[i] + channel[i] * alpha) / 255u;
+            channel[i] = blended > 255u ? 255u : blended;
+        }
+        image->texels[texel] = (uint16_t)(
+            ((channel[0] >> 3) << 11) | ((channel[1] >> 2) << 5) |
+            (channel[2] >> 3));
+        image->mask[texel >> 3] |= (uint8_t)(1u << (texel & 7u));
+    }
+
+    /* 2 and 3: the two stamps, placed off the key texels.
+
+       The scan reads the image it is writing into, which is what 0x00417160
+       does - it walks the composited image in place. That is not incidental:
+       the plate's key is a solid 45x20 block of blue, so the first hit at its
+       top-left corner overwrites all 900 of them and the scan finds no more.
+       Reading a frozen copy instead stamps the plate 900 times. */
+    for (y = 0; y < height; ++y) {
+        for (x = 0; x < width; ++x) {
+            const uint16_t key =
+                image->texels[(size_t)y * (size_t)width + (size_t)x];
+            int stamp_x;
+            int stamp_y;
+            if (key == KART_SKIN_KEY_CYAN && number != NULL &&
+                number->alpha != NULL) {
+                /* Digit 0 of the strip, blended in with `base`. */
+                for (stamp_y = 0; stamp_y < 17; ++stamp_y) {
+                    const int target_y = y - 8 + stamp_y;
+                    if (target_y < 0 || target_y >= height) continue;
+                    for (stamp_x = 0; stamp_x < 10; ++stamp_x) {
+                        const int target_x = x - 5 + stamp_x;
+                        const size_t from = (size_t)stamp_y *
+                            (size_t)number->width + (size_t)stamp_x;
+                        const size_t to =
+                            (size_t)target_y * (size_t)width + (size_t)target_x;
+                        const unsigned int alpha = number->alpha[from];
+                        unsigned int i;
+                        unsigned int channel[3];
+                        if (target_x < 0 || target_x >= width) continue;
+                        if ((int)number->width <= stamp_x ||
+                            (int)number->height <= stamp_y) continue;
+                        channel[0] = (unsigned int)((image->texels[to] >> 11) & 0x1Fu) << 3;
+                        channel[1] = (unsigned int)((image->texels[to] >> 5) & 0x3Fu) << 2;
+                        channel[2] = (unsigned int)(image->texels[to] & 0x1Fu) << 3;
+                        for (i = 0; i < 3u; ++i) {
+                            channel[i] = (channel[i] * (255u - alpha) +
+                                          (unsigned int)base_rgb[i] * alpha) / 255u;
+                        }
+                        image->texels[to] = (uint16_t)(
+                            ((channel[0] >> 3) << 11) |
+                            ((channel[1] >> 2) << 5) | (channel[2] >> 3));
+                        image->mask[to >> 3] |= (uint8_t)(1u << (to & 7u));
+                    }
+                }
+            } else if (key == KART_SKIN_KEY_BLUE && plate != NULL) {
+                for (stamp_y = 0; stamp_y < (int)plate->height; ++stamp_y) {
+                    const int target_y = y + stamp_y;
+                    if (target_y < 0 || target_y >= height) continue;
+                    for (stamp_x = 0; stamp_x < (int)plate->width; ++stamp_x) {
+                        const int target_x = x + stamp_x;
+                        const size_t to =
+                            (size_t)target_y * (size_t)width + (size_t)target_x;
+                        if (target_x < 0 || target_x >= width) continue;
+                        image->texels[to] = plate->texels[
+                            (size_t)stamp_y * (size_t)plate->width +
+                            (size_t)stamp_x];
+                        image->mask[to >> 3] |= (uint8_t)(1u << (to & 7u));
+                    }
+                }
+            }
+        }
+    }
+    demo->painted_skin = image;
+    demo->painted_colour = demo->kart_colour;
+}
+
+/* The kart, its skid marks and the boost flame through the rasterizer instead
+   of GDI, so the track's depth buffer decides what is in front of what. Without
+   this the kart shows through a wall the moment the track rises between it and
+   the camera. Drawn after the track, testing and writing the same buffer. */
+static void raster_kart(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    const Demo3DState *demo)
+{
+    static KartModelFace faces[KART_MODEL_MAX_FACES];
+    const KartModelParts *parts = NULL;
+    const KartTrackScene *model = active_kart_model(demo, &parts);
+    const COLORREF body_color =
+        kart_model_body_color(&demo->kart, demo->boost_active);
+    /* The kart's own skin. A kart mesh names no material - the exporter finds
+       none on a ReToonRigid node - so the lookup is by the kart's asset name
+       under the "kart" theme, which is where the packer put its 1.png. */
+    const KartTrackTextureImage *skin =
+        demo->kart_textured
+            ? kart_track_texture_find(
+                  &demo->textures, "kart", demo->kart_spec->asset_name)
+            : NULL;
+    size_t face_count;
+    size_t i;
+
+    if (model == NULL || parts == NULL || !parts->valid) {
+        return;
+    }
+    face_count = collect_kart_model_faces(
+        camera, &demo->kart, model, parts, faces, KART_MODEL_MAX_FACES);
+    /* No sort: the depth buffer resolves the order the qsort stood in for. */
+    for (i = 0; i < face_count; ++i) {
+        const KartModelFace *face = &faces[i];
+        raster_world_triangle(
+            target, client, camera,
+            face->vertices[0], face->vertices[1], face->vertices[2],
+            skin != NULL ? face->uv : NULL, skin,
+            colorref_to_bgrx(scale_color(
+                face->wheel ? KART_MODEL_WHEEL_COLOR : body_color,
+                face->shade)));
+    }
+}
+
+static void raster_skid_marks(
+    SoftwareTarget *target,
+    RECT client,
+    Camera3D camera,
+    const Demo3DState *demo)
+{
+    /* The GDI pass draws these as pen-width lines, which have no world size at
+       all. Through the rasterizer they have to be geometry, so each segment
+       becomes a quad of a tyre's width lying on the ground. */
+    const float half_width = 0.09f;
+    unsigned int i;
+
+    for (i = 0; i < demo->skid_count; ++i) {
+        const unsigned int oldest =
+            (demo->skid_head + MAX_SKID_SEGMENTS - demo->skid_count) %
+            MAX_SKID_SEGMENTS;
+        const SkidSegment3D *segment =
+            &demo->skid_segments[(oldest + i) % MAX_SKID_SEGMENTS];
+        const unsigned int age = demo->simulation_time_ms - segment->created_ms;
+        uint32_t colour;
+        int side;
+        if (age > SKID_LIFETIME_MS) {
+            continue;
+        }
+        colour = age < 4000u ? 0x00080A0Cu
+                             : (age < 9000u ? 0x00171A1Du : 0x002B2F33u);
+        for (side = 0; side < 2; ++side) {
+            const float x0 = side == 0 ? segment->left_x0 : segment->right_x0;
+            const float y0 = side == 0 ? segment->left_y0 : segment->right_y0;
+            const float x1 = side == 0 ? segment->left_x1 : segment->right_x1;
+            const float y1 = side == 0 ? segment->left_y1 : segment->right_y1;
+            const float dx = x1 - x0;
+            const float dy = y1 - y0;
+            const float length = sqrtf(dx * dx + dy * dy);
+            float nx;
+            float ny;
+            KartVec3 quad[4];
+            if (length < 1.0e-4f) {
+                continue;
+            }
+            nx = -dy / length * half_width;
+            ny = dx / length * half_width;
+            /* The same 0.025 lift the GDI pass uses, which keeps the mark off
+               the road surface it is drawn over. */
+            quad[0] = (KartVec3){x0 + nx, y0 + ny, 0.025f};
+            quad[1] = (KartVec3){x1 + nx, y1 + ny, 0.025f};
+            quad[2] = (KartVec3){x1 - nx, y1 - ny, 0.025f};
+            quad[3] = (KartVec3){x0 - nx, y0 - ny, 0.025f};
+            raster_flat_triangle(
+                target, client, camera, quad[0], quad[1], quad[2], colour);
+            raster_flat_triangle(
+                target, client, camera, quad[0], quad[2], quad[3], colour);
+        }
     }
 }
 
@@ -2526,33 +2988,81 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         const KartTrackScene *scene = active_track_scene(demo);
         const bool textured =
             demo->textured && scene != NULL && frame_pixels != NULL;
-        if (textured) {
+        /* The kart's skin is a separate switch, so Z alone rasterizes just the
+           kart over the wireframe track. Its depth buffer is then empty, which
+           is right: the wireframe is line art with no depth to test against. */
+        const bool kart_only =
+            !textured && demo->kart_textured && frame_pixels != NULL;
+        bool rasterized = false;
+        if (textured || kart_only) {
             SoftwareTarget frame;
             char theme[32];
-            /* GDI batches, so the sky fill has to have landed in the DIB
-               before anything writes to it behind GDI's back. */
-            GdiFlush();
+            memset(&frame, 0, sizeof(frame));
             frame.pixels = (uint32_t *)frame_pixels;
             frame.depth = frame_depth_buffer(client.right, client.bottom);
             frame.width = client.right;
             frame.height = client.bottom;
-            if (frame.depth != NULL) {
+            if (kart_only) {
+                /* Everything the kart is drawn over has to be on the DIB first,
+                   because the rasterizer writes pixels GDI will not touch
+                   again. Gates included, so they read as annotation under it. */
+                draw_track(buffer, client, camera, demo->track_spec);
+                draw_track_scene(
+                    buffer, client, camera, demo->track_spec, scene);
+                if (demo->show_gates && demo->course_ready) {
+                    draw_course_gates(buffer, client, camera, &demo->course);
+                }
+                draw_skid_marks(buffer, client, camera, demo);
+                draw_boost_effect(buffer, client, camera, demo);
+            }
+            /* GDI batches, so everything drawn so far has to have landed in the
+               DIB before anything writes to it behind GDI's back. */
+            GdiFlush();
+            if (frame.depth != NULL && kart_only) {
+                rasterized = true;
+                raster_kart(&frame, client, camera, demo);
+            } else if (frame.depth != NULL) {
+                const KartTrackScene *dome = active_skydome(demo);
+                rasterized = true;
                 track_theme(demo->track_spec, theme, sizeof(theme));
+                /* The dome first and with no distance cull: it is thousands of
+                   units across and encloses the whole track, so it is drawn
+                   where the asset puts it and the depth buffer keeps everything
+                   else in front of it. */
+                if (dome != NULL) {
+                    draw_track_scene_textured(
+                        &frame, client, camera, demo->track_spec, dome,
+                        &demo->textures, theme, 0.0f);
+                }
                 draw_track_scene_textured(
                     &frame, client, camera, demo->track_spec, scene,
-                    &demo->textures, theme);
+                    &demo->textures, theme, 210.0f);
+                /* Everything that used to be painted over the track goes
+                   through the same depth buffer now. */
+                raster_skid_marks(&frame, client, camera, demo);
+                raster_boost_effect(&frame, client, camera, demo);
+                raster_kart(&frame, client, camera, demo);
             }
-        } else {
+        }
+        if (!rasterized) {
             draw_track(buffer, client, camera, demo->track_spec);
             draw_track_scene(
                 buffer, client, camera, demo->track_spec, scene);
         }
-        if (demo->show_gates && demo->course_ready) {
+        if (demo->show_gates && demo->course_ready && !kart_only) {
             draw_course_gates(buffer, client, camera, &demo->course);
         }
-        draw_skid_marks(buffer, client, camera, demo);
-        draw_boost_effect(buffer, client, camera, demo);
-        draw_kart(buffer, client, camera, demo);
+        if (!rasterized) {
+            draw_skid_marks(buffer, client, camera, demo);
+            draw_boost_effect(buffer, client, camera, demo);
+            draw_kart(buffer, client, camera, demo);
+        } else if (demo->show_model_bounds) {
+            /* The bounds are wireframe annotation rather than geometry, so they
+               stay on the GDI overlay in both modes. */
+            const KartModelParts *parts = NULL;
+            (void)active_kart_model(demo, &parts);
+            draw_kart_model_bounds(buffer, client, camera, &demo->kart, parts);
+        }
         if (demo->show_vectors) {
             draw_motion_vectors(
                 buffer, client, camera, &demo->kart, demo->acceleration);
@@ -2584,15 +3094,27 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         lateral_speed,
         demo->kart.drift.slip_detected ? "ON" : "off");
     TextOutA(buffer, 16, 12, status, (int)strlen(status));
+    {
+        static const char driving[] =
+            "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  "
+            "P: parameters  K: kart  T: track  F: drag trigger  "
+            "S: screenshot  R: reset";
+        TextOutA(buffer, 16, 32, driving, (int)(sizeof(driving) - 1));
+    }
+    /* The view toggles, on their own line: there are enough of them now that
+       keeping them with the driving keys ran the line off the window. */
     snprintf(
         help,
         sizeof(help),
-        "Arrows: drive  Shift/W: drift  Ctrl/D: boost  C: camera  V: %s vectors  P: parameters  K: kart  T: track  F: drag trigger  S: screenshot  R: reset  X: %s  N: %s checkpoints  B: %s bounds",
-        demo->show_vectors ? "hide" : "show",
+        "X: %s  Z: %s kart skin  L: colour %u [%s]  N: %s checkpoints  B: %s bounds  V: %s vectors",
         demo->textured ? "wireframe" : "textured",
+        demo->kart_textured ? "hide" : "show",
+        demo->kart_colour,
+        KART_COLOURSETS[demo->kart_colour].name,
         demo->show_gates ? "hide" : "show",
-        demo->show_model_bounds ? "hide" : "show");
-    TextOutA(buffer, 16, 32, help, (int)strlen(help));
+        demo->show_model_bounds ? "hide" : "show",
+        demo->show_vectors ? "hide" : "show");
+    TextOutA(buffer, 16, 52, help, (int)strlen(help));
     /* The inferred layers, kept on their own line so they read as what they
        are rather than as part of the recovered demo. */
     snprintf(
@@ -2601,8 +3123,8 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         "(experimental)  E: gear model [%s]  G: gauge model [%s]",
         demo->gearbox.mode == KART_GEAR_MULTI ? "multi" : "single",
         kart_gauge_model_name(demo->gauge.model));
-    SetTextColor(buffer, RGB(150, 165, 180));
-    TextOutA(buffer, 16, 52, help, (int)strlen(help));
+    SetTextColor(buffer, RGB(190, 165, 240));
+    TextOutA(buffer, 16, 72, help, (int)strlen(help));
     SetTextColor(buffer, RGB(235, 240, 245));
     snprintf(
         status,
@@ -2621,7 +3143,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
     SetTextColor(
         buffer,
         demo->kart.drift.slip_detected ? RGB(255, 185, 55) : RGB(180, 195, 205));
-    kart_demo_text_out_utf8(buffer, 16, 72, status);
+    kart_demo_text_out_utf8(buffer, 16, 92, status);
     snprintf(
         status,
         sizeof(status),
@@ -2637,7 +3159,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         buffer,
         demo->boost_active ? RGB(75, 225, 255) :
         (drift_visual_active(&demo->kart) ? RGB(255, 185, 55) : RGB(180, 195, 205)));
-    TextOutA(buffer, 16, 92, status, (int)strlen(status));
+    TextOutA(buffer, 16, 112, status, (int)strlen(status));
     if (demo->course_ready) {
         /* The original's own progress record, field for field: the node the
            kart is in, how far into it, the accumulated start-gate crossings
@@ -2656,19 +3178,19 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         SetTextColor(
             buffer,
             demo->progress.wrong_way ? RGB(255, 120, 120) : RGB(180, 195, 205));
-        TextOutA(buffer, 16, 112, status, (int)strlen(status));
+        TextOutA(buffer, 16, 132, status, (int)strlen(status));
         if (demo->progress.best_lap_ms != 0) {
             char best[32];
             snprintf(best, sizeof(best), "%.2fs",
                      (float)demo->progress.best_lap_ms * 0.001f);
-            TextOutA(buffer, 16 + 7 * (int)strlen(status), 112, best,
+            TextOutA(buffer, 16 + 7 * (int)strlen(status), 132, best,
                      (int)strlen(best));
         }
     }
     if (demo->respawn_notice_ms != 0) {
         static const char notice[] = "RESPAWNING ONTO THE COURSE";
         SetTextColor(buffer, RGB(255, 120, 120));
-        TextOutA(buffer, 16, 132, notice, (int)strlen(notice));
+        TextOutA(buffer, 16, 152, notice, (int)strlen(notice));
     }
     /* 3, 2, 1 as the deadline approaches, then START; the recovered cues fire at
        the same thresholds. */
@@ -2679,7 +3201,7 @@ static void draw_scene(HWND window, HDC target, const Demo3DState *demo)
         char notice[96];
         snprintf(notice, sizeof(notice), "SAVED %s", demo->shot_name);
         SetTextColor(buffer, RGB(140, 235, 255));
-        TextOutA(buffer, 16, 152, notice, (int)strlen(notice));
+        TextOutA(buffer, 16, 172, notice, (int)strlen(notice));
     }
     draw_telemetry(buffer, client, demo);
     kart_demo_draw_gauge(
@@ -2742,11 +3264,10 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)demo);
         g_input_window = window;
         load_track_scenes(create->hInstance, demo);
+        load_skydomes(create->hInstance, demo);
         load_kart_models(create->hInstance, demo);
         load_track_textures(create->hInstance, demo);
-        /* Textured is the default when there is a table to sample; X falls back
-           to the wireframe and its collision colouring. */
-        demo->textured = demo->textures_ready;
+        demo->kart_colour = KART_COLOURSET_DEFAULT;
         kart_demo_sound_start(create->hInstance, &demo->sound);
         kart_demo_minimap_set_load(create->hInstance, &demo->minimaps);
         if (demo->track_spec == NULL) demo->track_spec = kart_demo_default_track();
@@ -2840,10 +3361,24 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             const bool gate_key_down = key_down('N') != 0;
             const bool bounds_key_down = key_down('B') != 0;
             const bool texture_key_down = key_down('X') != 0;
+            const bool kart_texture_key_down = key_down('Z') != 0;
             if (texture_key_down && !demo->texture_key_was_down) {
                 demo->textured = !demo->textured;
             }
             demo->texture_key_was_down = texture_key_down;
+            const bool kart_colour_key_down = key_down('L') != 0;
+            if (kart_texture_key_down && !demo->kart_texture_key_was_down) {
+                demo->kart_textured = !demo->kart_textured;
+            }
+            demo->kart_texture_key_was_down = kart_texture_key_down;
+            if (kart_colour_key_down && !demo->kart_colour_key_was_down) {
+                demo->kart_colour =
+                    (demo->kart_colour + 1u) % KART_COLOURSET_COUNT;
+            }
+            demo->kart_colour_key_was_down = kart_colour_key_down;
+            /* Cheap once the skin is painted: it returns immediately unless the
+               kart or the colour changed. */
+            paint_kart_skin(demo);
             if (gate_key_down && !demo->gate_key_was_down) {
                 demo->show_gates = !demo->show_gates;
             }
@@ -3109,6 +3644,8 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
             kart_demo_sound_stop(&demo->sound);
             free_track_scenes(demo);
             kart_track_texture_free(&demo->textures);
+            free(demo->skin_texels);
+            demo->skin_texels = NULL;
             kart_demo_minimap_set_free(&demo->minimaps);
         }
         PostQuitMessage(0);

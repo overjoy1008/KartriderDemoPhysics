@@ -253,6 +253,41 @@ if(WIN32)
         endforeach()
     endif()
 
+    # The skydome that ships beside each track.1s. Six of the thirteen do not
+    # export (unsupported class stamp), so this list is only the ones that do
+    # and demo/kart_skydome_resources.h maps them back onto TRACKS[].
+    set(KART_SKYDOME_CODES
+        ice_I01 ice_I02 ice_R01
+        village_I01 village_I02 village_R01 village_R03)
+    set(KART_SKYDOME_MESH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/analysis/track-assets/skydome")
+    set(KART_SKYDOME_PACK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/analysis/track-assets/packed-skydome")
+    set(KART_HAVE_ALL_SKYDOMES TRUE)
+    foreach(KART_SKYDOME_CODE IN LISTS KART_SKYDOME_CODES)
+        if(NOT EXISTS "${KART_SKYDOME_MESH_DIR}/track_${KART_SKYDOME_CODE}.skydome.ktrk")
+            set(KART_HAVE_ALL_SKYDOMES FALSE)
+        endif()
+    endforeach()
+    if(KART_HAVE_ALL_SKYDOMES)
+        execute_process(
+            COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+                    -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/pack_track_scenes.ps1"
+                    -InputDirectory "analysis/track-assets/skydome"
+                    -OutputDirectory "analysis/track-assets/packed-skydome"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            RESULT_VARIABLE KART_SKYDOME_PACK_RESULT
+            OUTPUT_VARIABLE KART_SKYDOME_PACK_OUTPUT
+            ERROR_VARIABLE KART_SKYDOME_PACK_OUTPUT)
+        if(NOT KART_SKYDOME_PACK_RESULT EQUAL 0)
+            message(FATAL_ERROR
+                "Packing the skydomes failed:\n${KART_SKYDOME_PACK_OUTPUT}")
+        endif()
+        foreach(KART_SKYDOME_CODE IN LISTS KART_SKYDOME_CODES)
+            if(NOT EXISTS "${KART_SKYDOME_PACK_DIR}/track_${KART_SKYDOME_CODE}.skydome.ktkz")
+                set(KART_HAVE_ALL_SKYDOMES FALSE)
+            endif()
+        endforeach()
+    endif()
+
     # The tracks' texture assets, decoded out of the theme archives and packed
     # into one shared KTEX table keyed by theme and texture name. The KTRK
     # meshes already name a texture and carry the asset's UVs, so this is the
@@ -346,6 +381,28 @@ if(WIN32)
     else()
         message(STATUS "KTRK kart models not found; the demo will draw the box hull")
     endif()
+    if(KART_HAVE_ALL_SKYDOMES)
+        set(KART_SKYDOME_RC_ENTRIES "")
+        set(KART_SKYDOME_PACK_FILES "")
+        foreach(KART_SKYDOME_CODE IN LISTS KART_SKYDOME_CODES)
+            string(TOUPPER "${KART_SKYDOME_CODE}" KART_SKYDOME_CODE_UPPER)
+            string(APPEND KART_SKYDOME_RC_ENTRIES
+                "IDR_SKYDOME_${KART_SKYDOME_CODE_UPPER} RCDATA \"${KART_SKYDOME_PACK_DIR}/track_${KART_SKYDOME_CODE}.skydome.ktkz\"\n")
+            list(APPEND KART_SKYDOME_PACK_FILES
+                "${KART_SKYDOME_PACK_DIR}/track_${KART_SKYDOME_CODE}.skydome.ktkz")
+        endforeach()
+        configure_file(
+            demo/kart_skydomes.rc.in
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skydomes.rc
+            @ONLY)
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skydomes.rc
+            PROPERTIES OBJECT_DEPENDS "${KART_SKYDOME_PACK_FILES}")
+        list(APPEND KART_DEMO_SOURCES
+            ${CMAKE_CURRENT_BINARY_DIR}/kart_skydomes.rc)
+    else()
+        message(STATUS "Skydome exports not found; the demo will draw an empty sky")
+    endif()
     if(KART_HAVE_TRACK_TEXTURES)
         configure_file(
             demo/kart_track_textures.rc.in
@@ -371,6 +428,9 @@ if(WIN32)
     endif()
     if(KART_HAVE_TRACK_TEXTURES)
         target_compile_definitions(kart PRIVATE KART_EMBED_TRACK_TEXTURES=1)
+    endif()
+    if(KART_HAVE_ALL_SKYDOMES)
+        target_compile_definitions(kart PRIVATE KART_EMBED_SKYDOMES=1)
     endif()
     if(KART_HAVE_ALL_MINIMAPS)
         target_compile_definitions(kart PRIVATE KART_EMBED_MINIMAPS=1)

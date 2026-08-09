@@ -22,7 +22,7 @@ import struct
 import sys
 import zlib
 
-KTEX_VERSION = 1
+KTEX_VERSION = 2
 KEY_BYTES = 112
 
 THEMES = ("desert", "forest", "ice", "village")
@@ -30,6 +30,10 @@ THEMES = ("desert", "forest", "ice", "village")
 # 0x01: the source carried an alpha channel, so the stored 1-bit mask is
 # meaningful and the rasterizer must test it. Without it every texel is opaque.
 KTEX_FLAG_MASKED = 1
+# 0x02: an 8-bit alpha plane follows the 1-bit mask. Only the kart images carry
+# it, because 0x00417160 composites them over a solid colour at load time and
+# needs the asset's real coverage, not a cutout.
+KTEX_FLAG_ALPHA8 = 2
 
 
 # --- DDS ------------------------------------------------------------------
@@ -358,10 +362,16 @@ def read_ktrk_textures(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mesh-directory", default="analysis/track-assets/meshes")
+    parser.add_argument(
+        "--skydome-directory", default="analysis/track-assets/skydome")
+    parser.add_argument(
+        "--kart-directory", default="analysis/kart-assets/extracted")
     parser.add_argument("--shared-directory", default="analysis/track-assets/shared")
     parser.add_argument(
         "--output", default="analysis/track-assets/packed/track_textures.ktxz")
     parser.add_argument("--max-size", type=int, default=64)
+    parser.add_argument("--skydome-max-size", type=int, default=256)
+    parser.add_argument("--kart-max-size", type=int, default=256)
     arguments = parser.parse_args()
 
     workspace = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -372,15 +382,30 @@ def main():
     index = build_source_index(shared_root)
     images = []
     image_by_digest = {}
+    alpha8_images = set()
     entries = {}
     missing = set()
 
-    for name in sorted(os.listdir(mesh_root)):
+    # The skydomes are separate exports beside the tracks and name their texture
+    # the same way, so they go through exactly the same resolution. They are
+    # walked first because a dome fills the whole screen at once, unlike a track
+    # surface seen at a distance, and so is stored at its own larger cap.
+    sources = []
+    skydome_root = os.path.join(workspace, arguments.skydome_directory)
+    if os.path.isdir(skydome_root):
+        sources += [(skydome_root, name, arguments.skydome_max_size)
+                    for name in sorted(os.listdir(skydome_root))]
+    sources += [(mesh_root, name, arguments.max_size)
+                for name in sorted(os.listdir(mesh_root))]
+
+    for root, name, cap in sources:
         if not name.endswith(".ktrk"):
             continue
         track = name[:-len(".ktrk")]
+        if track.endswith(".skydome"):
+            track = track[:-len(".skydome")]
         theme = track.split("_")[1] if track.startswith("track_") else ""
-        _, textures = read_ktrk_textures(os.path.join(mesh_root, name))
+        _, textures = read_ktrk_textures(os.path.join(root, name))
         for texture in sorted(set(textures)):
             # The key is the mesh's own texture bytes behind the theme, so the
             # loader matches KartTrackSceneMesh.texture without re-encoding it.
@@ -412,8 +437,8 @@ def main():
             if width == 0 or height == 0:
                 missing.add(key)
                 continue
-            target_width = fit_power_of_two(width, arguments.max_size)
-            target_height = fit_power_of_two(height, arguments.max_size)
+            target_width = fit_power_of_two(width, cap)
+            target_height = fit_power_of_two(height, cap)
             if (target_width, target_height) != (width, height):
                 pixels = resize_box(
                     width, height, pixels, target_width, target_height)
@@ -427,6 +452,48 @@ def main():
                 images.append((target_width, target_height, pixels, has_alpha))
             entries[key] = image
 
+    # The kart models. Their KTRK meshes name no texture at all - the exporter
+    # finds no material on a ReToonRigid node - but docs/KART_MODEL_CATALOG.md
+    # established that a kart's whole body is the single 256x128 `1.png` beside
+    # its model.1s. So the key is the theme "kart" and the kart's own asset name,
+    # and the demo looks it up that way rather than from the mesh.
+    kart_root = os.path.join(workspace, arguments.kart_directory)
+    if os.path.isdir(kart_root):
+        kart_sources = [(kart, os.path.join(kart_root, kart, "1.png"),
+                         b"kart/" + kart.encode("latin-1"))
+                        for kart in sorted(os.listdir(kart_root))]
+        # The two shared images 0x00417160 stamps onto every skin.
+        kart_sources += [
+            ("common", os.path.join(kart_root, "common", "plate.png"),
+             b"kart/@plate"),
+            ("common", os.path.join(kart_root, "common", "number.png"),
+             b"kart/@number"),
+        ]
+        for kart, path, key in kart_sources:
+            if not os.path.isfile(path):
+                continue
+            if key in entries:
+                continue
+            try:
+                width, height, pixels, has_alpha = decode_png(open(path, "rb").read())
+            except ValueError as error:
+                sys.stderr.write("skipping %s: %s\n" % (path, error))
+                missing.add(key)
+                continue
+            # Kart images are stamped and composited at their own texel
+            # coordinates, so they are stored at the asset's exact size - the
+            # plate is 45x20 and the number strip 100x17, neither a power of
+            # two, and neither is ever sampled by a UV.
+            digest = hashlib.sha1(
+                struct.pack("<IIB", width, height, has_alpha) + pixels).digest()
+            image = image_by_digest.get(digest)
+            if image is None:
+                image = len(images)
+                image_by_digest[digest] = image
+                images.append((width, height, pixels, has_alpha))
+            alpha8_images.add(image)
+            entries[key] = image
+
     payload = bytearray()
     payload += b"KTEX"
     payload += struct.pack("<III", KTEX_VERSION, len(entries), len(images))
@@ -434,9 +501,12 @@ def main():
         raw = key[:KEY_BYTES - 1]
         payload += raw + b"\0" * (KEY_BYTES - len(raw))
         payload += struct.pack("<I", entries[key])
-    for width, height, pixels, has_alpha in images:
-        payload += struct.pack(
-            "<III", width, height, KTEX_FLAG_MASKED if has_alpha else 0)
+    for image_index, (width, height, pixels, has_alpha) in enumerate(images):
+        keep_alpha = image_index in alpha8_images
+        flags = KTEX_FLAG_MASKED if has_alpha else 0
+        if keep_alpha:
+            flags |= KTEX_FLAG_ALPHA8
+        payload += struct.pack("<III", width, height, flags)
         colour = bytearray()
         mask = bytearray((width * height + 7) // 8)
         for i in range(width * height):
@@ -450,6 +520,8 @@ def main():
                 mask[i >> 3] |= 1 << (i & 7)
         payload += colour
         payload += mask
+        if keep_alpha:
+            payload += bytes(pixels[i * 4 + 3] for i in range(width * height))
 
     compressed = zlib.compressobj(9, zlib.DEFLATED, -15)
     body = compressed.compress(bytes(payload)) + compressed.flush()

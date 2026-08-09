@@ -48,6 +48,7 @@ void kart_track_texture_free(KartTrackTextureTable *table)
         for (image_index = 0; image_index < table->image_count; ++image_index) {
             free(table->images[image_index].texels);
             free(table->images[image_index].mask);
+            free(table->images[image_index].alpha);
         }
     }
     free(table->images);
@@ -132,6 +133,13 @@ bool kart_track_texture_load_memory(
         }
         if (!read_bytes(&reader, image->mask, mask_bytes)) {
             goto fail;
+        }
+        if ((image->flags & KART_TRACK_TEXTURE_ALPHA8) != 0u) {
+            image->alpha = (uint8_t *)malloc(texels);
+            if (image->alpha == NULL ||
+                !read_bytes(&reader, image->alpha, texels)) {
+                goto fail;
+            }
         }
     }
     return true;

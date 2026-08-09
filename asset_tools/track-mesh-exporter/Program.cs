@@ -100,7 +100,7 @@ var report = new
     CollidableMeshCount = meshes.Count(m => (m.Flags & MeshFlagCollidable) != 0),
     CollidableTriangleCount = meshes.Where(m => (m.Flags & MeshFlagCollidable) != 0).Sum(m => m.Indices.Count / 3),
     Collidable = meshes.Where(m => (m.Flags & MeshFlagCollidable) != 0).Select(m => new { m.Name, Triangles = m.Indices.Count / 3 }).ToArray(),
-    Meshes = meshes.Select(m => new { m.Name, m.Texture, m.Flags, Vertices = m.Vertices.Count, Triangles = m.Indices.Count / 3 }).ToArray()
+    Meshes = meshes.Select(m => new { m.Name, m.Texture, m.Flags, m.Kind, m.Determinant, Vertices = m.Vertices.Count, Triangles = m.Indices.Count / 3 }).ToArray()
 };
 string reportPath = outputPrefix + ".mesh.json";
 if (File.Exists(reportPath)) throw new IOException($"Refusing to overwrite: {reportPath}");
@@ -132,28 +132,49 @@ static void Collect(Relement node, Matrix4x4 parent, bool collidable, List<MeshD
                           Matrix4x4.CreateTranslation(node.Position) * parent;
     collidable = IsCollidable(node, collidable);
     // Kart models store geometry as ReToonRigid: separate vertex, normal and
-    // texcoord arrays indexed per face corner. Only the vertex indices matter
-    // for the mesh itself.
+    // texcoord arrays, each indexed independently per face corner. A corner is
+    // therefore a (vertex, texcoord) pair and not a vertex on its own, so the
+    // only faithful export is one output vertex per corner. Pairing TexCoords[i]
+    // with Vertices[i] instead - which is what this did before - produced UVs
+    // that were not the asset's: every u came out 0.
     if (node is ReToonRigid toon && toon.Vertices is not null && toon.MeshFaces is not null)
     {
+        List<Vector3> positions = new(toon.MeshFaces.Length * 3);
+        List<Vector2> corners = new(toon.MeshFaces.Length * 3);
         List<uint> indices = new(toon.MeshFaces.Length * 3);
+        Vector3[]? texCoords = toon.TexCoords;
         foreach (ReToonRigidMeshFace face in toon.MeshFaces)
         {
-            indices.Add((uint)face.VertexIndex1);
-            indices.Add((uint)face.VertexIndex2);
-            indices.Add((uint)face.VertexIndex3);
+            int[] vertexIndices = { face.VertexIndex1, face.VertexIndex2, face.VertexIndex3 };
+            int[] uvIndices = { face.TexCoordIndex1, face.TexCoordIndex2, face.TexCoordIndex3 };
+            for (int corner = 0; corner < 3; corner++)
+            {
+                int vertexIndex = vertexIndices[corner];
+                if (vertexIndex < 0 || vertexIndex >= toon.Vertices.Length) { indices.Clear(); break; }
+                int uvIndex = uvIndices[corner];
+                // The reader hands each texcoord back as a Vector3, but only the
+                // last two components are the coordinate. The first is a 4-byte
+                // tag whose bits are the entry's own index shifted left 16 - it
+                // reads back as a denormal float stepping by 9.18e-41, never as
+                // anything in 0..1 - so u is Y and v is Z.
+                Vector2 uv = texCoords is not null && uvIndex >= 0 && uvIndex < texCoords.Length
+                    ? new Vector2(texCoords[uvIndex].Y, texCoords[uvIndex].Z)
+                    : Vector2.Zero;
+                indices.Add((uint)positions.Count);
+                positions.Add(toon.Vertices[vertexIndex]);
+                corners.Add(uv);
+            }
+            if (indices.Count == 0) break;
         }
-        Vector2[,]? uv = null;
-        if (toon.TexCoords is not null && toon.TexCoords.Length >= toon.Vertices.Length)
+        if (indices.Count >= 3)
         {
-            uv = new Vector2[toon.Vertices.Length, 1];
-            for (int i = 0; i < toon.Vertices.Length; i++)
-                uv[i, 0] = new Vector2(toon.TexCoords[i].X, toon.TexCoords[i].Y);
+            Vector2[,] uvs = new Vector2[corners.Count, 1];
+            for (int i = 0; i < corners.Count; i++) uvs[i, 0] = corners[i];
+            AddIndexed(node, positions.ToArray(), uvs, indices, transform, collidable, meshes, "ReToonRigid");
         }
-        AddIndexed(node, toon.Vertices, uv, indices, transform, collidable, meshes);
     }
     else if (node is ReTriList triList && triList.Vertex?.Vertices is not null && triList.Vertex.Indexes is not null)
-        AddIndexed(node, triList.Vertex.Vertices, triList.Vertex.TextureUVs, triList.Vertex.Indexes.Select(i => (uint)(ushort)i), transform, collidable, meshes);
+        AddIndexed(node, triList.Vertex.Vertices, triList.Vertex.TextureUVs, triList.Vertex.Indexes.Select(i => (uint)(ushort)i), transform, collidable, meshes, "ReTriList");
     else if (node is ReTriStrip triStrip && triStrip.Vertex?.Vertices is not null && triStrip.Vertex.Indexes is not null)
     {
         List<uint> indices = new();
@@ -165,14 +186,14 @@ static void Collect(Relement node, Matrix4x4 parent, bool collidable, List<MeshD
             if ((i & 1) != 0) (a, b) = (b, a);
             if (a != b && b != c && a != c) indices.AddRange(new[] { a, b, c });
         }
-        AddIndexed(node, triStrip.Vertex.Vertices, triStrip.Vertex.TextureUVs, indices, transform, collidable, meshes);
+        AddIndexed(node, triStrip.Vertex.Vertices, triStrip.Vertex.TextureUVs, indices, transform, collidable, meshes, "ReTriStrip");
     }
     foreach (Relement child in node) Collect(child, transform, collidable, meshes);
 }
 
 static void AddIndexed(Relement node, Vector3[] positions, Vector2[,]? textureUvs,
                        IEnumerable<uint> sourceIndices, Matrix4x4 transform, bool collidable,
-                       List<MeshData> meshes)
+                       List<MeshData> meshes, string kind)
 {
     List<Vertex> vertices = new(positions.Length);
     for (int i = 0; i < positions.Length; i++)
@@ -182,8 +203,29 @@ static void AddIndexed(Relement node, Vector3[] positions, Vector2[,]? textureUv
     }
     List<uint> indices = sourceIndices.ToList();
     if (indices.Count < 3 || indices.Any(i => i >= vertices.Count)) return;
+
+    // A node placed by a mirroring transform reverses its triangles' orientation.
+    // Transforming the vertices without also reversing the index order leaves the
+    // face normal - normalize(cross(v1 - v0, v2 - v0)), which is what the
+    // original's collision builder computes at 0x00432390 - pointing into the
+    // surface instead of out of it. That is not a cosmetic difference: the
+    // suspension response at 0x0042f460 scales its force by
+    // dot(contact normal, chassis up), so a road whose normal points down pulls
+    // the kart through the deck rather than holding it up. village_R01's
+    // overpass (RoadObj09@s1/@s2, determinant -8) is where it shows.
+    //
+    // Reversing the winding under a negative determinant is the same
+    // compensation kart_track_collision.c's read_triangle already applies for
+    // the scene-wide X mirror; this is the per-node case it could not see.
+    float determinant = transform.GetDeterminant();
+    if (determinant < 0.0f)
+    {
+        for (int i = 0; i + 2 < indices.Count; i += 3)
+            (indices[i + 1], indices[i + 2]) = (indices[i + 2], indices[i + 1]);
+    }
+
     string? texture = node.Tex?.u3;
-    meshes.Add(new MeshData(node.Name ?? "", texture, collidable ? MeshFlagCollidable : 0u, vertices, indices));
+    meshes.Add(new MeshData(node.Name ?? "", texture, collidable ? MeshFlagCollidable : 0u, vertices, indices, kind, determinant));
 }
 
 static void WriteVector(BinaryWriter writer, Vector3 value)
@@ -200,4 +242,4 @@ static void WriteFixedUtf8(BinaryWriter writer, string value, int size)
 }
 
 internal sealed record Vertex(Vector3 Position, Vector2 UV);
-internal sealed record MeshData(string Name, string? Texture, uint Flags, List<Vertex> Vertices, List<uint> Indices);
+internal sealed record MeshData(string Name, string? Texture, uint Flags, List<Vertex> Vertices, List<uint> Indices, string Kind, float Determinant);

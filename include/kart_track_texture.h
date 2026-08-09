@@ -17,11 +17,15 @@
    with a one-bit coverage mask, which is what a software rasterizer can sample
    without a per-pixel multiply and what the cutout art needs. */
 
-#define KART_TRACK_TEXTURE_VERSION 1u
+#define KART_TRACK_TEXTURE_VERSION 2u
 #define KART_TRACK_TEXTURE_KEY_BYTES 112u
 
 /* Bit 0: the source had an alpha channel, so `mask` is meaningful. */
 #define KART_TRACK_TEXTURE_MASKED 1u
+/* Bit 1: `alpha` holds the source's own 8-bit coverage. Only the kart images
+   carry it: 0x00417160 composites them over a solid colour when the kart is
+   built, which needs the real alpha rather than a cutout. */
+#define KART_TRACK_TEXTURE_ALPHA8 2u
 
 typedef struct KartTrackTextureImage {
     uint32_t width;
@@ -30,6 +34,8 @@ typedef struct KartTrackTextureImage {
     uint16_t *texels;
     /* One bit per texel, row major, bit (i & 7) of byte (i >> 3). */
     uint8_t *mask;
+    /* One byte per texel, or NULL unless KART_TRACK_TEXTURE_ALPHA8 is set. */
+    uint8_t *alpha;
 } KartTrackTextureImage;
 
 typedef struct KartTrackTextureEntry {
