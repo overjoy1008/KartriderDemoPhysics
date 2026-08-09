@@ -3056,6 +3056,17 @@ static const char *drift_phase_name(const KartSimulationState *kart)
     return "GRIP";
 }
 
+static const char *jump_phase_name(KartJumpPhase phase)
+{
+    switch (phase) {
+    case KART_JUMP_CROUCH: return "CROUCH";
+    case KART_JUMP_PUSH: return "PUSH";
+    case KART_JUMP_AIRBORNE: return "AIR";
+    case KART_JUMP_LANDING: return "LAND";
+    default: return "READY";
+    }
+}
+
 /* The values the HUD lines have no room for: the whole rigid body state, the
    drift and boost timers, the suspension contacts and what the last step
    resolved. Fixed pitch so the columns line up as the numbers move. */
@@ -3063,7 +3074,7 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
 {
     const KartSimulationState *kart = &demo->kart;
     const int line_height = 15;
-    const int rows = 14;
+    const int rows = 16;
     const int panel_width = 396;
     const int margin = 16;
     RECT panel = {
@@ -3177,6 +3188,14 @@ static void draw_telemetry(HDC dc, RECT client, const Demo3DState *demo)
         "INST    model %-6s stored %u  (Q: model, Up: use)",
         kart->instant_boost.stored_model ? "stored" : "window",
         kart->instant_boost.stored_count);
+    TELEMETRY_LINE(
+        kart->jump.phase == KART_JUMP_READY ? RGB(200, 212, 220)
+                                            : RGB(255, 180, 235),
+        "JUMP    %-6s gauge %.2f power %3.0f%% E %6.0fJ F %6.0fN h %.2fm",
+        jump_phase_name(kart->jump.phase), kart->jump.gauge_position,
+        kart->jump.jump_strength * 100.0f,
+        kart->jump.stored_energy, kart->jump.applied_force,
+        kart->jump.apex_height - kart->jump.takeoff_height);
     TELEMETRY_LINE(
         RGB(200, 212, 220),
         "FORCES  fwd %6.0f  brake %6.0f  Gf %4.2f  Gr %4.2f",
@@ -3406,7 +3425,7 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
     TextOutA(buffer, 16, 12, status, (int)strlen(status));
     {
         static const char driving[] =
-            "Arrows: drive/instant  Shift/W: drift  Ctrl/D: boost  C: camera  "
+            "Arrows: drive/instant  Space: cat jump  Shift/W: drift  Ctrl/D: boost  C: camera  "
             "P: parameters  K: kart  T: track  F: drag trigger  "
             "S: screenshot  R: reset";
         TextOutA(buffer, 16, 32, driving, (int)(sizeof(driving) - 1));
@@ -3528,6 +3547,10 @@ static void draw_scene(HWND window, HDC target, Demo3DState *demo)
         demo->gauge.boosters, demo->kart_spec->max_boosters,
         demo->gauge.unlimited_boosters, demo->gauge.rate > 0.0f,
         kart_gauge_model_name(demo->gauge.model));
+    kart_demo_draw_jump_gauge(
+        buffer, client, demo->kart.jump.gauge_position,
+        demo->kart.jump.jump_strength,
+        demo->kart.jump.phase == KART_JUMP_CROUCH);
     kart_demo_draw_wheel_load(
         buffer, client, demo->kart.wheels.compression, demo->kart.grounded);
     kart_demo_draw_tachometer(
@@ -3656,6 +3679,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
         controls.steering_input = demo->steering.value;
         controls.reverse_steering = false;
         controls.drift_input = key_down(VK_SHIFT) || key_down('W');
+        controls.jump_input = key_down(VK_SPACE) != 0;
         {
             /* The gauge models spend a charge on the press that starts a
                booster; the infinite model lets every press through. */
@@ -3861,6 +3885,7 @@ static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LP
                 controls.forward_input = 0.0f;
                 controls.reverse_input = 0.0f;
                 controls.boost_active = false;
+                controls.jump_input = false;
             }
         }
         /* The original has no teleport-to-the-line key. Its reset command and

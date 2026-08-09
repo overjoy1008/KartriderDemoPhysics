@@ -24,6 +24,23 @@ static float dot(KartVec3 a, KartVec3 b)
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+static KartVec3 cross(KartVec3 a, KartVec3 b)
+{
+    const KartVec3 value = {
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x,
+    };
+    return value;
+}
+
+static KartVec3 normalize(KartVec3 value)
+{
+    const float length = sqrtf(dot(value, value));
+    return length > 0.000001f ? scale(value, 1.0f / length)
+                              : (KartVec3){0.0f, 0.0f, 1.0f};
+}
+
 static void orientation_axes(
     KartQuat q,
     KartVec3 *right,
@@ -56,6 +73,198 @@ static void orientation_axes(
         2.0f * (yz - wx),
         1.0f - 2.0f * (xx + yy),
     };
+}
+
+static bool jump_can_start(
+    const KartSimulationState *state,
+    const KartWheelQueryOutput *wheel,
+    KartVec3 up)
+{
+    const float minimum_normal_z = cosf(
+        state->config.jump_max_slope_deg * 3.14159265358979323846f / 180.0f);
+    return wheel->active_contacts >= 2 &&
+           wheel->average_normal.z >= minimum_normal_z &&
+           dot(wheel->average_normal, up) > 0.5f;
+}
+
+static float jump_power(const KartDynamicsConfig *config, float gauge_position)
+{
+    const float position = fmaxf(0.0f, fminf(gauge_position, 1.0f));
+    const float timing = position * position * (3.0f - 2.0f * position);
+    const float minimum = fmaxf(config->jump_min_efficiency, 0.0f);
+    const float maximum = fmaxf(config->jump_max_efficiency, minimum);
+    return minimum + (maximum - minimum) * timing;
+}
+
+static void jump_begin_push(KartSimulationState *state)
+{
+    KartJumpState *jump = &state->jump;
+    const float stiffness = fmaxf(
+        state->config.jump_spring_million_per_m, 0.0f) * 1000000.0f;
+    const float max_crouch = fmaxf(
+        state->config.jump_max_crouch_distance, 0.0f);
+    jump->jump_strength = jump_power(&state->config, jump->gauge_position);
+    jump->crouch_distance = max_crouch * sqrtf(jump->jump_strength);
+    jump->stored_energy =
+        0.5f * stiffness *
+        jump->crouch_distance * jump->crouch_distance;
+    jump->phase = KART_JUMP_PUSH;
+    jump->phase_time = 0.0f;
+    jump->takeoff_height = state->position.z;
+    jump->apex_height = state->position.z;
+}
+
+static void kart_step_jump(
+    KartSimulationState *state,
+    const KartSimulationControls *controls,
+    const KartWheelQueryOutput *wheel,
+    KartVec3 right,
+    KartVec3 forward,
+    KartVec3 up,
+    float dt,
+    KartVec3 *force,
+    KartVec3 *torque)
+{
+    static const float right_sign[KART_WHEEL_COUNT] = {1.0f, -1.0f, 1.0f, -1.0f};
+    static const float forward_sign[KART_WHEEL_COUNT] = {1.0f, 1.0f, -1.0f, -1.0f};
+    KartJumpState *jump = &state->jump;
+    const bool pressed = controls->jump_input;
+
+    jump->applied_force = 0.0f;
+    if (jump->phase == KART_JUMP_READY) {
+        if (pressed && !jump->previous_input &&
+            jump_can_start(state, wheel, up)) {
+            jump->phase = KART_JUMP_CROUCH;
+            jump->phase_time = 0.0f;
+            jump->gauge_position = 0.0f;
+            jump->jump_strength = 0.0f;
+            jump->crouch_distance = 0.0f;
+            jump->stored_energy = 0.0f;
+        }
+    } else if (jump->phase == KART_JUMP_CROUCH) {
+        if (!jump_can_start(state, wheel, up)) {
+            jump->phase = KART_JUMP_READY;
+            jump->gauge_position = 0.0f;
+            jump->jump_strength = 0.0f;
+            jump->crouch_distance = 0.0f;
+        } else if (!pressed) {
+            jump_begin_push(state);
+        } else {
+            const float sweep_time = fmaxf(
+                state->config.jump_gauge_sweep_time, dt);
+            float cycle;
+            jump->phase_time += dt;
+            cycle = jump->phase_time / sweep_time;
+            jump->gauge_position = cycle <= 1.0f ? cycle
+                : (cycle <= 2.0f ? 2.0f - cycle : 0.0f);
+            jump->jump_strength = jump_power(
+                &state->config, jump->gauge_position);
+            jump->crouch_distance =
+                fmaxf(state->config.jump_max_crouch_distance, 0.0f) *
+                sqrtf(jump->jump_strength);
+            jump->stored_energy =
+                0.5f * fmaxf(state->config.jump_spring_million_per_m, 0.0f) *
+                1000000.0f *
+                jump->crouch_distance * jump->crouch_distance;
+        }
+    }
+
+    if (jump->phase == KART_JUMP_PUSH) {
+        const float duration = fmaxf(state->config.jump_push_duration, dt);
+        if (!wheel->grounded) {
+            jump->phase = KART_JUMP_AIRBORNE;
+            jump->phase_time = 0.0f;
+        } else if (jump->phase_time < duration && state->config.mass > 0.0f) {
+            const float impulse = sqrtf(
+                fmaxf(2.0f * state->config.mass * jump->stored_energy, 0.0f));
+            const float peak_force =
+                3.14159265358979323846f * impulse / (2.0f * duration);
+            const float total_force = peak_force * sinf(
+                3.14159265358979323846f * jump->phase_time / duration);
+            const float blend = fmaxf(0.0f, fminf(
+                state->config.jump_body_up_blend, 1.0f));
+            const KartVec3 direction = normalize(add(
+                scale(wheel->average_normal, 1.0f - blend), scale(up, blend)));
+            const KartVec3 tangent_velocity = add(
+                state->linear_velocity,
+                scale(wheel->average_normal,
+                      -dot(state->linear_velocity, wheel->average_normal)));
+            const float tangent_speed = sqrtf(dot(tangent_velocity, tangent_velocity));
+            const float velocity_bias = fmaxf(-0.9f, fminf(
+                state->config.jump_velocity_direction_bias, 0.9f));
+            const float speed_factor = fminf(tangent_speed / 20.0f, 1.0f);
+            float wheel_weights[KART_WHEEL_COUNT] = {0};
+            float active_weight = 0.0f;
+            unsigned int i;
+
+            for (i = 0; i < KART_WHEEL_COUNT; ++i) {
+                if (wheel->contacts[i].active) {
+                    float alignment = 0.0f;
+                    if (tangent_speed > 0.1f) {
+                        const KartVec3 contact_offset = add(
+                            scale(right, state->geometry.half_width * right_sign[i]),
+                            scale(forward, state->geometry.half_length * forward_sign[i]));
+                        alignment = dot(
+                            normalize(contact_offset),
+                            scale(tangent_velocity, 1.0f / tangent_speed));
+                    }
+                    wheel_weights[i] = fmaxf(
+                        0.1f, 1.0f + velocity_bias * speed_factor * alignment);
+                    active_weight += wheel_weights[i];
+                }
+            }
+            if (active_weight > 0.0f) {
+                for (i = 0; i < KART_WHEEL_COUNT; ++i) {
+                    if (wheel->contacts[i].active) {
+                        const float wheel_force =
+                            total_force * wheel_weights[i] / active_weight;
+                        const KartVec3 world_force = scale(direction, wheel_force);
+                        const KartVec3 lever = {
+                            state->geometry.half_width * right_sign[i],
+                            -state->geometry.half_length * forward_sign[i],
+                            0.0f,
+                        };
+                        const KartVec3 local_force = {
+                            dot(world_force, right),
+                            -dot(world_force, forward),
+                            dot(world_force, up),
+                        };
+                        *force = add(*force, world_force);
+                        *torque = add(*torque, scale(
+                            cross(lever, local_force),
+                            state->config.jump_torque_scale));
+                    }
+                }
+            }
+            jump->applied_force = total_force;
+            jump->phase_time += dt;
+        } else {
+            /* The powered stroke is over. Residual suspension contact may
+               remain for a few substeps while the chassis clears the ray. */
+            jump->phase = KART_JUMP_AIRBORNE;
+            jump->phase_time = 0.0f;
+        }
+    } else if (jump->phase == KART_JUMP_AIRBORNE) {
+        jump->phase_time += dt;
+        if (state->position.z > jump->apex_height) {
+            jump->apex_height = state->position.z;
+        }
+        if (wheel->landed_this_step ||
+            (wheel->grounded && jump->phase_time > 0.05f &&
+             dot(state->linear_velocity, wheel->average_normal) <= 0.0f)) {
+            jump->phase = KART_JUMP_LANDING;
+            jump->phase_time = state->config.jump_landing_cooldown;
+        }
+    } else if (jump->phase == KART_JUMP_LANDING) {
+        jump->phase_time = fmaxf(jump->phase_time - dt, 0.0f);
+        if (jump->phase_time == 0.0f && wheel->grounded) {
+            jump->phase = KART_JUMP_READY;
+            jump->gauge_position = 0.0f;
+            jump->jump_strength = 0.0f;
+            jump->crouch_distance = 0.0f;
+        }
+    }
+    jump->previous_input = pressed;
 }
 
 KartSimulationGeometry kart_simulation_default_geometry(void)
@@ -204,6 +413,10 @@ static void simulate_substep(
             .dt = dt,
             .half_width = state->geometry.half_width,
             .half_length = state->geometry.half_length,
+            .compression_damping =
+                state->jump.phase == KART_JUMP_AIRBORNE ||
+                state->jump.phase == KART_JUMP_LANDING
+                    ? state->config.jump_landing_damping : 0.0f,
             .chassis_up = up,
         };
         KartSuspensionOutput suspension;
@@ -287,6 +500,9 @@ static void simulate_substep(
         force.z += WORLD_GRAVITY * state->config.mass;
         torque = add(torque, scale(state->angular_velocity, -30.0f));
     }
+
+    kart_step_jump(
+        state, controls, &wheel, right, forward, up, dt, &force, &torque);
 
     drag_input = (KartDragInput){
         .linear_velocity = state->linear_velocity,

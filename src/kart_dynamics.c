@@ -115,6 +115,18 @@ KartDynamicsConfig kart_dynamics_default_config(void)
         .corner_draw_factor = 0.0f,
         .drift_lean_factor = 0.07f,
         .steer_lean_factor = 0.01f,
+        .jump_spring_million_per_m = 1.2f,
+        .jump_max_crouch_distance = 0.18f,
+        .jump_gauge_sweep_time = 0.75f,
+        .jump_push_duration = 0.09f,
+        .jump_min_efficiency = 0.20f,
+        .jump_max_efficiency = 1.0f,
+        .jump_velocity_direction_bias = 0.12f,
+        .jump_body_up_blend = 0.25f,
+        .jump_torque_scale = 0.02f,
+        .jump_max_slope_deg = 45.0f,
+        .jump_landing_cooldown = 0.12f,
+        .jump_landing_damping = 1200.0f,
     };
     return result;
 }
@@ -266,7 +278,7 @@ KartSuspensionOutput kart_compute_suspension_response(
     KartSuspensionOutput out = {0};
     const float static_force =
         fabsf(KART_WORLD_GRAVITY) * config->mass * 0.5f;
-    const float compression_damping = 0.0f;
+    const float compression_damping = fmaxf(input->compression_damping, 0.0f);
     const float rebound_damping =
         static_force * KART_SUSPENSION_REBOUND_RATIO;
     unsigned int i;

@@ -26,6 +26,20 @@ typedef struct KartDynamicsConfig {
     float corner_draw_factor;
     float drift_lean_factor;
     float steer_lean_factor;
+    /* Active suspension jump. Energy is 1/2*k*x^2, converted to a smooth
+       contact force rather than writing velocity directly. */
+    float jump_spring_million_per_m;
+    float jump_max_crouch_distance;
+    float jump_gauge_sweep_time;
+    float jump_push_duration;
+    float jump_min_efficiency;
+    float jump_max_efficiency;
+    float jump_velocity_direction_bias;
+    float jump_body_up_blend;
+    float jump_torque_scale;
+    float jump_max_slope_deg;
+    float jump_landing_cooldown;
+    float jump_landing_damping;
 } KartDynamicsConfig;
 
 typedef struct KartVec3 {
@@ -73,6 +87,7 @@ typedef struct KartSuspensionInput {
     float dt;
     float half_width;
     float half_length;
+    float compression_damping;
     KartVec3 chassis_up;
     KartSuspensionContact contacts[4];
 } KartSuspensionInput;

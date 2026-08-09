@@ -5,7 +5,10 @@
 #define DYNAMICS(mass_, air_, drag_, forward_, backward_, grip_brake_, slip_brake_, steer_, constraint_, front_grip_, rear_grip_, trigger_, trigger_time_, slip_, escape_, corner_) \
     { (mass_), (air_), (drag_), (forward_), (backward_), (grip_brake_), \
       (slip_brake_), (steer_), (constraint_), (front_grip_), (rear_grip_), \
-      (trigger_), (trigger_time_), (slip_), (escape_), (corner_), 0.07f, 0.01f }
+      (trigger_), (trigger_time_), (slip_), (escape_), (corner_), 0.07f, 0.01f, \
+      1.2f, 0.18f, 0.75f, 0.09f, 0.20f, 1.0f, 0.12f, \
+      0.25f, 0.02f, \
+      45.0f, 0.12f, 1200.0f }
 
 #define PRACTICE_DYNAMICS \
     DYNAMICS(100.0f, 3.0f, 0.740f, 2000.0f, 1500.0f, 1800.0f, 1200.0f, \

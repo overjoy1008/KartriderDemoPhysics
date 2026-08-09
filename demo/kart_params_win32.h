@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define KART_PARAM_DYNAMICS_COUNT 18
+#define KART_PARAM_DYNAMICS_COUNT 30
 #define KART_PARAM_GAUGE_COUNT 4
 #define KART_PARAM_FIELD_COUNT \
     (KART_PARAM_DYNAMICS_COUNT + KART_PARAM_GAUGE_COUNT)
@@ -50,6 +50,18 @@ static const KartParamField KART_PARAM_FIELDS[KART_PARAM_FIELD_COUNT] = {
     {"corner draw", offsetof(KartDynamicsConfig, corner_draw_factor), 3},
     {"drift lean", offsetof(KartDynamicsConfig, drift_lean_factor), 3},
     {"steer lean", offsetof(KartDynamicsConfig, steer_lean_factor), 3},
+    {"jump spring x million", offsetof(KartDynamicsConfig, jump_spring_million_per_m), 2},
+    {"jump crouch m", offsetof(KartDynamicsConfig, jump_max_crouch_distance), 3},
+    {"jump sweep s", offsetof(KartDynamicsConfig, jump_gauge_sweep_time), 3},
+    {"jump push s", offsetof(KartDynamicsConfig, jump_push_duration), 3},
+    {"jump min efficiency", offsetof(KartDynamicsConfig, jump_min_efficiency), 3},
+    {"jump max efficiency", offsetof(KartDynamicsConfig, jump_max_efficiency), 3},
+    {"jump velocity bias", offsetof(KartDynamicsConfig, jump_velocity_direction_bias), 3},
+    {"jump up blend", offsetof(KartDynamicsConfig, jump_body_up_blend), 3},
+    {"jump torque", offsetof(KartDynamicsConfig, jump_torque_scale), 3},
+    {"jump slope deg", offsetof(KartDynamicsConfig, jump_max_slope_deg), 1},
+    {"jump cooldown", offsetof(KartDynamicsConfig, jump_landing_cooldown), 3},
+    {"jump landing damp", offsetof(KartDynamicsConfig, jump_landing_damping), 1},
     {"gauge Kg", offsetof(KartGaugeConfig, charge_factor), 3},
     {"gauge full", offsetof(KartGaugeConfig, full_value), 1},
     {"gauge Ks", offsetof(KartGaugeConfig, suspension_gain), 3},

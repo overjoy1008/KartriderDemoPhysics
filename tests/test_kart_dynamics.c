@@ -21,6 +21,13 @@ static void test_defaults(void)
     assert(near(config.forward_accel_force, 3000.0f, 0.0001f));
     assert(near(config.drift_escape_force, 5000.0f, 0.0001f));
     assert(near(config.drift_trigger_time, 0.1f, 0.0001f));
+    assert(near(config.jump_min_efficiency, 0.20f, 0.0001f));
+    assert(near(config.jump_max_efficiency, 1.0f, 0.0001f));
+    assert(near(config.jump_velocity_direction_bias, 0.12f, 0.0001f));
+    assert(near(config.jump_landing_damping, 1200.0f, 0.0001f));
+    assert(near(config.jump_gauge_sweep_time, 0.75f, 0.0001f));
+    assert(near(config.jump_spring_million_per_m, 1.2f, 0.0001f));
+    assert(near(config.jump_max_crouch_distance, 0.18f, 0.0001f));
     for (kart_index = 0; kart_index < kart_demo_kart_count(); ++kart_index) {
         assert(kart_demo_kart_at(kart_index)->max_boosters == 2u);
     }
@@ -826,6 +833,125 @@ static void test_reverse_input_boost_cutoff_model(void)
     assert(!state.instant_boost.active);
 }
 
+static float simulate_jump_height(
+    float mass, unsigned int hold_ms, bool *saw_airborne)
+{
+    KartSimulationState state;
+    KartDynamicsConfig config = kart_dynamics_default_config();
+    FlatGroundContext context = {0};
+    const KartSimulationWorld world = {
+        .query_ground = query_flat_ground,
+        .user_data = &context,
+    };
+    KartSimulationControls controls = {0};
+    float takeoff_z;
+    float peak_z;
+    unsigned int elapsed;
+
+    config.mass = mass;
+    kart_simulation_init(&state, &config, NULL);
+    for (elapsed = 0; elapsed < 250; elapsed += 5) {
+        kart_simulate_milliseconds(&state, &controls, &world, 5);
+    }
+    takeoff_z = state.position.z;
+    peak_z = takeoff_z;
+    controls.jump_input = true;
+    for (elapsed = 0; elapsed < hold_ms; elapsed += 5) {
+        kart_simulate_milliseconds(&state, &controls, &world, 5);
+    }
+    controls.jump_input = false;
+    for (elapsed = 0; elapsed < 1200; elapsed += 5) {
+        kart_simulate_milliseconds(&state, &controls, &world, 5);
+        if (state.jump.phase == KART_JUMP_AIRBORNE) *saw_airborne = true;
+        if (state.position.z > peak_z) peak_z = state.position.z;
+    }
+    assert(state.position.z > -0.5f);
+    assert(state.grounded);
+    return peak_z - takeoff_z;
+}
+
+static float simulate_jump_lateral_roll(float velocity_bias)
+{
+    KartSimulationState state;
+    KartDynamicsConfig config = kart_dynamics_default_config();
+    FlatGroundContext context = {0};
+    const KartSimulationWorld world = {
+        .query_ground = query_flat_ground,
+        .user_data = &context,
+    };
+    KartSimulationControls controls = {0};
+    unsigned int elapsed;
+
+    config.front_grip_factor = 0.0f;
+    config.rear_grip_factor = 0.0f;
+    config.jump_velocity_direction_bias = velocity_bias;
+    config.jump_torque_scale = 0.2f;
+    kart_simulation_init(&state, &config, NULL);
+    for (elapsed = 0; elapsed < 250; elapsed += 5) {
+        kart_simulate_milliseconds(&state, &controls, &world, 5);
+    }
+    controls.jump_input = true;
+    for (elapsed = 0; elapsed < 750; elapsed += 5) {
+        kart_simulate_milliseconds(&state, &controls, &world, 5);
+    }
+    state.linear_velocity.x = 20.0f;
+    controls.jump_input = false;
+    for (elapsed = 0; elapsed < 50; elapsed += 5) {
+        kart_simulate_milliseconds(&state, &controls, &world, 5);
+    }
+    return state.angular_velocity.y;
+}
+
+static void test_jump_is_force_driven_and_opt_in(void)
+{
+    KartSimulationState untouched;
+    KartSimulationState baseline;
+    FlatGroundContext context_a = {0};
+    FlatGroundContext context_b = {0};
+    const KartSimulationWorld world_a = {
+        .query_ground = query_flat_ground,
+        .user_data = &context_a,
+    };
+    const KartSimulationWorld world_b = {
+        .query_ground = query_flat_ground,
+        .user_data = &context_b,
+    };
+    const KartSimulationControls controls = {.forward_input = 1.0f};
+    bool light_airborne = false;
+    bool heavy_airborne = false;
+    bool early_airborne = false;
+    bool overheld_airborne = false;
+    float light_height;
+    float heavy_height;
+    float early_height;
+    float overheld_height;
+    float right_side_lift_roll;
+    float left_side_lift_roll;
+    unsigned int elapsed;
+
+    kart_simulation_init(&untouched, NULL, NULL);
+    kart_simulation_init(&baseline, NULL, NULL);
+    for (elapsed = 0; elapsed < 1000; elapsed += 5) {
+        kart_simulate_milliseconds(&untouched, &controls, &world_a, 5);
+        kart_simulate_milliseconds(&baseline, &controls, &world_b, 5);
+    }
+    assert(memcmp(&untouched, &baseline, sizeof(untouched)) == 0);
+
+    light_height = simulate_jump_height(100.0f, 750, &light_airborne);
+    heavy_height = simulate_jump_height(200.0f, 750, &heavy_airborne);
+    early_height = simulate_jump_height(100.0f, 150, &early_airborne);
+    overheld_height = simulate_jump_height(100.0f, 1700, &overheld_airborne);
+    right_side_lift_roll = simulate_jump_lateral_roll(0.5f);
+    left_side_lift_roll = simulate_jump_lateral_roll(-0.5f);
+    assert(light_airborne && heavy_airborne);
+    assert(light_height > 1.5f && light_height < 4.5f);
+    assert(heavy_height > 0.1f && heavy_height < light_height);
+    assert(early_airborne && early_height < light_height * 0.4f);
+    assert(overheld_height > 0.2f && overheld_height < light_height * 0.35f);
+    assert(right_side_lift_roll < 0.0f);
+    assert(left_side_lift_roll > 0.0f);
+}
+
 typedef struct CollisionContext {
     unsigned int calls;
 } CollisionContext;
@@ -969,6 +1095,7 @@ int main(void)
     test_integrated_instant_boost_input_edge();
     test_integrated_timed_boost_lockout();
     test_reverse_input_boost_cutoff_model();
+    test_jump_is_force_driven_and_opt_in();
     test_airborne_and_integrated_collision();
     test_event_ordered_new_cut_steering();
     test_integrated_drift_input_edge();

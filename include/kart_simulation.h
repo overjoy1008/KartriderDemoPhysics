@@ -88,8 +88,30 @@ typedef struct KartSimulationControls {
     bool reverse_steering;
     bool drift_input;
     bool boost_active;
+    bool jump_input;
     bool drive_disabled;
 } KartSimulationControls;
+
+typedef enum KartJumpPhase {
+    KART_JUMP_READY = 0,
+    KART_JUMP_CROUCH,
+    KART_JUMP_PUSH,
+    KART_JUMP_AIRBORNE,
+    KART_JUMP_LANDING
+} KartJumpPhase;
+
+typedef struct KartJumpState {
+    KartJumpPhase phase;
+    float phase_time;
+    float gauge_position;
+    float jump_strength;
+    float crouch_distance;
+    float stored_energy;
+    float applied_force;
+    float apex_height;
+    float takeoff_height;
+    bool previous_input;
+} KartJumpState;
 
 typedef struct KartSimulationState {
     KartDynamicsConfig config;
@@ -102,6 +124,7 @@ typedef struct KartSimulationState {
     KartLongitudinalState longitudinal;
     KartInstantBoostState instant_boost;
     KartTimedBoostState timed_boost;
+    KartJumpState jump;
     KartWheelContactState wheels;
     float previous_steer_angle_rad;
     float grounded_drag_scale;

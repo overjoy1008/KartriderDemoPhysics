@@ -458,6 +458,56 @@ static void kart_demo_draw_gauge(
     DeleteObject(font);
 }
 
+static void kart_demo_draw_jump_gauge(
+    HDC dc,
+    RECT client,
+    float position,
+    float strength,
+    bool active)
+{
+    const int width = 300;
+    const int height = 16;
+    const int center_x = (client.left + client.right) / 2;
+    RECT bar = {
+        center_x - width / 2,
+        client.bottom - 72,
+        center_x + width / 2,
+        client.bottom - 72 + height,
+    };
+    RECT target = {bar.right - 28, bar.top + 2, bar.right - 2, bar.bottom - 2};
+    HBRUSH back;
+    HBRUSH target_brush;
+    HPEN edge;
+    HGDIOBJ old_brush;
+    HGDIOBJ old_pen;
+    int marker_x;
+    char label[64];
+
+    if (!active) return;
+    if (position < 0.0f) position = 0.0f;
+    if (position > 1.0f) position = 1.0f;
+    back = CreateSolidBrush(RGB(18, 22, 30));
+    target_brush = CreateSolidBrush(RGB(80, 220, 125));
+    edge = CreatePen(PS_SOLID, 1, RGB(150, 165, 180));
+    old_brush = SelectObject(dc, back);
+    old_pen = SelectObject(dc, edge);
+    Rectangle(dc, bar.left, bar.top, bar.right, bar.bottom);
+    FillRect(dc, &target, target_brush);
+    marker_x = bar.left + 2 + (int)((float)(width - 4) * position);
+    SelectObject(dc, GetStockObject(WHITE_PEN));
+    MoveToEx(dc, marker_x, bar.top - 3, NULL);
+    LineTo(dc, marker_x, bar.bottom + 3);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, RGB(255, 220, 245));
+    snprintf(label, sizeof(label), "CAT JUMP  release at end  %3.0f%%", strength * 100.0f);
+    TextOutA(dc, bar.left, bar.top - 17, label, (int)strlen(label));
+    SelectObject(dc, old_brush);
+    SelectObject(dc, old_pen);
+    DeleteObject(back);
+    DeleteObject(target_brush);
+    DeleteObject(edge);
+}
+
 /* Suspension load, drawn as the kart seen from above with each wheel's
    compression over it. Sits directly above the speedometer. Wheel order is the
    simulation's: 0 front-right, 1 front-left, 2 rear-right, 3 rear-left, with
