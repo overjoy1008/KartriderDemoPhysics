@@ -6,8 +6,8 @@ This note records code recovered from the original unpacked KartRider demo
 executable.
 
 Implementation status: the whole mode-0 update below is carried into the
-simulator as `src/kart_camera.c` / `include/kart_camera.h`, covered by
-`tests/test_camera_follow.c` — orientation follow, asymmetric speed filter,
+simulator as `Scripts/Runtime/Rendering/kart_camera.c` / `Scripts/Runtime/Rendering/kart_camera.h`, covered by
+`Scripts/Tests/test_camera_follow.c` — orientation follow, asymmetric speed filter,
 chase pitch/distance/height, booster FOV, and the Z-only position smoothing.
 
 Two things are present but unexercised. Mode 1 (`Front Chase Cameraman`, 100 ms)

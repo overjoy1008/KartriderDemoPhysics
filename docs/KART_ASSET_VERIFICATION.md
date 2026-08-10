@@ -1,7 +1,7 @@
 # 카트 프리셋 검증
 
-`src/kart_demo_data.c`의 26개 카트 상수를 원본 데모 에셋과 대조한 기록이다.
-재실행은 `python scripts/derive_kart_constants.py`.
+`Scripts/Runtime/Gameplay/kart_demo_data.c`의 26개 카트 상수를 원본 데모 에셋과 대조한 기록이다.
+재실행은 `python DeveloperTools/AssetPipeline/derive_kart_constants.py`.
 
 ## 출처
 
@@ -54,7 +54,7 @@ model_height = max_z - min(0, min_z)
 
 ## 3D 형상
 
-`demo/kart_win32.c`의 `draw_kart`는 26개 카트의 `model.1s`를 KTRK로 내보낸 뒤
+`Scripts/Platform/Windows/kart_win32.c`의 `draw_kart`는 26개 카트의 `model.1s`를 KTRK로 내보낸 뒤
 KTKZ로 압축해 실행 파일에 넣은 것을 그린다. `burst3` 기준 6개 메쉬, 284정점,
 442삼각형이다. 서브메쉬 분해와 카트별 수치는
 `docs/KART_MODEL_CATALOG.md`에 있다.

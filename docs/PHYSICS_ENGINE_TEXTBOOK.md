@@ -4,11 +4,11 @@
 
 구현의 중심은 다음 파일이다.
 
-- [`include/kart_dynamics.h`](../include/kart_dynamics.h): 물리 입력·출력·상태 자료형
-- [`src/kart_dynamics.c`](../src/kart_dynamics.c): 복구된 힘, 토크, 상태기계와 적분식
-- [`include/kart_simulation.h`](../include/kart_simulation.h): 월드 질의와 완성 시뮬레이션 API
-- [`src/kart_simulation.c`](../src/kart_simulation.c): 5 ms 고정 서브스텝 파이프라인
-- [`src/kart_demo_data.c`](../src/kart_demo_data.c): 26개 카트와 15개 트랙의 원본 데이터
+- [`Scripts/Runtime/Physics/kart_dynamics.h`](../Scripts/Runtime/Physics/kart_dynamics.h): 물리 입력·출력·상태 자료형
+- [`Scripts/Runtime/Physics/kart_dynamics.c`](../Scripts/Runtime/Physics/kart_dynamics.c): 복구된 힘, 토크, 상태기계와 적분식
+- [`Scripts/Runtime/Physics/kart_simulation.h`](../Scripts/Runtime/Physics/kart_simulation.h): 월드 질의와 완성 시뮬레이션 API
+- [`Scripts/Runtime/Physics/kart_simulation.c`](../Scripts/Runtime/Physics/kart_simulation.c): 5 ms 고정 서브스텝 파이프라인
+- [`Scripts/Runtime/Gameplay/kart_demo_data.c`](../Scripts/Runtime/Gameplay/kart_demo_data.c): 26개 카트와 15개 트랙의 원본 데이터
 - [`analysis/RECOVERY_NOTES.md`](../analysis/RECOVERY_NOTES.md): EXE 주소와 역분석 근거
 
 > 현재 시뮬레이터의 트랙 월드는 원본 트랙 메시가 아니라 각 트랙의 정확한 전체 AABB를 사용한 평면 직사각형이다. 카트의 힘·상태·적분은 원본 EXE에서 복구했지만, 독점 트랙 공간 인덱스와 삼각형 질의는 콜백 경계 바깥에 남아 있다.

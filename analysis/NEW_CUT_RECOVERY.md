@@ -146,7 +146,7 @@ inventing another physics force.
 ## Implemented minimal correction
 
 The Windows Top-down and 3D demos now share `KartSteeringInputState` from
-`include/kart_input.h` and `src/kart_input.c`:
+`Scripts/Runtime/Input/kart_input.h` and `Scripts/Runtime/Input/kart_input.c`:
 
 - a genuine key-down transition assigns that direction as owner;
 - pressing the opposite direction overwrites the owner even while both are
@@ -160,7 +160,7 @@ The Windows Top-down and 3D demos now share `KartSteeringInputState` from
 setter call on press and one on release instead of one call per 5 ms substep.
 No tire, force, torque, timer, drag, or camera formula was changed.
 
-Regression coverage in `tests/test_kart_dynamics.c` checks both last-event
+Regression coverage in `Scripts/Tests/test_kart_dynamics.c` checks both last-event
 steering ownership and that a held drift key does not restart TRIGGER after
 linger expires.
 

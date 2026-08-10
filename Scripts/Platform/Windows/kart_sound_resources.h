@@ -1,0 +1,36 @@
+#ifndef KART_SOUND_RESOURCES_H
+#define KART_SOUND_RESOURCES_H
+
+/* Shared effects. Engine-family sounds use the contiguous preset block below. */
+#define IDR_SOUND_DRIFT 402
+#define IDR_SOUND_CRASH 404
+#define IDR_SOUND_SHOCK 405
+/* Race start countdown, from sound_fx_etc.rho. */
+#define IDR_SOUND_COUNT_3 408
+#define IDR_SOUND_COUNT_2 409
+#define IDR_SOUND_COUNT_1 410
+#define IDR_SOUND_COUNT_GO 411
+
+#define KART_ENGINE_SOUND_PRESET_COUNT 13
+#define KART_ENGINE_SOUND_SLOT_COUNT 4
+#define IDR_ENGINE_SOUND_BASE 600
+#define IDR_ENGINE_SOUND(preset, slot) \
+    (IDR_ENGINE_SOUND_BASE + (preset) * KART_ENGINE_SOUND_SLOT_COUNT + (slot))
+
+enum KartEngineSoundPreset {
+    KART_ENGINE_SOUND_CLASSIC = 0,
+    KART_ENGINE_SOUND_SR,
+    KART_ENGINE_SOUND_SR_BIKE,
+    KART_ENGINE_SOUND_Z7,
+    KART_ENGINE_SOUND_Z7_BIKE,
+    KART_ENGINE_SOUND_HT,
+    KART_ENGINE_SOUND_HT_BIKE,
+    KART_ENGINE_SOUND_JIU,
+    KART_ENGINE_SOUND_JIU_BIKE,
+    KART_ENGINE_SOUND_X,
+    KART_ENGINE_SOUND_X_BIKE,
+    KART_ENGINE_SOUND_V1,
+    KART_ENGINE_SOUND_V1_BIKE
+};
+
+#endif

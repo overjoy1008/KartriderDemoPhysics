@@ -9,7 +9,7 @@ C 구현이나 KTRK 익스포터는 근거로 쓰지 않았다. 추측한 부분
 - `input/KartRider.exe`, SHA-256 `812FB0FF…B58C`
   (`C:\Program Files (x86)\Nexon\KartRider Demo\KartRider.exe`와 동일)
 - `Data/track_*.rho` 안의 `track.1s`
-- Ghidra 프로젝트 `analysis/ghidra-project`, 스크립트 `scripts/ghidra`
+- Ghidra 프로젝트 `analysis/ghidra-project`, 스크립트 `DeveloperTools/AssetPipeline/ghidra`
 
 주소는 전부 VA다. 이미지 베이스가 `0x400000`이고 모든 섹션에서
 `raw offset == RVA`라, 파일 오프셋은 `VA - 0x400000`으로 바로 나온다.

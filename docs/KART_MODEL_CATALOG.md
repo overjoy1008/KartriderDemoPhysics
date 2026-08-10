@@ -1,7 +1,7 @@
 # 카트 모델 카탈로그
 
 26개 카트의 디자인·모델링·바운딩 박스를 원본 데모 에셋에서 직접 뽑은 것이다.
-생성은 `python scripts/derive_kart_catalog.py`, 원본 데이터는
+생성은 `python DeveloperTools/AssetPipeline/derive_kart_catalog.py`, 원본 데이터는
 `analysis/reports/kart-catalog.json`에 그대로 들어 있다.
 
 출처는 `C:\Program Files (x86)\Nexon\KartRider Demo\Data\kart.rho`
@@ -324,7 +324,7 @@ model_height = body.max_z - min(0, body.min_z)
 
 데모 설치본 `C:\Program Files (x86)\Nexon\KartRider Demo\Data\etc.rho` 안에
 `colortable.xml`이 그대로 들어 있다. 사본은
-`analysis/kart-assets/demo_etc/colortable.xml`.
+`Assets/Models/Karts/demo_etc/colortable.xml`.
 
 `colorset` 10개, 각각 `base`/`high` 쌍이며 순서가 위 인덱스와 일치한다.
 
@@ -404,7 +404,7 @@ FUN_004a6eb0(out, 이미지"0", 이미지"1", base, high)
 
 참고로 `Enum.cs`의 `FF0000`/`FFFF00`은 위 base 값과 다르다. 그쪽이 근사치다.
 
-`tests/test_kart_model_assets.c`가 26개 모델을 전부 열어 서브메쉬 6개와
+`Scripts/Tests/test_kart_model_assets.c`가 26개 모델을 전부 열어 서브메쉬 6개와
 바퀴 4개를 확인하고, 차체 박스에서 `half_width`/`half_length`/
-`model_height`를 다시 계산해 `src/kart_demo_data.c`의 상수와 대조한다.
+`model_height`를 다시 계산해 `Scripts/Runtime/Gameplay/kart_demo_data.c`의 상수와 대조한다.
 그리는 형상과 시뮬레이션하는 형상이 갈라지지 않게 묶어 두는 장치다.

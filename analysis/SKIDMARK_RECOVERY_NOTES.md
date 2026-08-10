@@ -7,7 +7,7 @@ All statements below come from the 2004 demo `KartRider.exe` and its
 
 - Runtime resource key: `skidmark` (`FUN_00470f50`, `0x00471106` onward).
 - Archive entry: `effect.rho/skidmark/skidmark.tga`.
-- Extracted file: `analysis/kart-assets/demo_effect/skidmark/skidmark.tga`.
+- Extracted file: `Assets/Models/Karts/demo_effect/skidmark/skidmark.tga`.
 - TGA header: 64 x 32, uncompressed true-color (type 2), 32 bpp, 8 alpha bits.
 - SHA-256: `AEB659F86F660D95787A8760846004E6B7C9E54E69A651505F22C3514F73E89A`.
 

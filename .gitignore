@@ -6,16 +6,17 @@
 !/build-win/README.md
 !/build-win/kart.exe
 /.build-win/
+/.build-*/
 /input/
 /tools/
 /.build-macos/
 /build-macos/*.zip
 /.nuget-packages/
-/asset_tools/*/bin/
-/asset_tools/*/obj/
-/analysis/track-assets/
-/analysis/kart-assets/
-/analysis/sound-assets/
+/DeveloperTools/AssetImporters/*/bin/
+/DeveloperTools/AssetImporters/*/obj/
+/Assets/Tracks/
+/Assets/Models/Karts/
+/Assets/Audio/
 
 # macOS Finder metadata (at any directory depth)
 .DS_Store

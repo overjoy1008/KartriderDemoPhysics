@@ -31,7 +31,7 @@ SHA-256을 남긴 뒤 복원할 수 있다.
 
 ## 안전 장치
 
-`asset_tools/rho-safe-index`는 RHO를 `FileAccess.Read`로만 연다.
+`DeveloperTools/AssetImporters/rho-safe-index`는 RHO를 `FileAccess.Read`로만 연다.
 
 1. 열기 전 원본 크기, 수정 시각, SHA-256 기록
 2. 파일 트리만 JSON으로 기록 가능
@@ -48,12 +48,12 @@ SHA-256을 남긴 뒤 복원할 수 있다.
 
 ## 생성물
 
-- `analysis/track-assets/*.manifest.json`: RHO 내부 파일 목록
-- `analysis/track-assets/*.extracted.json`: 추출 파일별 SHA-256 포함 목록
-- `analysis/track-assets/extracted/`: 트랙별 선택 추출 결과
-- `analysis/track-assets/shared/`: 테마 및 공용 텍스처/모델
-- `analysis/track-assets/meshes/*.ktrk`: C 로더용 little-endian 메시
-- `analysis/track-assets/meshes/*.mesh.json`: 노드/텍스처/충돌 후보 보고서
+- `Assets/Tracks/*.manifest.json`: RHO 내부 파일 목록
+- `Assets/Tracks/*.extracted.json`: 추출 파일별 SHA-256 포함 목록
+- `Assets/Tracks/extracted/`: 트랙별 선택 추출 결과
+- `Assets/Tracks/shared/`: 테마 및 공용 텍스처/모델
+- `Assets/Tracks/meshes/*.ktrk`: C 로더용 little-endian 메시
+- `Assets/Tracks/meshes/*.mesh.json`: 노드/텍스처/충돌 후보 보고서
 
 ## KTRK v1
 
@@ -95,19 +95,19 @@ uint32 원본 KTRK 크기 (little-endian)
 uint8  raw DEFLATE 스트림 (RFC 1951, zlib/gzip 래퍼 없음)
 ```
 
-`scripts/pack_track_scenes.ps1`이 .NET `DeflateStream`으로 만들고,
-`src/kart_inflate.c`의 자체 구현이 실행 시 푼다. 외부 라이브러리를 쓰지 않는
+`DeveloperTools/AssetPipeline/pack_track_scenes.ps1`이 .NET `DeflateStream`으로 만들고,
+`Scripts/Runtime/Assets/kart_inflate.c`의 자체 구현이 실행 시 푼다. 외부 라이브러리를 쓰지 않는
 기존 방침에 맞췄다. 13개 합계 12,709,660 → 3,886,066 바이트(30.6%)이고 실행 파일은
 약 4.2 MB다. 기록된 원본 크기와 실제 해제 길이가 다르면 부분 로드하지 않고 거부한다.
 
 ## 트랙 상수 산출 규칙 통일
 
-이전에는 `src/kart_demo_data.c`의 AABB 상수가 트랙마다 다른 기준으로 들어가 있었다.
+이전에는 `Scripts/Runtime/Gameplay/kart_demo_data.c`의 AABB 상수가 트랙마다 다른 기준으로 들어가 있었다.
 13개 중 4개만 전체 메쉬 AABB와 일치했고, `village_R01`은 road 서브셋 AABB,
 나머지 8개는 어느 서브셋과도 맞지 않았다. `village_R01`의 경우 AABB 중심이 실제
 메쉬 중심과 24.3 단위 어긋나 장면이 자기 벽·미니맵과 따로 놀았다.
 
-지금은 `scripts/derive_track_constants.py`가 KTRK에서 전부 다시 뽑는다.
+지금은 `DeveloperTools/AssetPipeline/derive_track_constants.py`가 KTRK에서 전부 다시 뽑는다.
 
 - **AABB**: KTRK 헤더의 전체 메쉬 정점 경계
 - **출발선 X/Y**: 텍스처 이름에 `start`가 들어간 road 플래그 메쉬의 정점 중심
@@ -115,7 +115,7 @@ uint8  raw DEFLATE 스트림 (RFC 1951, zlib/gzip 래퍼 없음)
 - **주행 축**: 출발선 스트라이프는 도로를 가로지르므로, 긴 변에 수직인 축
 
 따라서 장면 배치, AABB 안전벽, 미니맵 정규화, 스폰이 모두 같은 한 출처를 쓴다.
-`tests/test_track_scene_assets.c`가 13개 KTRK 헤더 경계와 트랙 표의 AABB가
+`Scripts/Tests/test_track_scene_assets.c`가 13개 KTRK 헤더 경계와 트랙 표의 AABB가
 일치하는지 매번 확인한다.
 
 ## 출발 방향의 한계
@@ -130,7 +130,7 @@ uint8  raw DEFLATE 스트림 (RFC 1951, zlib/gzip 래퍼 없음)
 | `assumed axis` | `ice_I01`(2.37), `ice_R01`(1.94), `ice_I02`(1.92) | 정사각형에 가까워 축도 추정 |
 
 가정하는 방향은 두 축 모두 **월드 좌표계의 양의 방향**이다. 부호가 틀려도
-카트가 반대로 서 있을 뿐이고, 수정은 `src/kart_demo_data.c`의 enum 한 줄이다.
+카트가 반대로 서 있을 뿐이고, 수정은 `Scripts/Runtime/Gameplay/kart_demo_data.c`의 enum 한 줄이다.
 
 출발선 후보는 `road` 플래그를 요구하지 않는다. 그 플래그는 노드 **이름**의
 부분문자열 매칭이라 한글 노드명을 놓친다. `ice_I02`의 출발 바닥은
@@ -224,13 +224,13 @@ world X를 미니맵 원본 좌표로 되돌리는 `u = 0.5 - x_world / track_wi
 
 KTRK 메시는 처음부터 `track.1s`가 머티리얼에 지정한 텍스처 이름과 정점별 UV를
 싣고 있었다. 없던 것은 픽셀뿐이고, 그 픽셀은 추출된 테마 아카이브
-(`analysis/track-assets/shared/theme_*/texture`, `track_common`)에 DDS와 PNG로
+(`Assets/Tracks/shared/theme_*/texture`, `track_common`)에 DDS와 PNG로
 들어 있다.
 
-`scripts/pack_track_textures.py`가 이 둘을 잇는다.
+`DeveloperTools/AssetPipeline/pack_track_textures.py`가 이 둘을 잇는다.
 
 - 참조 목록은 KTRK에서 직접 읽는다. 이름 해석 순서는
-  `scripts/map_track_textures.ps1`과 같다: `theme_<트랙 테마>` → `theme_common`
+  `DeveloperTools/AssetPipeline/map_track_textures.ps1`과 같다: `theme_<트랙 테마>` → `theme_common`
   → `track_common`.
 - DDS는 DXT1/DXT3/DXT5와 비압축 레이아웃을, PNG는 팔레트/그레이/RGB/RGBA를
   자체 디코딩한다 (외부 이미지 라이브러리 없음, Python 표준 `zlib`만 사용).
@@ -250,14 +250,14 @@ KTRK 메시는 처음부터 `track.1s`가 머티리얼에 지정한 텍스처 �
 `ice_ob_a`, `ice_tree_01`도 어느 아카이브에도 없다. 이 메시들은 텍스처 없이
 바닥/벽 색으로 칠해진다.
 
-포맷 정의는 `include/kart_track_texture.h`, 로더는 `src/kart_track_texture.c`
+포맷 정의는 `Scripts/Runtime/Rendering/kart_track_texture.h`, 로더는 `Scripts/Runtime/Rendering/kart_track_texture.c`
 (KTKZ와 같은 모양의 `KTXZ` 컨테이너, 같은 `kart_inflate` 사용).
 
 ## 스카이돔
 
 `track.1s` 옆에 `skydome.1s`가 같이 들어 있고, 루트가 `TrackContainer`가 아니라
 `Relement` 씬이라 익스포터의 `export-kart` 경로로 읽힌다.
-`scripts/export_track_meshes.ps1`이 트랙 메시 다음에 이어서 뽑는다.
+`DeveloperTools/AssetPipeline/export_track_meshes.ps1`이 트랙 메시 다음에 이어서 뽑는다.
 
 **13개 중 7개만 읽힌다.** desert 3개와 forest 3개의 돔은 KartLibrary에 타입이
 없는 클래스 스탬프 `1f4b04fc`를 포함해 리더가 실패한다. 해당 트랙은 하늘이

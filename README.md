@@ -76,7 +76,7 @@ distribution copies; the `.app` bundles are the files to run directly.
   submesh breakdown of `model.1s`, the three different bounding boxes it yields
   (full, body, wheels) and why only the body one reproduces the physics
   constants, the wheel placement, and what the skins actually contain.
-  Re-run it with `python scripts/derive_kart_catalog.py`.
+  Re-run it with `python DeveloperTools/AssetPipeline/derive_kart_catalog.py`.
 - [Recovery notes](analysis/RECOVERY_NOTES.md) connect recovered formulas to
   executable addresses and supporting reports.
 - [Differential-oracle results](analysis/RECOVERY_NOTES.md#differential-oracle-results)
@@ -128,7 +128,7 @@ distribution copies; the `.app` bundles are the files to run directly.
   and all 78 dimension constants are reproduced exactly from the body mesh of
   its `model.1s`. See
   [kart asset verification](docs/KART_ASSET_VERIFICATION.md); re-run it with
-  `python scripts/derive_kart_constants.py`. All 26 **models** are embedded too,
+  `python DeveloperTools/AssetPipeline/derive_kart_constants.py`. All 26 **models** are embedded too,
   so the drawn kart is now that `model.1s` rather than a box built from its
   dimensions; `M` switches back to the box and `B` shows the bounding volumes.
   See [the kart model catalogue](docs/KART_MODEL_CATALOG.md).
@@ -138,7 +138,7 @@ distribution copies; the `.app` bundles are the files to run directly.
 
 The source addresses are recorded next to recovered formulas. Raw Ghidra output
 and ranking reports are kept under `analysis/reports`; reusable headless scripts
-are under `scripts/ghidra`.
+are under `DeveloperTools/AssetPipeline/ghidra`.
 
 ## Binary differential verification
 
@@ -183,12 +183,13 @@ After a Windows build, launch `build/kart.exe`. It uses the following controls:
 | Cycle the drift gauge model | `G` | — |
 | Open the kart parameter editor | `P` | — |
 | Choose kart / track | `K` / `T` | `K` / `T` |
+| Choose engine sound preset | `U` | — |
 | Toggle grounded-drag trigger | `F` | `G` |
 | Save a screenshot | `S` | — |
-| Dismiss the `K` / `T` menu | `Esc` | `Esc` |
+| Dismiss the `K` / `T` / `U` menu | `Esc` | `Esc` |
 | Reset (the countdown only reruns on a track change) | `R` | `R` |
 
-`Esc` only closes the kart and track menus. The window is closed the usual way,
+`Esc` only closes the kart, track, and engine-sound menus. The window is closed the usual way,
 with Alt+F4 or the title bar. Keys are ignored unless the demo window is the
 foreground window, so the kart will not drive while you are typing elsewhere.
 
@@ -297,7 +298,7 @@ physics and world callbacks, with a software-rendered perspective chase camera.
 All 13 real tracks embed and draw the decoded original `track.1s` KTRK scene
 mesh; `flat_test` deliberately has none.
 The scenes are stored as raw DEFLATE inside the executable and inflated at
-startup by `src/kart_inflate.c`, which keeps 12.1 MB of mesh data down to
+startup by `Scripts/Runtime/Assets/kart_inflate.c`, which keeps 12.1 MB of mesh data down to
 3.7 MB of resources and needs no external library. No asset directory is needed
 at run time.
 Every mesh in an embedded scene is solid, scenery included. What a face is used
@@ -314,7 +315,7 @@ AABB.
 Those collision faces are also shaded, translucently, so the surface the physics
 actually uses is visible rather than inferred from wireframe alone: warm sand
 for ground, blue for walls, using the same thresholds as
-`src/kart_track_collision.c`. The fill is composited at roughly one third
+`Scripts/Runtime/Physics/kart_track_collision.c`. The fill is composited at roughly one third
 opacity, so the wireframe and the ground grid stay readable through it.
 
 ### Sound
@@ -324,9 +325,9 @@ The Windows build plays the demo's own effect samples — `motor.wav`,
 `booster/booster.wav` from `sound_fx_item.rho`. All five are 16-bit mono
 22050 Hz PCM and are embedded in the executables byte for byte.
 
-The driving logic in `src/kart_engine_sound.c` is recovered from `FUN_00452E60`
-and `FUN_00458000`; `tests/test_engine_sound.c` pins its constants. Playback is
-`demo/kart_audio_win32.c`, a small streaming mixer over `waveOut` with per-voice
+The driving logic in `Scripts/Runtime/Audio/kart_engine_sound.c` is recovered from `FUN_00452E60`
+and `FUN_00458000`; `Scripts/Tests/test_engine_sound.c` pins its constants. Playback is
+`Scripts/Platform/Windows/kart_audio_win32.c`, a small streaming mixer over `waveOut` with per-voice
 looping, volume, and pitch by resampling — no third-party audio library. A
 machine with no output device simply runs silent.
 
@@ -430,7 +431,7 @@ the models playable — they are **not** claims about the original:
   for feel — no video or capture has been fitted to them yet. Fitting `Kg` to a
   measured run is the obvious next step and has not been done.
 
-The implementation is `demo/kart_gauge.h`, kept out of `src/` deliberately so
+The implementation is `Scripts/Platform/Windows/kart_gauge.h`, kept out of `src/` deliberately so
 nothing inferred sits beside the recovered engine.
 
 ### Falling out of the world
@@ -467,7 +468,7 @@ On a Mac with CMake and either Xcode or the standalone Xcode Command Line
 Tools installed:
 
 ```sh
-bash scripts/build_macos.sh
+bash DeveloperTools/AssetPipeline/build_macos.sh
 ```
 
 This builds and tests both applications, then creates directly executable app
@@ -502,10 +503,10 @@ Controls match Windows except that the item-boost modifier is **Command**:
 Parameter names/defaults and the core formulas are directly supported by the
 listed executable addresses in `analysis/RECOVERY_NOTES.md`. Kart dynamics and
 dimensions are verified against the demo's own `kart.rho` by
-`scripts/derive_kart_constants.py`; the kart's drawn shape is not, and remains a
+`DeveloperTools/AssetPipeline/derive_kart_constants.py`; the kart's drawn shape is not, and remains a
 box rather than the asset mesh. All 13 track bounds and start
 lines are derived from the decoded `track.1s` meshes by
-`scripts/derive_track_constants.py`, and all 13 use the selected yellow KTRK
+`DeveloperTools/AssetPipeline/derive_track_constants.py`, and all 13 use the selected yellow KTRK
 triangles for ground and wall contact on Windows. The exact proprietary
 node-selection query is still not claimed as recovered.
 
@@ -513,7 +514,7 @@ The **drift gauge is on the far side of that line**, and further out than
 anything else in this repository. No charging function was recovered — only the
 rear-tire slip term the models are assembled from — so its formulas, its
 coefficients, the one-booster-per-drift rule and the two slots are all inferred
-or invented, and none of them is pinned by a test. It lives in `demo/`, never in
+or invented, and none of them is pinned by a test. It lives in `Scripts/Platform/Windows/`, never in
 `src/`, and it changes nothing about how the kart moves.
 
 The start **direction** is the weakest link. A start line's position and its
@@ -530,4 +531,4 @@ table grades each entry:
 | `assumed axis` | `ice_I01`, `ice_I02`, `ice_R01` | start quad nearly square, so even the axis is a guess |
 
 A wrong sign only means the kart starts facing backwards; press `R` after
-turning around. Correcting one is a single enum change in `src/kart_demo_data.c`.
+turning around. Correcting one is a single enum change in `Scripts/Runtime/Gameplay/kart_demo_data.c`.

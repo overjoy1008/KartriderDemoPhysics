@@ -341,11 +341,11 @@ SetTransform(kart, p.pos + 0.5*col1, {col0, col1, col2});   // 속도도 0이 �
 
 | 파일 | 내용 |
 |---|---|
-| `scripts/derive_course_gates.py` | track.1s에서 course 태그와 ToRoad 게이트를 뽑아 `src/kart_course_data.c` 생성 |
-| `src/kart_course_data.c` | 생성물. 13개 트랙, 23개 ToRoad 오브젝트 |
-| `include/kart_course.h`, `src/kart_course.c` | 그래프 빌드, 통과 판정, 진행·랩·역주행, 출발/리스폰 포즈 |
-| `tests/test_course_progress.c` | 13개 트랙 전부에서 중심선을 주행시켜 랩 카운트를 검증 |
-| `tests/test_track_scene_assets.c` | 실제 씬 위에서 출발 그리드 스냅과 첫 게이트 통과를 검증 |
+| `DeveloperTools/AssetPipeline/derive_course_gates.py` | track.1s에서 course 태그와 ToRoad 게이트를 뽑아 `Scripts/Runtime/Gameplay/kart_course_data.c` 생성 |
+| `Scripts/Runtime/Gameplay/kart_course_data.c` | 생성물. 13개 트랙, 23개 ToRoad 오브젝트 |
+| `Scripts/Runtime/Gameplay/kart_course.h`, `Scripts/Runtime/Gameplay/kart_course.c` | 그래프 빌드, 통과 판정, 진행·랩·역주행, 출발/리스폰 포즈 |
+| `Scripts/Tests/test_course_progress.c` | 13개 트랙 전부에서 중심선을 주행시켜 랩 카운트를 검증 |
+| `Scripts/Tests/test_track_scene_assets.c` | 실제 씬 위에서 출발 그리드 스냅과 첫 게이트 통과를 검증 |
 
 생성 데이터의 좌표는 `kart_track_scene_world_vertex`가 씬 정점에 적용하는
 것과 같은 변환을 이미 거친 월드 좌표다 (X 미러 포함). 방향 벡터에는 그 미러의

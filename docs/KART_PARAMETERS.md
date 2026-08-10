@@ -1,9 +1,9 @@
 # 카트 파라미터 표
 
-26개 카트가 물리에 넘기는 값 전부다. 출처는 `src/kart_demo_data.c`이고, 그
+26개 카트가 물리에 넘기는 값 전부다. 출처는 `Scripts/Runtime/Gameplay/kart_demo_data.c`이고, 그
 값들은 2004년 데모 `kart.rho`의 카트별 `parameter.xml`과 `model.1s`에서 뽑은
 것이다. 대조 기록은 `docs/KART_ASSET_VERIFICATION.md`, 재실행은
-`python scripts/derive_kart_constants.py`.
+`python DeveloperTools/AssetPipeline/derive_kart_constants.py`.
 
 여기 있는 숫자는 전부 **복원값**이다. 추정이 섞인 항목은 없다. 아카이브는
 Cotton을 `cotten`으로 적는다.
@@ -65,7 +65,7 @@ Cotton을 `cotten`으로 적는다.
 
 ## 각 파라미터가 하는 일
 
-식은 `src/kart_dynamics.c`에서 그대로 옮긴 것이다. 함께 나오는 상수는 전부
+식은 `Scripts/Runtime/Physics/kart_dynamics.c`에서 그대로 옮긴 것이다. 함께 나오는 상수는 전부
 실행 파일 `.rdata 0x00571d20-0x00571d38`에서 읽은 값이다.
 
 ```text
